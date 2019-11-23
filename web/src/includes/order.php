@@ -1,6 +1,6 @@
 <?
 require_once(dirname(__FILE__).'/JSON.php');
-require_once(dirname(__FILE__).'/../../includes/password.inc');
+// require_once(dirname(__FILE__).'/../../includes/password.inc');
 class Order {
 	var $db, $json;
 	
@@ -55,8 +55,8 @@ class Order {
 		
 		$this->checkUser($user);
 		
-		$dbArticles = $this->db->queryAll('SELECT id, name, price FROM ' . DB_TABLE_ORDER_ARTICLES, null, null, true);
-		if(PEAR::isError($dbArticles)) {
+		$dbArticles = $this->db->queryAllIndexByCol('SELECT id, name, price FROM ' . DB_TABLE_ORDER_ARTICLES, "id");
+		if($dbArticles === false) {
 			echo $this->json->encode(array('code' => 0, 'message' => 'Fehler beim lesen Speichern der Bestellung.'));
 			exit;
 		}

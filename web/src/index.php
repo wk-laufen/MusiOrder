@@ -1,6 +1,10 @@
 <?
 require_once(dirname(__FILE__) . '/site.inc.php');
 
+if(!defined('BASE_DIR')) {
+	define('BASE_DIR', ".");
+}
+
 $action = $_POST['do'];
 if(!empty($action)) {
 	switch($action) {
@@ -44,17 +48,17 @@ if(!empty($action)) {
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 <title>Sportunion Gampern - Bestellsystem</title>
-<link href="/order/css/jquery-ui-1.7.2.custom.css" rel="stylesheet" type="text/css" />
-<link href="/order/css/order.css" rel="stylesheet" type="text/css" />
-<script type="text/javascript" src="/order/js/jquery-1.3.2.min.js"></script>
-<script type="text/javascript" src="/order/js/jquery-ui-1.7.2.custom.min.js"></script>
-<script type="text/javascript" src="/order/js/jquery.bgiframe.min.js"></script>
-<script type="text/javascript" src="/order/js/JSON.js"></script>
-<script type="text/javascript" src="/order/js/order.js"></script>
+<link href="<? echo BASE_DIR; ?>/css/jquery-ui-1.7.2.custom.css" rel="stylesheet" type="text/css" />
+<link href="<? echo BASE_DIR; ?>/css/order.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="<? echo BASE_DIR; ?>/js/jquery-1.3.2.min.js"></script>
+<script type="text/javascript" src="<? echo BASE_DIR; ?>/js/jquery-ui-1.7.2.custom.min.js"></script>
+<script type="text/javascript" src="<? echo BASE_DIR; ?>/js/jquery.bgiframe.min.js"></script>
+<script type="text/javascript" src="<? echo BASE_DIR; ?>/js/JSON.js"></script>
+<script type="text/javascript" src="<? echo BASE_DIR; ?>/js/order.js"></script>
 <?
 if(ADMIN) {
-	echo '<script type="text/javascript" src="/order/admin/js/order.js"></script>';
-	echo '<script type="text/javascript" src="/order/admin/js/jquery.form.js"></script>';
+	echo '<script type="text/javascript" src="' . BASE_DIR . '/admin/js/order.js"></script>';
+	echo '<script type="text/javascript" src="' . BASE_DIR . '/admin/js/jquery.form.js"></script>';
 }
 if($msg) {
 	echo '<script type="text/javascript">
