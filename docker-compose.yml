@@ -1,0 +1,25 @@
+version: "3.7"
+services:
+  db:
+    image: mysql:5
+    volumes:
+      - ./order.sql:/docker-entrypoint-initdb.d/order.sql
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+    #   MYSQL_DATABASE: name_db
+    #   MYSQL_USER: user
+    #   MYSQL_PASSWORD: password
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    links:
+      - db
+    ports:
+      - 8080:80
+  web:
+    build: ./web
+    volumes:
+      - ./web/src:/var/www/html/
+    links:
+      - db
+    ports:
+      - 8081:80
