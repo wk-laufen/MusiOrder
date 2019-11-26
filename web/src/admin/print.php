@@ -6,14 +6,14 @@ $timeFrom = mktime(0, 0, 0, 1, 1, $year);
 $timeTo = mktime(0, 0, 0, 12, 1, $year);
 $user = $_GET['user'];
 if($user['id']) {
-	$order->checkUser($user);
-	$fullName = $user['nachname'] . ' ' . $user['vorname'];
+	$dbUser = $order->getUser($user['id'], "");
+	$fullName = $dbUser['nachname'] . ' ' . $dbUser['vorname'];
 } else {
 	$fullName = 'alle Mitglieder';
 }
-$orders = $order->getOrders($user, $timeFrom);
+$orders = $order->getOrders($user['id'], $timeFrom);
 ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!DOCTYPE html>
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
@@ -70,7 +70,7 @@ $orders = $order->getOrders($user, $timeFrom);
 			</div>
 		</form>
 	</div>
-	<h1 class="print-only"><?php echo 'Jahresstatistik ' . $year . ' für ' . $fullName; ?></h1>
+	<h1><?php echo 'Jahresstatistik ' . $year . ' für ' . $fullName; ?></h1>
 	<div id="Orders">
 		<?php
 			$col = 0;

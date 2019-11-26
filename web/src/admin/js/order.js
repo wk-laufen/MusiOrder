@@ -101,7 +101,7 @@ $.extend(Order, {
 			$state.val("0");
 			$attribs = {'title': 'Offline', 'alt': 'Offline'};
 		}
-		$attribs.src = '/order/images/state_' + $state.val() + '.png';
+		$attribs.src = `${BASE_DIR}/images/state_${$state.val()}.png`;
 		$('#Article-' + articleIndex + ' .state img').attr($attribs);
 	},
 	
@@ -115,7 +115,7 @@ $.extend(Order, {
 			$trash.val("0");
 			$attribs = {'title': 'Artikel nicht löschen', 'alt': 'Artikel nicht löschen'};
 		}
-		$attribs.src = '/order/images/trash_' + $trash.val() + '.png';
+		$attribs.src = `${BASE_DIR}/images/trash_${$trash.val()}.png`;
 		$('#Article-' + articleIndex + ' .trash img').attr($attribs);
 	},
 	
@@ -181,9 +181,9 @@ $.extend(Order, {
 		$article.find('input[name$="][name]"]').val('');
 		$article.find('input[name$="][price]"]').val('');
 		$article.find('.state').attr('href', 'javascript:Order.toggleState(' + newIndex + ')');
-		$article.find('.state img').attr({'title': 'Offline', 'alt': 'Offline', 'src': '/order/images/state_0.png'});
+		$article.find('.state img').attr({'title': 'Offline', 'alt': 'Offline', 'src': `${BASE_DIR}/images/state_0.png`});
 		$article.find('.trash').attr('href', 'javascript:Order.toggleTrash(' + newIndex + ')').hide();
-		$article.find('.trash img').attr({'title': 'Nicht löschen', 'alt': 'Nicht löschen', 'src': '/order/images/trash_0.png'});
+		$article.find('.trash img').attr({'title': 'Nicht löschen', 'alt': 'Nicht löschen', 'src': `${BASE_DIR}/images/trash_0.png`});
 		$group.append($article);
 	}
 });

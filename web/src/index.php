@@ -15,18 +15,14 @@ if(!empty($action)) {
 				$user = stripslashes($user);
 				$articles = stripslashes($articles);
 			}
-			$user = $order->json->decode($user);
-			$articles = $order->json->decode($articles);
-			$order->doOrder($user, $articles);
+			$order->handlePostOrder($user, $articles);
 			break;
 		case 'showOrders':
 			$user = $_POST['user'];
 			if(get_magic_quotes_gpc()) {
 				$user = stripslashes($user);
 			}
-			$user = $order->json->decode($user);
-			$ret = $order->showOrders($user);
-			echo $order->json->encode($ret);
+			$order->handleGetOrders($user);
 			break;
 		case 'changeArticles':
 			$msg = $order->changeArticles($_POST['articles']);
@@ -43,17 +39,19 @@ if(!empty($action)) {
 	}
 }
 ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!DOCTYPE html>
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>Sportunion Gampern - Bestellsystem</title>
 <link href="<? echo BASE_DIR; ?>/css/jquery-ui-1.7.2.custom.css" rel="stylesheet" type="text/css" />
 <link href="<? echo BASE_DIR; ?>/css/order.css" rel="stylesheet" type="text/css" />
+<script>
+	const BASE_DIR = "<? echo BASE_DIR; ?>";
+</script>
 <script type="text/javascript" src="<? echo BASE_DIR; ?>/js/jquery-1.3.2.min.js"></script>
 <script type="text/javascript" src="<? echo BASE_DIR; ?>/js/jquery-ui-1.7.2.custom.min.js"></script>
 <script type="text/javascript" src="<? echo BASE_DIR; ?>/js/jquery.bgiframe.min.js"></script>
-<script type="text/javascript" src="<? echo BASE_DIR; ?>/js/JSON.js"></script>
 <script type="text/javascript" src="<? echo BASE_DIR; ?>/js/order.js"></script>
 <?
 if(ADMIN) {
@@ -70,9 +68,6 @@ if($msg) {
 ?>
 </head>
 <body>
-<?
-$groups = $db->queryAll('SELECT * FROM ' . DB_TABLE_ORDER_ARTICLE_GROUPS . ' ORDER BY grade');
-?>
 <div id="Main">
 	<div id="Caption">
 		<?php
@@ -86,8 +81,9 @@ $groups = $db->queryAll('SELECT * FROM ' . DB_TABLE_ORDER_ARTICLE_GROUPS . ' ORD
 	<?
 	if(ADMIN) {
 		echo '<form id="FormOrder" action="' . $_SERVER['PHP_SELF'] . '" method="post">
-			<div style="display: none;"><input type="hidden" name="do" value="changeArticles" /></div>';
+		<div style="display: none;"><input type="hidden" name="do" value="changeArticles" /></div>';
 	}
+	$groups = $db->getArticleGroups();
 	echo '
 	<div id="Tabs" class="ui-tabs">
 		<ul>';
@@ -451,28 +447,20 @@ $groups = $db->queryAll('SELECT * FROM ' . DB_TABLE_ORDER_ARTICLE_GROUPS . ' ORD
 <div id="Users" title="Name auswählen">
 	<input type="hidden" name="do" value="" />
 	<?
-	$dateCmd = 'DATE_FORMAT(FROM_DAYS(TO_DAYS(NOW()) - TO_DAYS(CONCAT_WS("-",birthdays_year,birthdays_month,birthdays_day))), "%Y") + 0';
-	$users = $db->queryAll('SELECT IF(' . $dateCmd . ' < 10, 1, IF(' . $dateCmd . ' < 15, 2, 3)) AS `group`, idm, nachname, vorname, ' . $dateCmd . ' AS age FROM mitglieder  ORDER BY `group`, nachname, vorname', null, null, true, null, true);
-	$groups = array(1 => 'Kinder', 2 => 'Jugendliche', 3 => 'Erwachsene');
+	$userGroups = $db->getGroupsOfUsers();
+	$groupNames = array(1 => 'Kinder', 2 => 'Jugendliche', 3 => 'Erwachsene');
 	
 	echo '<ul>';
-	foreach($users as $groupKey => $group) {
-		echo '<li><a href="#Group-' . $groupKey . '">' . $groups[$groupKey] . '</a></li>';
+	foreach($userGroups as $groupKey => $group) {
+		echo '<li><a href="#Group-' . $groupKey . '">' . $groupNames[$groupKey] . '</a></li>';
 	}
 	echo '</ul>';
-	foreach($users as $groupKey => $group) {
-		echo '<div id="Group-' . $groupKey . '" class="group">
-			<table width="100%" cellspacing="1" cellpadding="0"><tr>';
-		$group = sortUsers($group, 4);
+	foreach($userGroups as $groupKey => $group) {
+		echo '<div id="Group-' . $groupKey . '" class="group">';
 		foreach($group as $key => $user) {
-			if($key && !($key % 4)) {
-				echo '</tr><tr>';
-			}
-			echo "<td>
-				<a id=\"User-" . $user['idm'] . "\" class=\"user\" href=\"javascript:Order.selectUser(" . $user['idm'] . ");\">" . trim($user['nachname']) . " " . trim($user['vorname']) . "</a>
-			</td>";
+			echo "<a id=\"User-" . $user['idm'] . "\" class=\"user\" href=\"javascript:Order.selectUser(" . $user['idm'] . ");\">" . trim($user['nachname']) . " " . trim($user['vorname']) . "</a>";
 		}
-		echo '</tr></table></div>';
+		echo '</div>';
 	}
 	?>
 </div>

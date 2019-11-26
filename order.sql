@@ -25,19 +25,21 @@ USE `tennis`;
 -- --------------------------------------------------------
 
 --
--- Stellvertreter-Struktur des Views `mitglieder`
+-- Tabellenstruktur für Tabelle `mitglieder`
 --
+
 DROP TABLE IF EXISTS `mitglieder`;
 CREATE TABLE IF NOT EXISTS `mitglieder` (
-`idm` int(10) unsigned
-,`email` varchar(254)
-,`vorname` varchar(25)
-,`nachname` varchar(25)
-,`pass` varchar(128)
-,`birthdays_year` mediumint(8) unsigned
-,`birthdays_month` tinyint(3) unsigned
-,`birthdays_day` tinyint(3) unsigned
-);
+  `idm` int(10) NOT NULL AUTO_INCREMENT,
+  `email` varchar(254) NOT NULL,
+  `vorname` varchar(25) NOT NULL,
+  `nachname` varchar(25) NOT NULL,
+  `pass` varchar(128) NOT NULL,
+  `birthdays_year` mediumint(8) unsigned NOT NULL,
+  `birthdays_month` tinyint(3) unsigned NOT NULL,
+  `birthdays_day` tinyint(3) unsigned NOT NULL,
+  PRIMARY KEY (`idm`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -52,11 +54,11 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `id_order_article` int(11) NOT NULL,
   `amount` tinyint(4) NOT NULL,
   `price` float NOT NULL,
-  `time` tinytext NOT NULL,
-  `bill_send_time` tinytext NOT NULL,
+  `time` int(11) unsigned NOT NULL,
+  `bill_send_time` int(11) unsigned NOT NULL,
   `ip` tinytext NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=23617 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -73,7 +75,7 @@ CREATE TABLE IF NOT EXISTS `order_articles` (
   `name` tinytext NOT NULL,
   `price` float NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=73 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -87,7 +89,7 @@ CREATE TABLE IF NOT EXISTS `order_article_groups` (
   `grade` int(11) NOT NULL,
   `name` tinytext NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 

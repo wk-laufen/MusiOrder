@@ -1,38 +1,31 @@
 <?
-require_once(dirname(__FILE__).'/JSON.php');
 // require_once(dirname(__FILE__).'/../../includes/password.inc');
 class Order {
-	var $db, $json;
+	protected $db;
 	
-	function Order() {
-		$this->db = $GLOBALS['db'];
-		$this->json = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
+	function __construct($db) {
+		$this->db = $db;
 	}
 	
 	function drawArticles($groups) {
-	  $cnt = 0;
+		$cnt = 0;
 		foreach($groups as $group) {
-			$articles = $this->getArticles($group['id']);
+			$articles = $this->db->getActiveArticles($group['id']);
 			$rows = 5;
-	    $cols = min(ceil(count($articles) / $rows), 4);
-	    $rows = ceil(count($articles) / $cols);
-			echo '<div class="tab ui-tabs-hide" id="Tab-' . $group['id'] . '">
-				<div>';
-				echo '<table><tr><td>';
-				foreach($articles as $i => $article) {
-				  if($i && !($i % $rows)) {
-				   echo '</td><td>'; 
-				  }
-    	    echo '<div id="Article-' . $cnt . '" class="article">
-      			<span class="name">' . $article['name'] . '</span>
-      			<a class="arrow" href="javascript:Order.countUp(' . $article['id'] . ');"><img src="images/arrow_up.png" alt="Mehr" title="Mehr" /></a>
-      			<span class="amount"><input id="Order-' . $article['id'] . '" type="text" value="0" name="orders[' . $article['id'] . ']" size="1" /></span>
-      			<a class="arrow" href="javascript:Order.countDown(' . $article['id'] . ');"><img src="images/arrow_down.png" alt="Weniger" title="Weniger" /></a>
-      			<div class="clear"><span>&nbsp;</span></div>
-      		</div>';
-      		$cnt++;
-    		}
-    		echo '</td></tr></table></div></div>';
+			$cols = min(ceil(count($articles) / $rows), 4);
+			$rows = ceil(count($articles) / $cols);
+			echo '<div class="tab ui-tabs-hide" id="Tab-' . $group['id'] . '">';
+			foreach($articles as $i => $article) {
+				echo '<div id="Article-' . $cnt . '" class="article">
+					<span class="name">' . $article['name'] . '</span>
+					<a class="arrow" href="javascript:Order.countUp(' . $article['id'] . ');"><img src="images/arrow_up.png" alt="Mehr" title="Mehr" /></a>
+					<span class="amount"><input id="Order-' . $article['id'] . '" type="text" value="0" name="orders[' . $article['id'] . ']" size="1" /></span>
+					<a class="arrow" href="javascript:Order.countDown(' . $article['id'] . ');"><img src="images/arrow_down.png" alt="Weniger" title="Weniger" /></a>
+					<div class="clear"><span>&nbsp;</span></div>
+				</div>';
+				$cnt++;
+			}
+			echo '</div>';
 		}
 	}
 	
@@ -43,68 +36,66 @@ class Order {
 		<input type="button" class="bigButton ui-button ui-state-default ui-corner-all" onclick="Order.showUserList();" value="Bestellung abschließen">';
 	}
 	
-	function getArticles($groupId) {
-		return $this->db->queryAll('SELECT * FROM ' . DB_TABLE_ORDER_ARTICLES . ' WHERE id_group=' . $this->db->escape($groupId) . ' AND state = 1 ORDER BY grade');
-	}
-	
-	function doOrder($user, $articles) {
+	function handlePostOrder($user, $articles) {
+		$user = json_decode($user);
+		$articles = json_decode($articles);
 		if(!count($articles)) {
-			echo $this->json->encode(array('code' => 0, 'message' => 'Bestellung ist leer.'));
+			echo json_encode(array('code' => 0, 'message' => 'Bestellung ist leer.'));
 			exit;
 		}
 		
-		$this->checkUser($user);
+		$dbUser = $this->getUser($user->id, $user->pw);
 		
-		$dbArticles = $this->db->queryAllIndexByCol('SELECT id, name, price FROM ' . DB_TABLE_ORDER_ARTICLES, "id");
+		$dbArticles = $this->db->getActiveArticlesIndexedById();
 		if($dbArticles === false) {
-			echo $this->json->encode(array('code' => 0, 'message' => 'Fehler beim lesen Speichern der Bestellung.'));
+			echo json_encode(array('code' => 0, 'message' => 'Fehler beim Speichern der Bestellung.'));
 			exit;
 		}
 		
-		$this->db->query('START TRANSACTION');
+		$this->db->startTransaction();
 		foreach($articles as $article) {
-			$dbArticle = $dbArticles[$article['id']];
+			$dbArticle = $dbArticles[$article->id];
 			if(!$dbArticle) {
-				$this->db->query('ROLLBACK');
-				echo $this->json->encode(array('code' => 0, 'message' => 'Einer oder mehrere Artikel sind nicht im System vorhanden.'));
+				$this->db->cancelTransaction();
+				echo json_encode(array('code' => 0, 'message' => 'Einer oder mehrere Artikel sind nicht im System vorhanden.'));
 				exit;
 			}
-			$query = 'INSERT INTO ' . DB_TABLE_ORDERS . ' SET ';
-			$query .= 'id_user = ' . $this->db->escape($user['id']);
-			$query .= ', id_order_article = ' . $this->db->escape($article['id']);
-			$query .= ', amount = ' . $this->db->escape($article['amount']);
-			$query .= ', price = ' . number_format((float)$this->db->escape($dbArticle['price']), 2, '.', ',');
-			$query .= ', `time` = "' . time() . '"';
-			$query .= ', ip = "' . $this->db->escape($_SERVER['REMOTE_ADDR']) . '"';
-			$res = $this->db->query($query);
-			if(PEAR::isError($res)) {
-				$this->db->query('ROLLBACK');
-				echo $this->json->encode(array('code' => 0, 'message' => 'Fehler beim Speichern der Bestellung.'.$query));
+			try {
+				$this->db->addOrder($dbUser['idm'], $article->id, $article->amount, $dbArticle['price'], time(), $_SERVER['REMOTE_ADDR']);
+			}
+			catch (\Throwable $e) {
+				$this->db->cancelTransaction();
+				echo json_encode(array('code' => 0, 'message' => "Fehler beim Speichern der Bestellung."));
 				exit;
 			}
 		}
-		$this->db->query('COMMIT');
-		echo $this->json->encode(array('code' => 1, 'message' => 'Ihre Bestellung wurde erfolgreich gespeichert.'));
+		$this->db->commitTransaction();
+		echo json_encode(array('code' => 1, 'message' => 'Ihre Bestellung wurde erfolgreich gespeichert.'));
 	}
 	
-	function getOrders($user, $timeFrom = null) {
+	function getOrders($userId, $timeFrom = null) {
 		if($timeFrom == null) {
 			$timeFrom = mktime(0, 0, 0, date('n') - 2, 1, date('Y'));
 		}
 		$timeTo = mktime(0, 0, 0, date('n') + 1, 1, date('Y'));
 		$dbOrders = array();
 		for($time = $timeFrom; $time < $timeTo; $time = mktime(0, 0, 0, date('n', $time) + 1, date('j', $time), date('Y', $time))) {
-			$dbOrders[$time] = $this->db->queryAll('SELECT CONCAT(id_order_article, ";", DATE_FORMAT(FROM_UNIXTIME(`time`), "%d.%m.%Y")) as thekey, id_order_article, amount, price, time, bill_send_time  FROM ' . DB_TABLE_ORDERS . ' WHERE `time` >= ' . $time . ' AND `time` < ' . mktime(0, 0, 0, date('n', $time) + 1, date('j', $time), date('Y', $time)) . ($user['id'] > 0? ' AND id_user = ' . $this->db->escape($user['id']): '') . ' ORDER BY `time`', null, null, true, null, true);
-			if(PEAR::isError($dbOrders[$time])) {
-				echo $this->json->encode(array('code' => 0, 'message' => 'Fehler beim Laden der Bestellungen.'));
+			$endTime = mktime(0, 0, 0, date('n', $time) + 1, date('j', $time), date('Y', $time));
+			try {
+				$dbOrders[$time] = $this->db->getOrders($userId, $time, $endTime);
+			}
+			catch (\Throwable $e) {
+				echo json_encode(array('code' => 0, 'message' => 'Fehler beim Laden der Bestellungen.'));
 				exit;
 			}
 		}
-		//echo '<pre>';
-		//print_r($dbOrders);
-		$articles = $this->db->queryAll('SELECT id, name FROM ' . DB_TABLE_ORDER_ARTICLES, null, null, true);
-		if(PEAR::isError($articles)) {
-			echo $this->json->encode(array('code' => 0, 'message' => 'Fehler beim Laden der Bestellungen.'));
+		// echo '<pre>';
+		// print_r($dbOrders);
+		try {
+			$articles = $this->db->getAllArticleNamesIndexedById();
+		}
+		catch (\Throwable $e) {
+			echo json_encode(array('code' => 0, 'message' => 'Fehler beim Laden der Bestellungen.'));
 			exit;
 		}
 		
@@ -138,14 +129,16 @@ class Order {
 		return $orders;
 	}
 	
-	function showOrders($user, $timeFrom = null) {
-		$this->checkUser($user);
-		
+	function handleGetOrders($user, $timeFrom = null) {
+		$user = json_decode($user);
+
+		$dbUser = $this->getUser($user->id, $user->pw);
+
 		if($timeFrom == null) {
 			$timeFrom = mktime(0, 0, 0, date('n') - 2, 1, date('Y'));
 		}
 		$timeTo = mktime(0, 0, 0, date('n'), 1, date('Y'));
-		$orders = $this->getOrders($user, $timeFrom, $timeTo);
+		$orders = $this->getOrders($dbUser['idm'], $timeFrom, $timeTo);
 		
 		$ordersHtml = '<div style="margin: 0 10px 20px 0;">';
 		for($time = $timeTo; $time >= $timeFrom; $time = mktime(0, 0, 0, date('n', $time) - 1, date('j', $time), date('Y', $time))) {
@@ -184,35 +177,30 @@ class Order {
 			$ordersHtml .= '</div>';
 		}
 		$ordersHtml .= '</div>';
-		return array('code' => 1, 'username' => $user['nachname'] . ' ' . $user['vorname'], 'message' => utf8_encode($ordersHtml));
+		echo json_encode(array('code' => 1, 'username' => $dbUser['nachname'] . ' ' . $dbUser['vorname'], 'message' => $ordersHtml));
 	}
 	
 	function changeArticles($articles) {
-		echo $this->json->encode(array('code' => 0, 'message' => 'Sie haben nicht die erforderliche Berechtigung.'));
+		echo json_encode(array('code' => 0, 'message' => 'Sie haben nicht die erforderliche Berechtigung.'));
 		exit;
 	}
 	
 	function sendBill($options) {
-		echo $this->json->encode(array('code' => 0, 'message' => 'Sie haben nicht die erforderliche Berechtigung.'));
+		echo json_encode(array('code' => 0, 'message' => 'Sie haben nicht die erforderliche Berechtigung.'));
 		exit;
 	}
 	
-	function checkUser($user) {
-		// super-pw
-		/*if($user['pw'] == 'Buchung123') {
-			$user = $this->db->queryRow('SELECT * FROM mitglieder WHERE idm = ' . $this->db->escape($user['id']));
-		} else {
-			$user = $this->db->queryRow('SELECT * FROM mitglieder WHERE idm = ' . $this->db->escape($user['id']) . ' AND tennis_pw = "' . $this->db->escape($user['pw']) . '"');
-		}*/
+	function getUser($userId, $userPassword) {
+		$dbUser = $this->db->getUser($userId);
 		if(ADMIN) {
-			
+			return $dbUser;
 		} else {
-			$userpass = $this->db->queryRow('SELECT pass FROM mitglieder WHERE IDM="'.$this->db->escape($user['id']).'"');
-			if(!$this->checkdrupal_password($user['pw'], $userpass['pass'])) {
-				echo $this->json->encode(array('code' => 0, 'message' => 'Falsche Benutzer-Passwort-Kombination.'));
+			if(!$this->checkdrupal_password($userPassword, $dbUser['pass'])) {
+				echo json_encode(array('code' => 0, 'message' => 'Falsche Benutzer-Passwort-Kombination.'));
 				exit;
 			}
 		}
+		return $dbUser;
 	}
 /*
 	function verifyPassword() {
@@ -228,31 +216,31 @@ class Order {
 
 */
 function checkdrupal_password($password, $userpass) {
-  if (substr($userpass, 0, 2) == 'U$') {
-    // This may be an updated password from user_update_7000(). Such hashes
-    // have 'U' added as the first character and need an extra md5().
-    $stored_hash = substr($userpass, 1);
-    $password = md5($password);
-  }
-  else {
-    $stored_hash = $userpass;
-  }
-  $type = substr($stored_hash, 0, 3);
-  switch ($type) {
-    case '$S$':
-      // A normal Drupal 7 password using sha512.
-      $hash = _password_crypt('sha512', $password, $stored_hash);
-      break;
-    case '$H$':
-      // phpBB3 uses "$H$" for the same thing as "$P$".
-    case '$P$':
-      // A phpass password generated using md5.  This is an
-      // imported password or from an earlier Drupal version.
-      $hash = _password_crypt('md5', $password, $stored_hash);
-      break;
-    default:
-      return FALSE;
-  }
-  return ($hash && $stored_hash == $hash);
+	if (substr($userpass, 0, 2) == 'U$') {
+		// This may be an updated password from user_update_7000(). Such hashes
+		// have 'U' added as the first character and need an extra md5().
+		$stored_hash = substr($userpass, 1);
+		$password = md5($password);
+	}
+	else {
+		$stored_hash = $userpass;
+	}
+	$type = substr($stored_hash, 0, 3);
+	switch ($type) {
+		case '$S$':
+			// A normal Drupal 7 password using sha512.
+			$hash = _password_crypt('sha512', $password, $stored_hash);
+			break;
+		case '$H$':
+			// phpBB3 uses "$H$" for the same thing as "$P$".
+		case '$P$':
+			// A phpass password generated using md5.	This is an
+			// imported password or from an earlier Drupal version.
+			$hash = _password_crypt('md5', $password, $stored_hash);
+			break;
+		default:
+			return FALSE;
+	}
+	return ($hash && $stored_hash == $hash);
 }
 }

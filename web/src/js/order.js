@@ -180,8 +180,8 @@ var Order = {
 		
 		$.post('index.php', {
 			'do': 'order',
-			'user': JSON.encode(user),
-			'articles': JSON.encode(articles)
+			'user': JSON.stringify(user),
+			'articles': JSON.stringify(articles)
 		}, function(ret) {
 			$this.resetUser();
 			var options = {
@@ -220,7 +220,7 @@ var Order = {
 		
 		$.post('index.php', {
 			'do': 'showOrders',
-			'user': JSON.encode(user)
+			'user': JSON.stringify(user)
 		}, function(ret) {
 			if(ret.code == 0) {
 				$this.alert('Bestellungen einsehen', ret.message);
