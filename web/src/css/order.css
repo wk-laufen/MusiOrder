@@ -18,9 +18,8 @@ img {
 	border: none;
 }
 h1 {
-	text-align: center;
-	color: #e3001b;
 	font-size: 30px;
+	text-shadow: 2px 2px 0px white;
 }
 h2 {
 	text-align: left;
@@ -56,17 +55,19 @@ h3 {
 
 #Caption {
 	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
 	background-color: #FAC300;
-	background-image: url(../images/caption.png);
-	background-position: left top;
-	background-repeat: no-repeat;
-	height: 90px;
-	text-align: right;
 }
-#Caption span {
-	font-size: 16px;
-	color: #000099;
-	font-weight: bold;
+#Caption .logo {
+	height: 70px;
+	margin: 0 20px;
+}
+#Caption h1 {
+	flex: 1 1 auto;
+}
+#Caption .print {
+	margin: 0 20px;
 }
 #Tabs {
 	flex: 1 1 auto;

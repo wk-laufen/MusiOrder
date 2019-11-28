@@ -43,7 +43,7 @@ if(!empty($action)) {
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>Sportunion Gampern - Bestellsystem</title>
+<title><?php echo ORG_NAME ?> - Bestellsystem</title>
 <link href="<? echo BASE_DIR; ?>/css/jquery-ui-1.7.2.custom.css" rel="stylesheet" type="text/css" />
 <link href="<? echo BASE_DIR; ?>/css/order.css" rel="stylesheet" type="text/css" />
 <script>
@@ -70,11 +70,17 @@ if($msg) {
 <body>
 <div id="Main">
 	<div id="Caption">
+		<div class="logo">
+			<img src="<?php echo BASE_DIR ?>/images/logo.svg" height="70px" />
+		</div>
+		<h1>Bestellsystem</h1>
 		<?php
 		if(ADMIN) {
-			echo '<a href="print.php" target="_blank">Statistik drucken</a>';
-		} else {
-			echo '<span>&nbsp;</span>';
+		?>
+		<div class="print">
+			<a href="print.php" target="_blank">Statistik drucken</a>
+		</div>
+		<?php
 		}
 		?>
 	</div>
