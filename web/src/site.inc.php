@@ -11,5 +11,5 @@ if(!defined('ADMIN')) {
 
 define ("ORG_NAME", "WK Laufen");
 
-$db = new DB("db", "root", "root1234", "tennis");
+$db = new DB("db", "root", "root1234", "order");
 $order = new Order($db);

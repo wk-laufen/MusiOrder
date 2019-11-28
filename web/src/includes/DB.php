@@ -60,23 +60,23 @@ class DB {
     }
 
     function getArticleGroups() {
-        return $this->queryAll('SELECT * FROM order_article_groups ORDER BY grade', []);
+        return $this->queryAll('SELECT * FROM articleGroup ORDER BY grade', []);
     }
 
     function getActiveArticles($groupId) {
-        return $this->queryAll('SELECT * FROM order_articles WHERE id_group=:groupId AND state = 1 ORDER BY grade', array(":groupId" => $groupId));
+        return $this->queryAll('SELECT * FROM article WHERE groupId = ? AND state = "enabled" ORDER BY grade', [ $groupId ]);
     }
 
     function getActiveArticlesIndexedById() {
-        return $this->queryAllIndexedByFirstColumn('SELECT id, name, price FROM order_articles WHERE state = 1', []);
+        return $this->queryAllIndexedByFirstColumn('SELECT id, name, price FROM article WHERE state = "enabled"', []);
     }
 
     function getAllArticles($groupId) {
-        return $this->queryAll('SELECT * FROM order_articles WHERE id_group=:groupId AND state >= 0 ORDER BY grade', array(":groupId" => $groupId));
+        return $this->queryAll('SELECT * FROM article WHERE groupId = ? ORDER BY grade', [ $groupId ]);
     }
 
     function getAllArticleNamesIndexedById() {
-        return $this->queryAllKeyValue('SELECT id, name FROM order_articles', []);
+        return $this->queryAllKeyValue('SELECT id, name FROM article', []);
     }
 
     function getGroupsOfUsers() {
