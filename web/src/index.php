@@ -44,6 +44,7 @@ if(!empty($action)) {
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title><?php echo ORG_NAME ?> - Bestellsystem</title>
+<link rel="shortcut icon" type="image/x-icon" href="<?php echo BASE_DIR ?>/images/logo.ico" sizes="256x256">
 <link href="<? echo BASE_DIR; ?>/css/jquery-ui-1.7.2.custom.css" rel="stylesheet" type="text/css" />
 <link href="<? echo BASE_DIR; ?>/css/order.css" rel="stylesheet" type="text/css" />
 <script>

@@ -17,7 +17,8 @@ $orders = $order->getOrders($user['id'], $timeFrom);
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-<title>Sportunion Gampern - Bestellsystem - Bestellungen für <?php echo $fullName; ?> drucken</title>
+<title><?php echo ORG_NAME ?> - Bestellsystem - Bestellungen für <?php echo $fullName; ?> drucken</title>
+<link rel="shortcut icon" type="image/x-icon" href="<?php echo BASE_DIR ?>/images/logo.ico" sizes="256x256">
 <style type="text/css">
 	#Orders {
 		width: 600px;
