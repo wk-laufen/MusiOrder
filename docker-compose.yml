@@ -6,9 +6,6 @@ services:
       - ./order.sql:/docker-entrypoint-initdb.d/order.sql
     environment:
       MYSQL_ROOT_PASSWORD: root1234
-    #   MYSQL_DATABASE: name_db
-    #   MYSQL_USER: user
-    #   MYSQL_PASSWORD: password
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     links:
