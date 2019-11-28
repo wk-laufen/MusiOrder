@@ -1,5 +1,4 @@
 <?
-// require_once(dirname(__FILE__).'/../../includes/password.inc');
 class Order {
 	protected $db;
 	
