@@ -194,52 +194,11 @@ class Order {
 		if(ADMIN) {
 			return $dbUser;
 		} else {
-			if(!$this->checkdrupal_password($userPassword, $dbUser['pass'])) {
+			if($userPassword != $dbUser['pass']) {
 				echo json_encode(array('code' => 0, 'message' => 'Falsche Benutzer-Passwort-Kombination.'));
 				exit;
 			}
 		}
 		return $dbUser;
 	}
-/*
-	function verifyPassword() {
-	$password = $_POST['user_pw'];
-		$userpass = $this->db->queryRow('SELECT pass FROM mitglieder WHERE IDM="'.$_POST['user_id'].'"');
-		if($this->checkdrupal_password($password,$userpass['pass']))
-			$ret = array('code'=>'1','message'=>'ok');
-		else
-			$ret = array('code'=>'0','message'=>'Falsches Passwort!: '.$userpass['pass']);
-		
-		echo $this->_encode($ret);
-	}
-
-*/
-function checkdrupal_password($password, $userpass) {
-	if (substr($userpass, 0, 2) == 'U$') {
-		// This may be an updated password from user_update_7000(). Such hashes
-		// have 'U' added as the first character and need an extra md5().
-		$stored_hash = substr($userpass, 1);
-		$password = md5($password);
-	}
-	else {
-		$stored_hash = $userpass;
-	}
-	$type = substr($stored_hash, 0, 3);
-	switch ($type) {
-		case '$S$':
-			// A normal Drupal 7 password using sha512.
-			$hash = _password_crypt('sha512', $password, $stored_hash);
-			break;
-		case '$H$':
-			// phpBB3 uses "$H$" for the same thing as "$P$".
-		case '$P$':
-			// A phpass password generated using md5.	This is an
-			// imported password or from an earlier Drupal version.
-			$hash = _password_crypt('md5', $password, $stored_hash);
-			break;
-		default:
-			return FALSE;
-	}
-	return ($hash && $stored_hash == $hash);
-}
 }
