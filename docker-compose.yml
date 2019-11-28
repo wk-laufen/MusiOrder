@@ -16,6 +16,7 @@ services:
     build: ./web
     volumes:
       - ./web/src:/var/www/html/
+      - ./web/.htpasswd:/var/www/.htpasswd
     links:
       - db
     ports:
