@@ -178,8 +178,6 @@ class AdminOrder extends Order {
 			$mail->AltBody = $mailHtml;
 			$mail->MsgHTML('<pre>' . $mailHtml . '</pre>');
 			$mail->AddAddress($user['email'], $user['full_name']);
-			//$mail->AddAddress('krr@sml.at', 'Karrer Hans-Peter');
-			//$mail->AddAddress('egger_j@gmx.net', 'Egger Johannes');
 			if($sendCopy) {
 				$mail->AddBCC($copyAddress);
 			}
