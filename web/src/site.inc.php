@@ -9,8 +9,6 @@ if(!defined('ADMIN')) {
 	define('ADMIN', false);
 }
 
-define('DB_TABLE_ORDERS', 'orders');
-define('DB_TABLE_ORDER_ARTICLES', 'order_articles');
 define ("ORG_NAME", "WK Laufen");
 
 $db = new DB("db", "root", "root1234", "tennis");
