@@ -47,7 +47,8 @@ class AdminOrder extends Order {
 		echo '
 		<input type="submit" class="bigButton ui-button ui-state-default ui-corner-all" value="Änderungen speichern" />&nbsp;
 		<input type="button" class="bigButton ui-button ui-state-default ui-corner-all" onclick="Order.showOrders();" value="Bestellungen einsehen" />&nbsp;
-		<input type="button" class="bigButton ui-button ui-state-default ui-corner-all" onclick="Order.sendBill();" value="Rechnung versenden" />';
+		<input type="button" class="bigButton ui-button ui-state-default ui-corner-all" onclick="Order.sendBill();" value="Rechnung versenden" />&nbsp;
+		<a class="bigButton ui-button ui-state-default ui-corner-all" href="print.php" target="_blank">Statistik drucken</a>';
 	}
 	
 	function changeArticles($articles) {

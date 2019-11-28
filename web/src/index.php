@@ -75,15 +75,6 @@ if($msg) {
 			<img src="<?php echo BASE_DIR ?>/images/logo.svg" height="70px" />
 		</div>
 		<h1>Bestellsystem</h1>
-		<?php
-		if(ADMIN) {
-		?>
-		<div class="print">
-			<a href="print.php" target="_blank">Statistik drucken</a>
-		</div>
-		<?php
-		}
-		?>
 	</div>
 	<?
 	if(ADMIN) {

@@ -131,6 +131,7 @@ h3 {
 	cursor: pointer;
 	padding: 10px 5px;
 	text-align: center;
+	text-decoration: none;
 }
 #Users {
 	display: none;
