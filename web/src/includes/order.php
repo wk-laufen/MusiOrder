@@ -60,11 +60,11 @@ class Order {
 				exit;
 			}
 			try {
-				$this->db->addOrder($dbUser['idm'], $article->id, $article->amount, $dbArticle['price'], time(), $_SERVER['REMOTE_ADDR']);
+				$this->db->addOrder($dbUser['id'], $article->id, $article->amount, $dbArticle['price'], date('Y-m-d H:i:s'));
 			}
 			catch (\Throwable $e) {
 				$this->db->cancelTransaction();
-				echo json_encode(array('code' => 0, 'message' => "Fehler beim Speichern der Bestellung."));
+				echo json_encode(array('code' => 0, 'message' => "Fehler beim Speichern der Bestellung. $e"));
 				exit;
 			}
 		}
@@ -194,7 +194,7 @@ class Order {
 		if(ADMIN) {
 			return $dbUser;
 		} else {
-			if($userPassword != $dbUser['pass']) {
+			if($userPassword != $dbUser['keyCode']) {
 				echo json_encode(array('code' => 0, 'message' => 'Falsche Benutzer-Passwort-Kombination.'));
 				exit;
 			}

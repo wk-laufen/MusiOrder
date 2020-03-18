@@ -80,12 +80,13 @@ class DB {
     }
 
     function getGroupsOfUsers() {
-        $dateCmd = 'DATE_FORMAT(FROM_DAYS(TO_DAYS(NOW()) - TO_DAYS(CONCAT_WS("-",birthdays_year,birthdays_month,birthdays_day))), "%Y") + 0';
-        return $this->queryAllGroupedByFirstColumn("SELECT IF($dateCmd < 10, 1, IF($dateCmd < 15, 2, 3)) AS `group`, idm, nachname, vorname, $dateCmd AS age FROM mitglieder ORDER BY `group`, nachname, vorname", []);
+        // $dateCmd = 'DATE_FORMAT(FROM_DAYS(TO_DAYS(NOW()) - TO_DAYS(CONCAT_WS("-",birthdays_year,birthdays_month,birthdays_day))), "%Y") + 0';
+        // return $this->queryAllGroupedByFirstColumn("SELECT IF($dateCmd < 10, 1, IF($dateCmd < 15, 2, 3)) AS `group`, idm, nachname, vorname, $dateCmd AS age FROM member ORDER BY `group`, nachname, vorname", []);
+        return $this->queryAllGroupedByFirstColumn("SELECT 1 AS `group`, id, lastName, firstName FROM member ORDER BY `group`, lastName, firstName", []);
     }
 
     function getUser($userId) {
-        return $this->queryOne('SELECT * FROM mitglieder WHERE IDM=:userId', array(":userId" => $userId));
+        return $this->queryOne('SELECT * FROM member WHERE id = ?', [ $userId ]);
     }
 
     function getUsers($userIds) {
@@ -97,10 +98,10 @@ class DB {
         return $this->queryAll("SELECT idm, CONCAT_WS(' ', nachname, vorname) as full_name, email FROM mitglieder WHERE $filter", []);
     }
 
-    function addOrder($userId, $articleId, $amount, $pricePerUnit, $timestamp, $ipAddress) {
-        $statement = 'INSERT INTO orders (id_user, id_order_article, amount, price, `time`, bill_send_time, ip) VALUES(?, ?, ?, ?, ?, ?, ?)';
+    function addOrder($userId, $articleId, $amount, $pricePerUnit, $timestamp) {
+        $statement = 'INSERT INTO `order` (userId, articleId, amount, price, orderedAt) VALUES(?, ?, ?, ?, ?)';
         $preparedStatement = $this->db->prepare($statement);
-        $preparedStatement->execute(array($userId, $articleId, $amount, $pricePerUnit, $timestamp, 0, $ipAddress));
+        $preparedStatement->execute(array($userId, $articleId, $amount, $pricePerUnit, $timestamp));
     }
 
     function getOrders($userId, $timeFrom, $timeTo) {

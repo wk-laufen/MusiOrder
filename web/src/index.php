@@ -47,6 +47,7 @@ if(!empty($action)) {
 <link rel="shortcut icon" type="image/x-icon" href="<?php echo BASE_DIR ?>/images/logo.ico" sizes="256x256">
 <link href="<? echo BASE_DIR; ?>/css/jquery-ui-1.7.2.custom.css" rel="stylesheet" type="text/css" />
 <link href="<? echo BASE_DIR; ?>/css/order.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.min.css" integrity="sha256-+N4/V/SbAFiW1MPBCXnfnP9QSN3+Keu+NlB+0ev/YKQ=" crossorigin="anonymous" />
 <script>
 	const BASE_DIR = "<? echo BASE_DIR; ?>";
 </script>
@@ -442,11 +443,15 @@ if($msg) {
 			</td>
 		</tr>-->
 </div>
-<div id="Users" title="Name auswählen">
+<div id="Users" title="Benutzerauthentifizierung">
+	<div class="content">
+		<i class="fas fa-barcode fa-9x"></i>
+		<span>Bitte elektronischen Musischlüssel auf den Scanner legen oder Mitglied auswählen.</span>
+	</div>
 	<input type="hidden" name="do" value="" />
 	<?
 	$userGroups = $db->getGroupsOfUsers();
-	$groupNames = array(1 => 'Kinder', 2 => 'Jugendliche', 3 => 'Erwachsene');
+	$groupNames = array(1 => 'Alle Mitglieder');
 	
 	echo '<ul>';
 	foreach($userGroups as $groupKey => $group) {
@@ -456,7 +461,7 @@ if($msg) {
 	foreach($userGroups as $groupKey => $group) {
 		echo '<div id="Group-' . $groupKey . '" class="group">';
 		foreach($group as $key => $user) {
-			echo "<a id=\"User-" . $user['idm'] . "\" class=\"user\" href=\"javascript:Order.selectUser(" . $user['idm'] . ");\">" . trim($user['nachname']) . " " . trim($user['vorname']) . "</a>";
+			echo "<a id=\"User-" . $user['id'] . "\" class=\"user\" href=\"javascript:Order.selectUser(" . $user['id'] . ");\">" . trim($user['lastName']) . " " . trim($user['firstName']) . "</a>";
 		}
 		echo '</div>';
 	}
