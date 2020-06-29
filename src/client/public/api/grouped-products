@@ -1,0 +1,36 @@
+﻿[
+    {
+        "name": "Getränke",
+        "products": [
+            {
+                "name": "Bier",
+                "price": 3.2
+            },
+            {
+                "name": "Cola",
+                "price": 1.5
+            },
+            {
+                "name": "Mineral",
+                "price": 1.0
+            },
+            {
+                "name": "Almdudler",
+                "price": 1.5
+            }
+        ]
+    },
+    {
+        "name": "Speisen",
+        "products": [
+            {
+                "name": "Chips",
+                "price": 1.2
+            },
+            {
+                "name": "Soletti",
+                "price": 0.8
+            }
+        ]
+    }
+]
