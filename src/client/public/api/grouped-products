@@ -3,18 +3,22 @@
         "name": "Getränke",
         "products": [
             {
+                "id": "20ac42f8-9b56-49a9-b432-6f04a645d1fb",
                 "name": "Bier",
                 "price": 3.2
             },
             {
+                "id": "b66041ba-f9f8-4611-af5c-e26df1317a42",
                 "name": "Cola",
                 "price": 1.5
             },
             {
+                "id": "be8ce543-b5ac-4887-8ae9-367e9bcca454",
                 "name": "Mineral",
                 "price": 1.0
             },
             {
+                "id": "41184fed-32db-46a7-9f76-2289ceb8a13a",
                 "name": "Almdudler",
                 "price": 1.5
             }
@@ -24,10 +28,12 @@
         "name": "Speisen",
         "products": [
             {
+                "id": "63292321-0747-49fe-9e91-cce5db2fd49f",
                 "name": "Chips",
                 "price": 1.2
             },
             {
+                "id": "0adc81e9-fe04-4312-bd6a-f16c113362b9",
                 "name": "Soletti",
                 "price": 0.8
             }
