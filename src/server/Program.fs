@@ -37,39 +37,42 @@ let errorHandler (ex : Exception) (logger : ILogger) =
 // ---------------------------------
 
 let configureCors (builder : CorsPolicyBuilder) =
-    builder.WithOrigins("http://localhost:8080")
-           .AllowAnyMethod()
-           .AllowAnyHeader()
-           |> ignore
+    builder
+        .WithOrigins("http://localhost:8080")
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+   |> ignore
 
-let configureApp (app : IApplicationBuilder) =
-    let env = app.ApplicationServices.GetService<IWebHostEnvironment>()
-    (match env.EnvironmentName with
-    | "Development" -> app.UseDeveloperExceptionPage()
-    | _ -> app.UseGiraffeErrorHandler(errorHandler))
+let configureApp (ctx: WebHostBuilderContext) (app : IApplicationBuilder) =
+    if ctx.HostingEnvironment.IsDevelopment() then
+        app.UseDeveloperExceptionPage() |> ignore
+    else
+        app.UseGiraffeErrorHandler(errorHandler) |> ignore
+
+    app
         .UseHttpsRedirection()
         .UseCors(configureCors)
         .UseGiraffe(webApp)
 
 let configureServices (services : IServiceCollection) =
-    services.AddCors()    |> ignore
-    services.AddGiraffe() |> ignore
+    services
+        .AddCors()
+        .AddGiraffe()
+    |> ignore
 
-let configureLogging (builder : ILoggingBuilder) =
-    builder.AddFilter(fun l -> l.Equals LogLevel.Error)
-           .AddConsole()
-           .AddDebug() |> ignore
+let configureLogging (ctx: HostBuilderContext) (builder : ILoggingBuilder) =
+    builder
+        .AddFilter(fun l -> ctx.HostingEnvironment.IsDevelopment() || l >= LogLevel.Error)
+        .AddConsole()
+        .AddDebug()
+    |> ignore
 
 [<EntryPoint>]
 let main _ =
     Host.CreateDefaultBuilder()
-        .ConfigureWebHostDefaults(
-            fun webHostBuilder ->
-                webHostBuilder
-                    .Configure(Action<IApplicationBuilder> configureApp)
-                    .ConfigureServices(configureServices)
-                    .ConfigureLogging(configureLogging)
-                    |> ignore)
+        .ConfigureWebHostDefaults(fun webHostBuilder -> webHostBuilder.Configure(configureApp) |> ignore)
+        .ConfigureLogging(configureLogging)
+        .ConfigureServices(configureServices)
         .Build()
         .Run()
     0
