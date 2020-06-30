@@ -206,21 +206,22 @@ let products = React.functionComponent (fun () ->
                     Bulma.modalBackground [
                         prop.onClick (ignore >> hideAuthForm)
                     ]
-                    Bulma.modalContent [
-                        Bulma.box [
-                            Bulma.title.h3 [
+                    Bulma.modalCard [
+                        Bulma.modalCardHead [
+                            Bulma.modalCardTitle [
                                 prop.text "Authenticate using your hardware key"
                             ]
-                            Bulma.container [
-                                text.hasTextCentered
-                                prop.children [
-                                    Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
-                                ]
+                            Bulma.delete [
+                                prop.onClick (ignore >> hideAuthForm)
                             ]
                         ]
-                    ]
-                    Bulma.modalClose [
-                        prop.onClick (ignore >> hideAuthForm)
+                        Bulma.modalCardBody [
+                            text.hasTextCentered
+                            color.hasTextPrimary
+                            prop.children [
+                                Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                            ]
+                        ]
                     ]
                 ]
             ]
