@@ -13,9 +13,15 @@ open Thoth.Json
 
 importAll "../styles/main.scss"
 
-type OrderState =
-    | Drafting
-    | Authenticating
+let retryButton onRetry =
+    Bulma.button.button [
+        color.isSuccess
+        prop.onClick (ignore >> onRetry)
+        prop.children [
+            Bulma.icon [ Fa.i [ Fa.Solid.SyncAlt ] [] ]
+            Html.span [ prop.text "Retry" ]
+        ]
+    ]
 
 let errorNotificationWithRetry (message: string) onRetry =
     Bulma.notification [
@@ -35,14 +41,7 @@ let errorNotificationWithRetry (message: string) onRetry =
                         ]
                     ]
                     Bulma.levelItem [
-                        Bulma.button.button [
-                            color.isSuccess
-                            prop.onClick (ignore >> onRetry)
-                            prop.children [
-                                Bulma.icon [ Fa.i [ Fa.Solid.SyncAlt ] [] ]
-                                Html.span [ prop.text "Retry" ]
-                            ]
-                        ]
+                        retryButton onRetry
                     ]
                 ]
             ]
@@ -63,7 +62,6 @@ let products = React.functionComponent (fun () ->
     React.useEffectOnce(startLoadingData)
 
     let (orders, setOrders) = React.useState(Map.empty)
-    let (orderState, setOrderState) = React.useState(Drafting)
 
     let changeAmount productId delta =
         let newAmount =
@@ -75,14 +73,65 @@ let products = React.functionComponent (fun () ->
             else Map.add productId newAmount orders
         setOrders newOrders
 
-    let resetOrders () =
-        setOrders Map.empty
+    let resetOrders () = setOrders Map.empty
 
-    let showAuthForm () =
-        setOrderState Authenticating
+    let (isFinishing, setFinishing) = React.useState(false)
+    let (authKey, setAuthKey) = React.useState(None)
+    React.useEffect (
+        fun () ->
+            if isFinishing then
+                let mutable key = ""
+                let mutable timeoutId = 0.
+                let rec finishAuthKey () =
+                    setAuthKey (Some (AuthKey key))
+                    key <- ""
+                and listener (e: Browser.Types.Event) =
+                    window.clearTimeout timeoutId
+                    key <- key + (e :?> Browser.Types.KeyboardEvent).key
+                    timeoutId <- window.setTimeout (finishAuthKey, 500)
+                window.addEventListener("keydown", listener)
+                React.createDisposable (fun () -> window.removeEventListener("keydown", listener))
+            else
+                React.createDisposable id
+        ,
+        [| box isFinishing |]
+    )
+    let startAuthenticate () = setFinishing true
 
-    let hideAuthForm () =
-        setOrderState Drafting
+    let (orderState, setOrderState) = React.useState(Deferred.HasNotStartedYet)
+
+    let hideFinishingForm () =
+        setFinishing false
+        setAuthKey None
+        if Deferred.resolved orderState then resetOrders ()
+        setOrderState Deferred.HasNotStartedYet
+
+    let sendOrder authKey = async {
+        let body =
+            {
+                AuthKey = authKey
+                Entries =
+                    orders
+                    |> Map.toList
+                    |> List.map (fun (productId, amount) -> { ProductId = productId; Amount = amount })
+            }
+        let coders =
+            Extra.empty
+            |> Extra.withCustom ProductId.encode ProductId.decoder
+            |> Extra.withCustom AuthKey.encode AuthKey.decoder
+        return! Fetch.``post``("/api/order", body, caseStrategy = CamelCase, extra = coders, decoder = Decode.unit) |> Async.AwaitPromise
+    }
+    let startSendOrder = React.useDeferredCallback(sendOrder, setOrderState)
+
+    React.useEffect(
+        fun () ->
+            match authKey, orderState with
+            | Some authKey, Deferred.HasNotStartedYet
+            | Some authKey, Deferred.Failed -> startSendOrder authKey
+            | _ -> ()
+        ,
+        [| box authKey |]
+    )
 
     Bulma.section [
         match data with
@@ -174,7 +223,7 @@ let products = React.functionComponent (fun () ->
                 Bulma.button.button [
                     color.isSuccess
                     prop.disabled (Map.isEmpty orders)
-                    prop.onClick (ignore >> showAuthForm)
+                    prop.onClick (ignore >> startAuthenticate)
                     prop.children [
                         Bulma.icon [ Fa.i [ Fa.Solid.EuroSign ] [] ]
                         Html.span [ prop.text "Order" ]
@@ -183,10 +232,10 @@ let products = React.functionComponent (fun () ->
             ]
 
             yield Bulma.modal [
-                if orderState = Authenticating then helpers.isActive
+                if isFinishing then helpers.isActive
                 prop.children [
                     Bulma.modalBackground [
-                        prop.onClick (ignore >> hideAuthForm)
+                        prop.onClick (ignore >> hideFinishingForm)
                     ]
                     Bulma.modalCard [
                         Bulma.modalCardHead [
@@ -194,14 +243,57 @@ let products = React.functionComponent (fun () ->
                                 prop.text "Authenticate using your hardware key"
                             ]
                             Bulma.delete [
-                                prop.onClick (ignore >> hideAuthForm)
+                                prop.onClick (ignore >> hideFinishingForm)
                             ]
                         ]
                         Bulma.modalCardBody [
                             text.hasTextCentered
-                            color.hasTextPrimary
                             prop.children [
-                                Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                                match authKey, orderState with
+                                | None, _ ->
+                                    Html.div [
+                                        color.hasTextPrimary
+                                        prop.style [ style.padding 10 ]
+                                        prop.children [
+                                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                                        ]
+                                    ]
+                                | Some, Deferred.HasNotStartedYet -> ()
+                                | Some, Deferred.InProgress ->
+                                    Html.div [
+                                        color.hasTextPrimary
+                                        prop.children [
+                                            Fa.i [ Fa.Solid.Spinner; Fa.Pulse; Fa.Size Fa.Fa8x ] []
+                                        ]
+                                    ]
+                                | Some, Deferred.Failed e ->
+                                    Bulma.container [
+                                        color.hasTextDanger
+                                        prop.style [ style.padding 10 ]
+                                        prop.children [
+                                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                                            Bulma.title.p [
+                                                color.hasTextDanger
+                                                prop.children [
+                                                    Html.text "Error while placing order."
+                                                    Html.br []
+                                                    Html.text "Try again using your hardware key."
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                | Some, Deferred.Resolved ->
+                                    Bulma.container [
+                                        color.hasTextSuccess
+                                        prop.style [ style.padding 10 ]
+                                        prop.children [
+                                            Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
+                                            Bulma.title.p [
+                                                color.hasTextSuccess
+                                                prop.text "Your order has been placed successfully. Enjoy!"
+                                            ]
+                                        ]
+                                    ]
                             ]
                         ]
                     ]

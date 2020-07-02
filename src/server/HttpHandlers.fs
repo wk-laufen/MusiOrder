@@ -55,3 +55,13 @@ let handleGetGroupedProducts =
             return! Successful.OK response next ctx
         }
 
+let handlePostOrder =
+    fun (next : HttpFunc) (ctx : HttpContext) ->
+        task {
+            let! data = ctx.BindModelAsync()
+            if data.AuthKey = AuthKey "123" then
+                printfn "Placing order %A" data.Entries
+                return! Successful.OK () next ctx
+            else
+                return! RequestErrors.badRequest (setBodyFromString "Invalid auth key") next ctx
+        }

@@ -25,6 +25,8 @@ let webApp =
                 GET >=> choose [
                     route "/grouped-products" >=> handleGetGroupedProducts
                 ]
+                POST >=> choose [
+                    route "/order" >=> handlePostOrder
                 ]
             ])
         setStatusCode 404 >=> text "Not Found" ]
@@ -68,6 +70,7 @@ let configureServices (services : IServiceCollection) =
     let jsonCoders =
         Extra.empty
         |> Extra.withCustom ProductId.encode ProductId.decoder
+        |> Extra.withCustom AuthKey.encode AuthKey.decoder
     services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = jsonCoders)) |> ignore
 
 let configureLogging (ctx: HostBuilderContext) (builder : ILoggingBuilder) =
