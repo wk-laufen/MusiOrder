@@ -139,57 +139,68 @@ let products = React.functionComponent (fun () ->
             prop.className "product"
             prop.children [
                 Bulma.levelLeft [
-                    Bulma.levelItem [
-                        prop.className "product-name"
-                        prop.children [
-                            Bulma.title.p [
-                                title.is5
-                                prop.text product.Name
-                            ]
-                        ]
+                    prop.style [
+                        style.flexShrink 1
                     ]
-
-                    Bulma.levelItem [
-                        match amount with
-                        | Some amount ->
-                            Bulma.title.p [
-                                title.is5
-                                color.hasTextSuccess
-                                prop.textf "%.2f€" (float amount * product.Price)
+                    prop.children [
+                        Bulma.levelItem [
+                            prop.className "product-name"
+                            prop.style [
+                                style.flexShrink 1
                             ]
-                        | None ->
-                            Bulma.title.p [
-                                title.is5
-                                prop.textf "%.2f€" (float product.Price)
-                            ]
-                    ]
-
-                    Bulma.levelItem [
-                        Bulma.button.button [
-                            color.isDanger
-                            prop.onClick (fun _e -> changeAmount product.Id -1)
                             prop.children [
-                                Bulma.icon [
-                                    Fa.i [ Fa.Solid.Minus; Fa.Size Fa.Fa2x ] []
+                                Bulma.title.p [
+                                    title.is5
+                                    prop.text product.Name
                                 ]
                             ]
                         ]
                     ]
-
-                    Bulma.levelItem [
-                        Bulma.title.p [
-                            title.is5
-                            prop.text (amount |> Option.map string |> Option.defaultValue "")
+                ]
+                Bulma.levelRight [
+                    prop.children [
+                        Bulma.levelItem [
+                            match amount with
+                            | Some amount ->
+                                Bulma.title.p [
+                                    title.is5
+                                    color.hasTextSuccess
+                                    prop.textf "%.2f€" (float amount * product.Price)
+                                ]
+                            | None ->
+                                Bulma.title.p [
+                                    title.is5
+                                    prop.textf "%.2f€" (float product.Price)
+                                ]
                         ]
-                    ]
 
-                    Bulma.levelItem [
-                        Bulma.button.button [
-                            color.isSuccess
-                            prop.onClick (fun _e -> changeAmount product.Id 1)
-                            prop.children [
-                                Bulma.icon [
-                                    Fa.i [ Fa.Solid.Plus; Fa.Size Fa.Fa2x ] []
+                        Bulma.levelItem [
+                            Bulma.button.button [
+                                color.isDanger
+                                prop.onClick (fun _e -> changeAmount product.Id -1)
+                                prop.children [
+                                    Bulma.icon [
+                                        Fa.i [ Fa.Solid.Minus; Fa.Size Fa.Fa2x ] []
+                                    ]
+                                ]
+                            ]
+                        ]
+
+                        Bulma.levelItem [
+                            Bulma.title.p [
+                                title.is5
+                                prop.text (amount |> Option.map string |> Option.defaultValue "")
+                            ]
+                        ]
+
+                        Bulma.levelItem [
+                            Bulma.button.button [
+                                color.isSuccess
+                                prop.onClick (fun _e -> changeAmount product.Id 1)
+                                prop.children [
+                                    Bulma.icon [
+                                        Fa.i [ Fa.Solid.Plus; Fa.Size Fa.Fa2x ] []
+                                    ]
                                 ]
                             ]
                         ]
@@ -309,10 +320,16 @@ let products = React.functionComponent (fun () ->
             yield Bulma.section [
                 prop.className "products"
                 prop.children [
-                    for group in data -> productGroupView group
+                    Bulma.container [
+                        for group in data -> productGroupView group
+                    ]
                 ]
             ]
-            yield Bulma.section [ controlButtons ]
+            yield Bulma.section [
+                Bulma.container [
+                    controlButtons
+                ]
+            ]
 
         yield authForm
     ]
