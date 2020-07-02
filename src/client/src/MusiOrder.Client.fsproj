@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>netcoreapp3.1</TargetFramework>
+        <DefineConstants>FABLE_COMPILER;$(DefineConstants)</DefineConstants>
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="..\..\shared\Models.fs" />
