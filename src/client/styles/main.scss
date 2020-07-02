@@ -11,6 +11,19 @@ html {
     overflow-y: auto;
 }
 
+.main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+.main .navigation,
+.main .controls {
+    flex: 0 0 auto;
+}
+.main .products {
+    overflow-y: auto;
+}
+
 .product-name {
     width: 200px;
     justify-content: left;

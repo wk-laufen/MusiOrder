@@ -133,217 +133,222 @@ let products = React.functionComponent (fun () ->
         [| box authKey |]
     )
 
-    Bulma.section [
+    let productView product =
+        let amount = Map.tryFind product.Id orders
+        Bulma.level [
+            prop.className "product"
+            prop.children [
+                Bulma.levelLeft [
+                    Bulma.levelItem [
+                        prop.className "product-name"
+                        prop.children [
+                            Bulma.title.p [
+                                title.is5
+                                prop.text product.Name
+                            ]
+                        ]
+                    ]
+
+                    Bulma.levelItem [
+                        match amount with
+                        | Some amount ->
+                            Bulma.title.p [
+                                title.is5
+                                color.hasTextSuccess
+                                prop.textf "%.2f€" (float amount * product.Price)
+                            ]
+                        | None ->
+                            Bulma.title.p [
+                                title.is5
+                                prop.textf "%.2f€" (float product.Price)
+                            ]
+                    ]
+
+                    Bulma.levelItem [
+                        Bulma.button.button [
+                            color.isDanger
+                            prop.onClick (fun _e -> changeAmount product.Id -1)
+                            prop.children [
+                                Bulma.icon [
+                                    Fa.i [ Fa.Solid.Minus; Fa.Size Fa.Fa2x ] []
+                                ]
+                            ]
+                        ]
+                    ]
+
+                    Bulma.levelItem [
+                        Bulma.title.p [
+                            title.is5
+                            prop.text (amount |> Option.map string |> Option.defaultValue "")
+                        ]
+                    ]
+
+                    Bulma.levelItem [
+                        Bulma.button.button [
+                            color.isSuccess
+                            prop.onClick (fun _e -> changeAmount product.Id 1)
+                            prop.children [
+                                Bulma.icon [
+                                    Fa.i [ Fa.Solid.Plus; Fa.Size Fa.Fa2x ] []
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+
+    let productGroupView group =
+        Bulma.box [
+            yield Bulma.title.h3 [ prop.text group.Name ]
+            for product in group.Products -> productView product
+        ]
+
+    let controlButtons = Bulma.buttons [
+        prop.className "controls"
+        prop.children [
+            Bulma.button.button [
+                color.isDanger
+                prop.disabled (Map.isEmpty orders)
+                prop.onClick (ignore >> resetOrders)
+                prop.children [
+                    Bulma.icon [ Fa.i [ Fa.Solid.UndoAlt ] [] ]
+                    Html.span [ prop.text "Reset" ]
+                ]
+            ]
+            Bulma.button.button [
+                color.isSuccess
+                prop.disabled (Map.isEmpty orders)
+                prop.onClick (ignore >> startAuthenticate)
+                prop.children [
+                    Bulma.icon [ Fa.i [ Fa.Solid.EuroSign ] [] ]
+                    Html.span [ prop.text "Order" ]
+                ]
+            ]
+        ]
+    ]
+
+    let authForm = Bulma.modal [
+        if isFinishing then helpers.isActive
+        prop.children [
+            Bulma.modalBackground [
+                prop.onClick (ignore >> hideFinishingForm)
+            ]
+            Bulma.modalCard [
+                Bulma.modalCardHead [
+                    Bulma.modalCardTitle [
+                        prop.text "Authenticate using your hardware key"
+                    ]
+                    Bulma.delete [
+                        prop.onClick (ignore >> hideFinishingForm)
+                    ]
+                ]
+                Bulma.modalCardBody [
+                    text.hasTextCentered
+                    prop.children [
+                        match authKey, orderState with
+                        | None, _ ->
+                            Html.div [
+                                color.hasTextPrimary
+                                prop.style [ style.padding 10 ]
+                                prop.children [
+                                    Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                                ]
+                            ]
+                        | Some, Deferred.HasNotStartedYet -> ()
+                        | Some, Deferred.InProgress ->
+                            Html.div [
+                                color.hasTextPrimary
+                                prop.children [
+                                    Fa.i [ Fa.Solid.Spinner; Fa.Pulse; Fa.Size Fa.Fa8x ] []
+                                ]
+                            ]
+                        | Some, Deferred.Failed e ->
+                            Bulma.container [
+                                color.hasTextDanger
+                                prop.style [ style.padding 10 ]
+                                prop.children [
+                                    Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                                    Bulma.title.p [
+                                        color.hasTextDanger
+                                        prop.children [
+                                            Html.text "Error while placing order."
+                                            Html.br []
+                                            Html.text "Try again using your hardware key."
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        | Some, Deferred.Resolved ->
+                            Bulma.container [
+                                color.hasTextSuccess
+                                prop.style [ style.padding 10 ]
+                                prop.children [
+                                    Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
+                                    Bulma.title.p [
+                                        color.hasTextSuccess
+                                        prop.text "Your order has been placed successfully. Enjoy!"
+                                    ]
+                                ]
+                            ]
+                    ]
+                ]
+            ]
+        ]
+    ]
+
+    [
         match data with
         | Deferred.HasNotStartedYet ->
             ()
         | Deferred.InProgress ->
-            yield Bulma.progress [ color.isPrimary ]
+            yield Bulma.section [ Bulma.progress [ color.isPrimary ] ]
         | Deferred.Failed error ->
-            yield errorNotificationWithRetry error.Message startLoadingData
+            yield Bulma.section [ errorNotificationWithRetry error.Message startLoadingData ]
         | Deferred.Resolved data ->
-            for group in data ->
-                Bulma.box [
-                    yield Bulma.title.h3 [ prop.text group.Name ]
-                    for product in group.Products ->
-                        let amount = Map.tryFind product.Id orders
-                        Bulma.level [
-                            prop.className "product"
-                            prop.children [
-                                Bulma.levelLeft [
-                                    Bulma.levelItem [
-                                        prop.className "product-name"
-                                        prop.children [
-                                            Bulma.title.p [
-                                                title.is5
-                                                prop.text product.Name
-                                            ]
-                                        ]
-                                    ]
-
-                                    Bulma.levelItem [
-                                        match amount with
-                                        | Some amount ->
-                                            Bulma.title.p [
-                                                title.is5
-                                                color.hasTextSuccess
-                                                prop.textf "%.2f€" (float amount * product.Price)
-                                            ]
-                                        | None ->
-                                            Bulma.title.p [
-                                                title.is5
-                                                prop.textf "%.2f€" (float product.Price)
-                                            ]
-                                    ]
-
-                                    Bulma.levelItem [
-                                        Bulma.button.button [
-                                            color.isDanger
-                                            prop.onClick (fun _e -> changeAmount product.Id -1)
-                                            prop.children [
-                                                Bulma.icon [
-                                                    Fa.i [ Fa.Solid.Minus; Fa.Size Fa.Fa2x ] []
-                                                ]
-                                            ]
-                                        ]
-                                    ]
-
-                                    Bulma.levelItem [
-                                        Bulma.title.p [
-                                            title.is5
-                                            prop.text (amount |> Option.map string |> Option.defaultValue "")
-                                        ]
-                                    ]
-
-                                    Bulma.levelItem [
-                                        Bulma.button.button [
-                                            color.isSuccess
-                                            prop.onClick (fun _e -> changeAmount product.Id 1)
-                                            prop.children [
-                                                Bulma.icon [
-                                                    Fa.i [ Fa.Solid.Plus; Fa.Size Fa.Fa2x ] []
-                                                ]
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                ]
-            yield Bulma.buttons [
-                Bulma.button.button [
-                    color.isDanger
-                    prop.disabled (Map.isEmpty orders)
-                    prop.onClick (ignore >> resetOrders)
-                    prop.children [
-                        Bulma.icon [ Fa.i [ Fa.Solid.UndoAlt ] [] ]
-                        Html.span [ prop.text "Reset" ]
-                    ]
-                ]
-                Bulma.button.button [
-                    color.isSuccess
-                    prop.disabled (Map.isEmpty orders)
-                    prop.onClick (ignore >> startAuthenticate)
-                    prop.children [
-                        Bulma.icon [ Fa.i [ Fa.Solid.EuroSign ] [] ]
-                        Html.span [ prop.text "Order" ]
-                    ]
-                ]
-            ]
-
-            yield Bulma.modal [
-                if isFinishing then helpers.isActive
+            yield Bulma.section [
+                prop.className "products"
                 prop.children [
-                    Bulma.modalBackground [
-                        prop.onClick (ignore >> hideFinishingForm)
-                    ]
-                    Bulma.modalCard [
-                        Bulma.modalCardHead [
-                            Bulma.modalCardTitle [
-                                prop.text "Authenticate using your hardware key"
-                            ]
-                            Bulma.delete [
-                                prop.onClick (ignore >> hideFinishingForm)
-                            ]
-                        ]
-                        Bulma.modalCardBody [
-                            text.hasTextCentered
-                            prop.children [
-                                match authKey, orderState with
-                                | None, _ ->
-                                    Html.div [
-                                        color.hasTextPrimary
-                                        prop.style [ style.padding 10 ]
-                                        prop.children [
-                                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
-                                        ]
-                                    ]
-                                | Some, Deferred.HasNotStartedYet -> ()
-                                | Some, Deferred.InProgress ->
-                                    Html.div [
-                                        color.hasTextPrimary
-                                        prop.children [
-                                            Fa.i [ Fa.Solid.Spinner; Fa.Pulse; Fa.Size Fa.Fa8x ] []
-                                        ]
-                                    ]
-                                | Some, Deferred.Failed e ->
-                                    Bulma.container [
-                                        color.hasTextDanger
-                                        prop.style [ style.padding 10 ]
-                                        prop.children [
-                                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
-                                            Bulma.title.p [
-                                                color.hasTextDanger
-                                                prop.children [
-                                                    Html.text "Error while placing order."
-                                                    Html.br []
-                                                    Html.text "Try again using your hardware key."
-                                                ]
-                                            ]
-                                        ]
-                                    ]
-                                | Some, Deferred.Resolved ->
-                                    Bulma.container [
-                                        color.hasTextSuccess
-                                        prop.style [ style.padding 10 ]
-                                        prop.children [
-                                            Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
-                                            Bulma.title.p [
-                                                color.hasTextSuccess
-                                                prop.text "Your order has been placed successfully. Enjoy!"
-                                            ]
-                                        ]
-                                    ]
-                            ]
-                        ]
-                    ]
+                    for group in data -> productGroupView group
                 ]
             ]
+            yield Bulma.section [ controlButtons ]
+
+        yield authForm
     ]
 )
 
-let main =
-    Html.div [
-        prop.style [
-            style.display.flex
-            style.flexDirection.column
-            style.height (length.vh 100)
-        ]
+let nav =
+    Bulma.navbar [
+        color.hasBackgroundPrimary
+        prop.className "navigation"
         prop.children [
-            Bulma.navbar [
-                color.hasBackgroundPrimary
+            Bulma.navbarBrand.div [
                 prop.style [
-                    style.flexShrink 0
+                    style.alignItems.baseline
                 ]
                 prop.children [
-                    Bulma.navbarBrand.div [
-                        prop.style [
-                            style.alignItems.baseline
+                    Bulma.navbarItem.div [
+                        Bulma.title.h1 [
+                            prop.text "MusiOrder"
                         ]
-                        prop.children [
-                            Bulma.navbarItem.div [
-                                Bulma.title.h1 [
-                                    prop.text "MusiOrder"
-                                ]
-                            ]
-                            Bulma.navbarItem.div [
-                                Bulma.icon [
-                                    Fa.i [ Fa.Solid.Beer; Fa.Size Fa.Fa2x ] []
-                                ]
-                            ]
+                    ]
+                    Bulma.navbarItem.div [
+                        Bulma.icon [
+                            Fa.i [ Fa.Solid.Beer; Fa.Size Fa.Fa2x ] []
                         ]
                     ]
                 ]
             ]
-            Html.div [
-                prop.style [
-                    style.flexGrow 1
-                    style.overflowY.scroll
-                ]
-                prop.children [
-                    products ()
-                ]
-            ]
+        ]
+    ]
+
+let main =
+    Html.div [
+        prop.className "main"
+        prop.children [
+            nav
+            products ()
         ]
     ]
 
