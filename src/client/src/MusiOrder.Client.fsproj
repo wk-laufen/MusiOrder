@@ -3,6 +3,7 @@
         <TargetFramework>netcoreapp3.1</TargetFramework>
     </PropertyGroup>
     <ItemGroup>
+        <Compile Include="..\..\shared\Models.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
     <ItemGroup>

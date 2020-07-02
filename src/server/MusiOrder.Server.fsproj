@@ -9,10 +9,12 @@
   <ItemGroup>
     <PackageReference Include="Giraffe" Version="4.1.*" />
     <PackageReference Include="TaskBuilder.fs" Version="2.1.*" />
+    <PackageReference Include="Thoth.Json" Version="4.1.0" />
+    <PackageReference Include="Thoth.Json.Giraffe" Version="4.2.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="Models.fs" />
+    <Compile Include="..\shared\Models.fs" />
     <Compile Include="HttpHandlers.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

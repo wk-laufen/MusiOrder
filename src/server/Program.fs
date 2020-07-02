@@ -8,7 +8,11 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Giraffe
+open Giraffe.Serialization
+open MusiOrder.Models
 open MusiOrder.Server.HttpHandlers
+open Thoth.Json.Net
+open Thoth.Json.Giraffe
 
 // ---------------------------------
 // Web app
@@ -19,7 +23,8 @@ let webApp =
         subRoute "/api"
             (choose [
                 GET >=> choose [
-                    route "/hello" >=> handleGetHello
+                    route "/grouped-products" >=> handleGetGroupedProducts
+                ]
                 ]
             ])
         setStatusCode 404 >=> text "Not Found" ]
@@ -59,6 +64,11 @@ let configureServices (services : IServiceCollection) =
         .AddCors()
         .AddGiraffe()
     |> ignore
+
+    let jsonCoders =
+        Extra.empty
+        |> Extra.withCustom ProductId.encode ProductId.decoder
+    services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = jsonCoders)) |> ignore
 
 let configureLogging (ctx: HostBuilderContext) (builder : ILoggingBuilder) =
     builder

@@ -7,33 +7,11 @@ open Fable.FontAwesome
 open Feliz
 open Feliz.Bulma
 open Feliz.UseDeferred
+open MusiOrder.Models
 open Thoth.Fetch
 open Thoth.Json
 
 importAll "../styles/main.scss"
-
-type ProductId = ProductId of string
-
-module ProductId =
-    let decoder = Decode.string |> Decode.map ProductId
-
-type Product = {
-    Id: ProductId
-    Name: string
-    Price: float
-}
-
-type ProductGroup = {
-    Name: string
-    Products: Product list
-}
-
-module ProductGroup =
-    let decoder =
-        let decoders =
-            Extra.empty
-            |> Extra.withCustom (fun _ -> failwith "Not implemeneted") ProductId.decoder
-        Decode.Auto.generateDecoderCached<ProductGroup>(caseStrategy = CamelCase, extra = decoders)
 
 type OrderState =
     | Drafting
@@ -73,7 +51,11 @@ let errorNotificationWithRetry (message: string) onRetry =
 
 let products = React.functionComponent (fun () ->
     let loadData = async {
-        return! Fetch.``get``("/api/grouped-products", decoder = Decode.list ProductGroup.decoder) |> Async.AwaitPromise
+        let coders =
+            Extra.empty
+            |> Extra.withCustom ProductId.encode ProductId.decoder
+        let! (data: ProductGroup list) = Fetch.``get``("/api/grouped-products", caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
+        return data
     }
 
     let (data, setData) = React.useState(Deferred.HasNotStartedYet)
