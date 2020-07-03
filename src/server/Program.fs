@@ -24,6 +24,7 @@ let webApp =
             (choose [
                 GET >=> choose [
                     route "/grouped-products" >=> handleGetGroupedProducts
+                    route "/order/summary" >=> handleGetOrderSummary
                 ]
                 POST >=> choose [
                     route "/order" >=> handlePostOrder

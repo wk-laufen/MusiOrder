@@ -1,5 +1,6 @@
 namespace MusiOrder.Models
 
+open System
 #if FABLE_COMPILER
 open Thoth.Json
 #else
@@ -31,8 +32,21 @@ type AuthKey = AuthKey of string
 module AuthKey =
     let encode : Encoder<_> = fun (AuthKey v) -> Encode.string v
     let decoder : Decoder<_> = Decode.string |> Decode.map AuthKey
+    let toString (AuthKey authKey) = authKey
 
 type Order = {
     AuthKey: AuthKey
     Entries: OrderEntry list
+}
+
+type HistoricOrder = {
+    Timestamp: DateTime
+    ProductName: string
+    Amount: int
+}
+
+type OrderSummary = {
+    ClientFullName: string
+    Balance: float
+    LatestOrders: HistoricOrder list
 }

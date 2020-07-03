@@ -13,6 +13,9 @@ open Thoth.Json
 
 importAll "../styles/main.scss"
 
+let [<Import("*","moment")>] moment: System.DateTime -> obj = jsNative
+moment?locale("de-AT")
+
 let retryButton onRetry =
     Bulma.button.button [
         color.isSuccess
@@ -119,7 +122,10 @@ let products = React.functionComponent (fun () ->
             Extra.empty
             |> Extra.withCustom ProductId.encode ProductId.decoder
             |> Extra.withCustom AuthKey.encode AuthKey.decoder
-        return! Fetch.``post``("/api/order", body, caseStrategy = CamelCase, extra = coders, decoder = Decode.unit) |> Async.AwaitPromise
+        do! Fetch.``post``("/api/order", body, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
+
+        let! (orderSummary: OrderSummary) = Fetch.``get``(sprintf "/api/order/summary?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent), caseStrategy = CamelCase) |> Async.AwaitPromise
+        return orderSummary
     }
     let startSendOrder = React.useDeferredCallback(sendOrder, setOrderState)
 
@@ -274,7 +280,7 @@ let products = React.functionComponent (fun () ->
                                     Fa.i [ Fa.Solid.Spinner; Fa.Pulse; Fa.Size Fa.Fa8x ] []
                                 ]
                             ]
-                        | Some, Deferred.Failed e ->
+                        | Some, Deferred.Failed ->
                             Bulma.container [
                                 color.hasTextDanger
                                 prop.style [ style.padding 10 ]
@@ -290,15 +296,35 @@ let products = React.functionComponent (fun () ->
                                     ]
                                 ]
                             ]
-                        | Some, Deferred.Resolved ->
+                        | Some, Deferred.Resolved orderSummary ->
                             Bulma.container [
-                                color.hasTextSuccess
                                 prop.style [ style.padding 10 ]
                                 prop.children [
-                                    Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
+                                    Html.div [
+                                        color.hasTextSuccess
+                                        prop.children [
+                                            Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
+                                        ]
+                                    ]
                                     Bulma.title.p [
                                         color.hasTextSuccess
                                         prop.text "Your order has been placed successfully. Enjoy!"
+                                    ]
+                                    Html.br []
+                                    Html.textf "The current balance for %s is: " orderSummary.ClientFullName
+                                    Html.span [
+                                        if orderSummary.Balance >= 5. then color.hasTextSuccess
+                                        elif orderSummary.Balance >= 0. then color.hasTextWarning
+                                        else color.hasTextDanger
+                                        prop.textf "%.2f€" orderSummary.Balance
+                                    ]
+                                    Html.br []
+                                    Html.textf "Your latest orders are:"
+                                    Html.ul [
+                                        for order in orderSummary.LatestOrders ->
+                                            Html.li [
+                                                prop.textf "%s: %d x %s" (moment(order.Timestamp)?fromNow()) order.Amount order.ProductName
+                                            ]
                                     ]
                                 ]
                             ]

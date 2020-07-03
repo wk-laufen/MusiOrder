@@ -58,10 +58,65 @@ let handleGetGroupedProducts =
 let handlePostOrder =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
-            let! data = ctx.BindModelAsync()
-            if data.AuthKey = AuthKey "123" then
+            let! data = ctx.BindModelAsync<Order>()
+            let (AuthKey authKey) = data.AuthKey
+            if authKey.StartsWith "12" then
                 printfn "Placing order %A" data.Entries
                 return! Successful.OK () next ctx
             else
                 return! RequestErrors.badRequest (setBodyFromString "Invalid auth key") next ctx
+        }
+
+let handleGetOrderSummary =
+    fun (next : HttpFunc) (ctx : HttpContext) ->
+        task {
+            match ctx.TryGetQueryStringValue "authKey" with
+            | Some authKey ->
+                if authKey.StartsWith "12" then
+                    let result =
+                        {
+                            ClientFullName = "Johannes Egger"
+                            Balance = 43.7
+                            LatestOrders = [
+                                {
+                                    Timestamp = System.DateTime.Today.AddDays(-1.).Add(System.TimeSpan(20, 17, 0))
+                                    ProductName = "Bier"
+                                    Amount = 2
+                                }
+                                {
+                                    Timestamp = System.DateTime.Today.AddDays(-1.).Add(System.TimeSpan(20, 15, 0))
+                                    ProductName = "Spritzer"
+                                    Amount = 143
+                                }
+                                {
+                                    Timestamp = System.DateTime.Today.AddDays(-1.).Add(System.TimeSpan(19, 37, 0))
+                                    ProductName = "Almdudler"
+                                    Amount = 2
+                                }
+                                {
+                                    Timestamp = System.DateTime.Today.AddDays(-8.).Add(System.TimeSpan(19, 32, 0))
+                                    ProductName = "Bier"
+                                    Amount = 2
+                                }
+                                {
+                                    Timestamp = System.DateTime.Today.AddDays(-15.).Add(System.TimeSpan(19, 32, 0))
+                                    ProductName = "Bier"
+                                    Amount = 2
+                                }
+                                {
+                                    Timestamp = System.DateTime.Today.AddDays(-22.).Add(System.TimeSpan(19, 32, 0))
+                                    ProductName = "Bier"
+                                    Amount = 2
+                                }
+                                {
+                                    Timestamp = System.DateTime.Today.AddDays(-29.).Add(System.TimeSpan(19, 32, 0))
+                                    ProductName = "Bier"
+                                    Amount = 2
+                                }
+                            ]
+                        }
+                    return! Successful.OK result next ctx
+                else
+                    return! RequestErrors.badRequest (setBodyFromString "Invalid auth key") next ctx
+            | None -> return! RequestErrors.badRequest (setBodyFromString "No auth key provided") next ctx
         }
