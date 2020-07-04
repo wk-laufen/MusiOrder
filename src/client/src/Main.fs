@@ -183,6 +183,7 @@ let products = React.functionComponent (fun () ->
                         Bulma.levelItem [
                             Bulma.button.button [
                                 color.isDanger
+                                prop.disabled (Option.defaultValue 0 amount <= 0)
                                 prop.onClick (fun _e -> changeAmount product.Id -1)
                                 prop.children [
                                     Bulma.icon [
