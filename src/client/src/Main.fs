@@ -13,7 +13,7 @@ open Thoth.Json
 
 importAll "../styles/main.scss"
 
-let [<Import("*","moment")>] moment: System.DateTime -> obj = jsNative
+let [<Import("*","moment")>] moment: System.DateTimeOffset -> obj = jsNative
 moment?locale("de-AT")
 
 let retryButton onRetry =

@@ -40,7 +40,7 @@ type Order = {
 }
 
 type HistoricOrder = {
-    Timestamp: DateTime
+    Timestamp: DateTimeOffset
     ProductName: string
     Amount: int
 }

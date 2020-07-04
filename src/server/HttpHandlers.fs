@@ -3,55 +3,43 @@ module MusiOrder.Server.HttpHandlers
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
 open Microsoft.AspNetCore.Http
+open Microsoft.Data.Sqlite
 open MusiOrder.Models
+open System
+
+module Option =
+    let bindTask fn o = task {
+        match o with
+        | Some v -> return! fn v
+        | None -> return None
+    }
 
 let handleGetGroupedProducts =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
+            let! groups = DB.read "SELECT `id`, `name` FROM `ArticleGroup` ORDER BY `grade`" [] (fun reader -> (reader.GetString(0), reader.GetString(1)))
+            let! articles = DB.read "SELECT `id`, `groupId`, `name`, `price` FROM `Article` WHERE `state` = 'enabled' ORDER BY `grade`" [] (fun reader -> (reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetDecimal(3)))
             let response =
-                [
-                    {
-                        Name = "Getränke"
-                        Products = [
+                groups
+                |> List.choose (fun (groupId, groupName) ->
+                    let articles =
+                        articles
+                        |> List.filter (fun (_, gId, _, _) -> gId = groupId)
+                        |> List.map (fun (articleId, _, articleName, price) ->
                             {
-                                Id = ProductId "20ac42f8-9b56-49a9-b432-6f04a645d1fb"
-                                Name = "Bier"
-                                Price = 2.5
+                                Id = ProductId articleId
+                                Name = articleName
+                                Price = float price
                             }
-                            {
-                                Id = ProductId "b66041ba-f9f8-4611-af5c-e26df1317a42"
-                                Name = "Cola"
-                                Price = 1.5
-                            }
-                            {
-                                Id = ProductId "be8ce543-b5ac-4887-8ae9-367e9bcca454"
-                                Name = "Mineral"
-                                Price = 1.0
-                            }
-                            {
-                                Id = ProductId "41184fed-32db-46a7-9f76-2289ceb8a13a"
-                                Name = "Almdudler"
-                                Price = 1.5
-                            }
-                        ]
-                    }
-                    {
-                        Name = "Speisen"
-                        Products = [
-                            {
-                                Id = ProductId "63292321-0747-49fe-9e91-cce5db2fd49f"
-                                Name = "Chips"
-                                Price = 1.2
-                            }
-                            {
-                                Id = ProductId "0adc81e9-fe04-4312-bd6a-f16c113362b9"
-                                Name = "Soletti"
-                                Price = 0.8
-                            }
-                        ]
-                    }
-                ]
-                |> List.toArray
+                        )
+                    match articles with
+                    | [] -> None
+                    | x ->
+                        Some {
+                            Name = groupName
+                            Products = x
+                        }
+                )
             return! Successful.OK response next ctx
         }
 
@@ -59,64 +47,45 @@ let handlePostOrder =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
             let! data = ctx.BindModelAsync<Order>()
-            let (AuthKey authKey) = data.AuthKey
-            if authKey.StartsWith "12" then
-                printfn "Placing order %A" data.Entries
+            let! user = DB.getUser data.AuthKey
+            let articleIds = data.Entries |> List.map (fun e -> let (ProductId p) = e.ProductId in p) |> List.toArray |> String.concat ","
+            let! articleData = DB.readIndexed "SELECT `id`, `name`, `price` FROM `Article` WHERE `id` IN (@ArticleIds)" [ ("@ArticleIds", articleIds) ] (fun reader -> reader.GetString(0), (reader.GetString(1), reader.GetDecimal(2)))
+            match user with
+            | Some user ->
+                let parameters =
+                    data.Entries
+                    |> List.map (fun entry ->
+                        let (ProductId productId) = entry.ProductId
+                        let (articleName, price) = Map.find productId articleData
+                        [
+                            ("@Id", sprintf "%O" (Guid.NewGuid()) |> box)
+                            ("@UserId", box user.Id)
+                            ("@ArticleName", box articleName)
+                            ("@Amount", box entry.Amount)
+                            ("@PricePerUnit", box price)
+                            ("@OrderedAt", box DateTimeOffset.Now)
+                        ]
+                    )
+                do! DB.writeMany "INSERT INTO `Order` (`id`, `userId`, `articleName`, `amount`, `pricePerUnit`, `timestamp`) VALUES (@Id, @UserId, @ArticleName, @Amount, @PricePerUnit, @OrderedAt)" parameters
                 return! Successful.OK () next ctx
-            else
-                return! RequestErrors.badRequest (setBodyFromString "Invalid auth key") next ctx
+            | None ->
+                return! RequestErrors.badRequest (setBodyFromString "Unknown auth key") next ctx
         }
 
 let handleGetOrderSummary =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
-            match ctx.TryGetQueryStringValue "authKey" with
-            | Some authKey ->
-                if authKey.StartsWith "12" then
-                    let result =
-                        {
-                            ClientFullName = "Johannes Egger"
-                            Balance = 43.7
-                            LatestOrders = [
-                                {
-                                    Timestamp = System.DateTime.Today.AddDays(-1.).Add(System.TimeSpan(20, 17, 0))
-                                    ProductName = "Bier"
-                                    Amount = 2
-                                }
-                                {
-                                    Timestamp = System.DateTime.Today.AddDays(-1.).Add(System.TimeSpan(20, 15, 0))
-                                    ProductName = "Spritzer"
-                                    Amount = 143
-                                }
-                                {
-                                    Timestamp = System.DateTime.Today.AddDays(-1.).Add(System.TimeSpan(19, 37, 0))
-                                    ProductName = "Almdudler"
-                                    Amount = 2
-                                }
-                                {
-                                    Timestamp = System.DateTime.Today.AddDays(-8.).Add(System.TimeSpan(19, 32, 0))
-                                    ProductName = "Bier"
-                                    Amount = 2
-                                }
-                                {
-                                    Timestamp = System.DateTime.Today.AddDays(-15.).Add(System.TimeSpan(19, 32, 0))
-                                    ProductName = "Bier"
-                                    Amount = 2
-                                }
-                                {
-                                    Timestamp = System.DateTime.Today.AddDays(-22.).Add(System.TimeSpan(19, 32, 0))
-                                    ProductName = "Bier"
-                                    Amount = 2
-                                }
-                                {
-                                    Timestamp = System.DateTime.Today.AddDays(-29.).Add(System.TimeSpan(19, 32, 0))
-                                    ProductName = "Bier"
-                                    Amount = 2
-                                }
-                            ]
-                        }
-                    return! Successful.OK result next ctx
-                else
-                    return! RequestErrors.badRequest (setBodyFromString "Invalid auth key") next ctx
-            | None -> return! RequestErrors.badRequest (setBodyFromString "No auth key provided") next ctx
+            match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
+            | Some user ->
+                let! latestOrders = DB.read "SELECT `articleName`, `amount`, datetime(`timestamp`, 'localtime') as `time` FROM `Order` WHERE userId = @UserId AND `time` > @OldestTime ORDER BY `time` DESC" [ ("@UserId", box user.Id); ("@OldestTime", DateTimeOffset.Now.AddMonths(-1) |> box) ] (fun reader -> { Timestamp = reader.GetDateTimeOffset(2); ProductName = reader.GetString(0); Amount = reader.GetInt32(1) })
+                let! totalOrderPrice = DB.readSingle "SELECT sum(`amount` * `pricePerUnit`) as `price` FROM `Order` WHERE userId = @UserId" [ ("@UserId", user.Id) ] (fun reader -> reader.GetDecimal(0))
+                let! totalBalance = DB.readSingle "SELECT sum(`amount`) FROM `MemberPayment` WHERE userId = @UserId" [ ("@UserId", user.Id) ] (fun reader -> reader.GetDecimal(0))
+                let result =
+                    {
+                        ClientFullName = sprintf "%s %s" user.FirstName user.LastName
+                        Balance = float ((Option.defaultValue 0m totalBalance) - (Option.defaultValue 0m totalOrderPrice))
+                        LatestOrders = latestOrders
+                    }
+                return! Successful.OK result next ctx
+            | None -> return! RequestErrors.badRequest (setBodyFromString "Invalid auth key") next ctx
         }
