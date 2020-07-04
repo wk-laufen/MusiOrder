@@ -23,9 +23,24 @@ type ProductGroup = {
     Products: Product list
 }
 
+type PositiveInteger = private PositiveInteger of int
+
+module PositiveInteger =
+    let tryCreate = function
+        | v when v > 0 -> Some (PositiveInteger v)
+        | _ -> None
+    let value (PositiveInteger v) = v
+    let encode : Encoder<_> = fun (PositiveInteger v) -> Encode.int v
+    let decoder : Decoder<_> =
+        Decode.int
+        |> Decode.andThen (tryCreate >> function
+            | Some v -> Decode.succeed v
+            | None -> Decode.fail "Must be positive"
+        )
+
 type OrderEntry = {
     ProductId: ProductId
-    Amount: int
+    Amount: PositiveInteger
 }
 
 type AuthKey = AuthKey of string

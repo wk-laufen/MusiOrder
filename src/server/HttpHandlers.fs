@@ -14,6 +14,29 @@ module Option =
         | None -> return None
     }
 
+module Result =
+    let ofOption e = function
+        | Some v -> Ok v
+        | None -> Error e
+
+    let apply r fn =
+        match fn, r with
+        | Ok fn, Ok r -> Ok (fn r)
+        | Error fn, Ok r -> Error fn
+        | Ok fn, Error r -> Error [ r ]
+        | Error fn, Error r -> Error (fn @ [ r ])
+
+module List =
+    let sequence l =
+        (l, Ok [])
+        ||> List.foldBack (fun item state ->
+            match state, item with
+            | Ok x, Ok v -> Ok (v :: x)
+            | Error e, Ok v -> Error e
+            | Ok e, Error v -> Error [ v ]
+            | Error e, Error ve -> Error (ve :: e)
+        )
+
 let handleGetGroupedProducts =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
@@ -43,34 +66,51 @@ let handleGetGroupedProducts =
             return! Successful.OK response next ctx
         }
 
+type OrderEntryError =
+    | ArticleNotFound
+
+type AddOrderError =
+    | InvalidAuthKey
+    | OrderEntryErrors of ProductId * OrderEntryError list
+
 let handlePostOrder =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
             let! data = ctx.BindModelAsync<Order>()
-            let! user = DB.getUser data.AuthKey
             let articleIds = data.Entries |> List.map (fun e -> let (ProductId p) = e.ProductId in p) |> List.toArray |> String.concat ","
             let! articleData = DB.readIndexed "SELECT `id`, `name`, `price` FROM `Article` WHERE `id` IN (@ArticleIds)" [ ("@ArticleIds", articleIds) ] (fun reader -> reader.GetString(0), (reader.GetString(1), reader.GetDecimal(2)))
-            match user with
+            match! DB.getUser data.AuthKey with
             | Some user ->
                 let parameters =
                     data.Entries
                     |> List.map (fun entry ->
                         let (ProductId productId) = entry.ProductId
-                        let (articleName, price) = Map.find productId articleData
-                        [
-                            ("@Id", sprintf "%O" (Guid.NewGuid()) |> box)
-                            ("@UserId", box user.Id)
-                            ("@ArticleName", box articleName)
-                            ("@Amount", box entry.Amount)
-                            ("@PricePerUnit", box price)
-                            ("@OrderedAt", box DateTimeOffset.Now)
-                        ]
+                        let fn (articleName: string, price: decimal) =
+                            [
+                                ("@Id", sprintf "%O" (Guid.NewGuid()) |> box)
+                                ("@UserId", box user.Id)
+                                ("@ArticleName", box articleName)
+                                ("@Amount", PositiveInteger.value entry.Amount |> box)
+                                ("@PricePerUnit", box price)
+                                ("@OrderedAt", box DateTimeOffset.Now)
+                            ]
+                        Ok fn
+                        |> Result.apply (Map.tryFind productId articleData |> Result.ofOption ArticleNotFound)
+                        |> Result.mapError (fun e -> OrderEntryErrors (entry.ProductId, e))
                     )
-                do! DB.writeMany "INSERT INTO `Order` (`id`, `userId`, `articleName`, `amount`, `pricePerUnit`, `timestamp`) VALUES (@Id, @UserId, @ArticleName, @Amount, @PricePerUnit, @OrderedAt)" parameters
-                return! Successful.OK () next ctx
+                    |> List.sequence
+                match parameters with
+                | Ok parameters ->
+                    do! DB.writeMany "INSERT INTO `Order` (`id`, `userId`, `articleName`, `amount`, `pricePerUnit`, `timestamp`) VALUES (@Id, @UserId, @ArticleName, @Amount, @PricePerUnit, @OrderedAt)" parameters
+                    return! Successful.OK () next ctx
+                | Error errors ->
+                    return! RequestErrors.BAD_REQUEST errors next ctx
             | None ->
-                return! RequestErrors.badRequest (setBodyFromString "Unknown auth key") next ctx
+                return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
         }
+
+type GetOrderSummaryError =
+    | InvalidAuthKey
 
 let handleGetOrderSummary =
     fun (next : HttpFunc) (ctx : HttpContext) ->
@@ -87,5 +127,5 @@ let handleGetOrderSummary =
                         LatestOrders = latestOrders
                     }
                 return! Successful.OK result next ctx
-            | None -> return! RequestErrors.badRequest (setBodyFromString "Invalid auth key") next ctx
+            | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
         }

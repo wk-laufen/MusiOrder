@@ -72,6 +72,7 @@ let configureServices (services : IServiceCollection) =
         Extra.empty
         |> Extra.withCustom ProductId.encode ProductId.decoder
         |> Extra.withCustom AuthKey.encode AuthKey.decoder
+        |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
     services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = jsonCoders)) |> ignore
 
 let configureLogging (ctx: HostBuilderContext) (builder : ILoggingBuilder) =

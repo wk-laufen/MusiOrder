@@ -116,12 +116,16 @@ let products = React.functionComponent (fun () ->
                 Entries =
                     orders
                     |> Map.toList
-                    |> List.map (fun (productId, amount) -> { ProductId = productId; Amount = amount })
+                    |> List.choose (fun (productId, amount) ->
+                        PositiveInteger.tryCreate amount
+                        |> Option.map (fun amount -> { ProductId = productId; Amount = amount })
+                    )
             }
         let coders =
             Extra.empty
             |> Extra.withCustom ProductId.encode ProductId.decoder
             |> Extra.withCustom AuthKey.encode AuthKey.decoder
+            |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
         do! Fetch.``post``("/api/order", body, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
 
         let! (orderSummary: OrderSummary) = Fetch.``get``(sprintf "/api/order/summary?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent), caseStrategy = CamelCase) |> Async.AwaitPromise
