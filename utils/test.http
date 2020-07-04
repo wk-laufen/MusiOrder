@@ -1,0 +1,4 @@
+POST http://localhost:5000/api/order
+Content-Type: application/json
+
+{"authKey": "1234", "entries": [ { "productId": "44225398-60d4-4cfa-92fd-91ed6ba138dd", "amount": 0 } ]}
