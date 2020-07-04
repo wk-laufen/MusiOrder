@@ -230,7 +230,7 @@ let products = React.functionComponent (fun () ->
                 prop.onClick (ignore >> resetOrders)
                 prop.children [
                     Bulma.icon [ Fa.i [ Fa.Solid.UndoAlt ] [] ]
-                    Html.span [ prop.text "Reset" ]
+                    Html.span [ prop.text "Bestellung löschen" ]
                 ]
             ]
             Bulma.button.button [
@@ -239,7 +239,7 @@ let products = React.functionComponent (fun () ->
                 prop.onClick (ignore >> startAuthenticate)
                 prop.children [
                     Bulma.icon [ Fa.i [ Fa.Solid.EuroSign ] [] ]
-                    Html.span [ prop.text "Order" ]
+                    Html.span [ prop.text "Bestellung speichern" ]
                 ]
             ]
         ]
@@ -254,7 +254,7 @@ let products = React.functionComponent (fun () ->
             Bulma.modalCard [
                 Bulma.modalCardHead [
                     Bulma.modalCardTitle [
-                        prop.text "Authenticate using your hardware key"
+                        prop.text "Authentifiziere dich mit deinem Musischlüssel"
                     ]
                     Bulma.delete [
                         prop.onClick (ignore >> hideFinishingForm)
@@ -289,9 +289,9 @@ let products = React.functionComponent (fun () ->
                                     Bulma.title.p [
                                         color.hasTextDanger
                                         prop.children [
-                                            Html.text "Error while placing order."
+                                            Html.text "Fehler beim Bestellen."
                                             Html.br []
-                                            Html.text "Try again using your hardware key."
+                                            Html.text "Versuche es nochmal mit deinem Musischlüssel."
                                         ]
                                     ]
                                 ]
@@ -308,15 +308,17 @@ let products = React.functionComponent (fun () ->
                                     ]
                                     Bulma.title.p [
                                         color.hasTextSuccess
-                                        prop.text "Your order has been placed successfully. Enjoy!"
+                                        prop.children [
+                                            Html.text "Bestellung erfolgreich gespeichert. Prost Mahlzeit, "
+                                            Html.span [
+                                                color.hasTextPrimary
+                                                prop.text orderSummary.ClientFullName
+                                            ]
+                                            Html.text "!"
+                                        ]
                                     ]
                                     Html.br []
-                                    Html.text "The current balance for "
-                                    Html.span [
-                                        color.hasTextPrimary
-                                        prop.text orderSummary.ClientFullName
-                                    ]
-                                    Html.text " is: "
+                                    Html.text "Dein aktuelles Guthaben beträgt: "
                                     Bulma.tag [
                                         if orderSummary.Balance >= 5. then color.isSuccess
                                         elif orderSummary.Balance >= 0. then color.isWarning
@@ -324,7 +326,7 @@ let products = React.functionComponent (fun () ->
                                         prop.textf "%.2f€" orderSummary.Balance
                                     ]
                                     Html.br []
-                                    Html.textf "Your latest orders are:"
+                                    Html.textf "Deine letzten Bestellungen waren:"
                                     Html.ul [
                                         for order in orderSummary.LatestOrders ->
                                             Html.li [
