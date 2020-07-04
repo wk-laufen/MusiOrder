@@ -311,11 +311,16 @@ let products = React.functionComponent (fun () ->
                                         prop.text "Your order has been placed successfully. Enjoy!"
                                     ]
                                     Html.br []
-                                    Html.textf "The current balance for %s is: " orderSummary.ClientFullName
+                                    Html.text "The current balance for "
                                     Html.span [
-                                        if orderSummary.Balance >= 5. then color.hasTextSuccess
-                                        elif orderSummary.Balance >= 0. then color.hasTextWarning
-                                        else color.hasTextDanger
+                                        color.hasTextPrimary
+                                        prop.text orderSummary.ClientFullName
+                                    ]
+                                    Html.text " is: "
+                                    Bulma.tag [
+                                        if orderSummary.Balance >= 5. then color.isSuccess
+                                        elif orderSummary.Balance >= 0. then color.isWarning
+                                        else color.isDanger
                                         prop.textf "%.2f€" orderSummary.Balance
                                     ]
                                     Html.br []
