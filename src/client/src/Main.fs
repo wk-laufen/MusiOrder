@@ -347,6 +347,8 @@ let products = React.functionComponent (fun () ->
             yield Bulma.section [ Bulma.progress [ color.isPrimary ] ]
         | Deferred.Failed error ->
             yield Bulma.section [ errorNotificationWithRetry error.Message startLoadingData ]
+        | Deferred.Resolved [] ->
+            yield Bulma.section [ errorNotificationWithRetry "No products available." startLoadingData ]
         | Deferred.Resolved data ->
             yield Bulma.section [
                 prop.className "products"
