@@ -55,15 +55,17 @@ let readIndexed query parameters readRow = task {
     return Map.ofList list
 }
 
-let write query parameters = task {
-    use connection = createConnection()
+let write connection query parameters = task {
     let command = createCommand connection query parameters
     let! result = command.ExecuteNonQueryAsync()
     return ()
 }
 
 let writeMany query parameterLists = task {
+    use connection = createConnection()
+    use! tx = connection.BeginTransactionAsync()
     for parameters in parameterLists do
-        do! write query parameters
+        do! write connection query parameters
+    do! tx.CommitAsync()
 }
 
