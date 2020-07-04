@@ -335,7 +335,11 @@ let products = React.functionComponent (fun () ->
                                     Html.ul [
                                         for order in orderSummary.LatestOrders ->
                                             Html.li [
-                                                prop.textf "%s: %d x %s" (moment(order.Timestamp)?fromNow()) order.Amount order.ProductName
+                                                Html.textf "%s: " (moment(order.Timestamp)?fromNow())
+                                                Bulma.tag [
+                                                    color.isInfo
+                                                    prop.textf "%d x %s" order.Amount order.ProductName
+                                                ]
                                             ]
                                     ]
                                 ]
