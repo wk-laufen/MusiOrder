@@ -79,7 +79,7 @@ let authForm title onHide =
     modal title onHide [
         Html.div [
             color.hasTextPrimary
-            prop.style [ style.padding 10 ]
+            spacing.px2
             prop.children [
                 Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
                 Bulma.title.p [
@@ -96,6 +96,7 @@ let orderSummaryView orderSummary =
             if orderSummary.Balance >= 5. then color.isSuccess
             elif orderSummary.Balance >= 0. then color.isWarning
             else color.isDanger
+            control.isLarge
             prop.textf "%.2f€" orderSummary.Balance
         ]
         Html.br []
@@ -106,6 +107,8 @@ let orderSummaryView orderSummary =
                     Html.textf "%s: " (moment(order.Timestamp)?fromNow())
                     Bulma.tag [
                         color.isInfo
+                        control.isMedium
+                        spacing.mt2
                         prop.textf "%d x %s" order.Amount order.ProductName
                     ]
                 ]
@@ -340,7 +343,7 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| Children: R
                     [
                         Bulma.container [
                             color.hasTextDanger
-                            prop.style [ style.padding 10 ]
+                            spacing.px2
                             prop.children [
                                 Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
                                 Bulma.title.p [
@@ -357,7 +360,7 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| Children: R
                 | Deferred.Resolved orderSummary ->
                     [
                         Bulma.container [
-                            prop.style [ style.padding 10 ]
+                            spacing.px2
                             prop.children [
                                 Html.div [
                                     color.hasTextSuccess
@@ -489,7 +492,7 @@ let showOrderSummary = React.functionComponent (fun () ->
                 modal "Bestellungen anzeigen" hideOrderSummary [
                     Bulma.container [
                         color.hasTextDanger
-                        prop.style [ style.padding 10 ]
+                        spacing.px2
                         prop.children [
                             Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
                             Bulma.title.p [
