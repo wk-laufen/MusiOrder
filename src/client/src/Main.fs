@@ -77,7 +77,7 @@ let modal (title: string) onHide (body: ReactElement list) =
 
 let authForm title onHide =
     modal title onHide [
-        Html.div [
+        Bulma.container [
             color.hasTextPrimary
             spacing.px2
             prop.children [
