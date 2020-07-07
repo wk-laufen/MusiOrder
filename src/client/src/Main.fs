@@ -83,6 +83,7 @@ let authForm title onHide =
             prop.children [
                 Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
                 Bulma.title.p [
+                    color.hasTextPrimary
                     prop.text "Authentifiziere dich mit deinem Musischlüssel"
                 ]
             ]
