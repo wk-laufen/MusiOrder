@@ -146,7 +146,7 @@ let loadOrderSummary authKey : Async<OrderSummary> = async {
     return! Fetch.``get``(url, caseStrategy = CamelCase) |> Async.AwaitPromise
 }
 
-let orderForm = React.functionComponent ("OrderForm", fun (props: {| Children: ReactElement list |}) ->
+let orderForm = React.functionComponent ("OrderForm", fun (props: {| UserButtons: ReactElement list; AdminButtons: ReactElement list |}) ->
     let loadData = async {
         let coders =
             Extra.empty
@@ -300,7 +300,7 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| Children: R
             for product in group.Products -> productView product
         ]
 
-    let controlButtons = Bulma.buttons [
+    let userButtons = Bulma.buttons [
         prop.className "controls"
         prop.children [
             Bulma.button.button [
@@ -321,6 +321,7 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| Children: R
                     Html.span [ prop.text "Bestellung speichern" ]
                 ]
             ]
+            yield! props.UserButtons
         ]
     ]
 
@@ -414,11 +415,13 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| Children: R
                     Bulma.level [
                         Bulma.levelLeft [
                             Bulma.levelItem [
-                                controlButtons
+                                userButtons
                             ]
                         ]
                         Bulma.levelRight [
-                            Bulma.levelItem props.Children
+                            Bulma.levelItem [
+                                Bulma.buttons props.AdminButtons
+                            ]
                         ]
                     ]
                 ]
@@ -527,18 +530,40 @@ let showOrderSummary = React.functionComponent (fun () ->
     ]
 )
 
+let showAdministration = React.functionComponent (fun () ->
+    let (isVisible, setVisible) = React.useState(false)
+    let authKey = React.useAuthentication isVisible
+    let startAuthenticate () = setVisible true
+
+    let hideOrderSummary () =
+        setVisible false
+
+    let authForm =
+        match authKey with
+        | None -> authForm "Administration" hideOrderSummary
+        | Some -> modal "Administration" hideOrderSummary [ Html.div [ prop.text "Now what?" ] ]
+
+    [
+        Bulma.button.button [
+            prop.onClick (ignore >> startAuthenticate)
+            prop.children [
+                Bulma.icon [ Fa.i [ Fa.Solid.Cogs ] [] ]
+                Html.span [ prop.text "Administration" ]
+            ]
+        ]
+        if isVisible then authForm
+    ]
+)
+
 let main =
     Html.div [
         prop.className "main"
         prop.children [
             nav
             orderForm
-                {| Children =
-                    [
-                        Bulma.buttons [
-                            showOrderSummary ()
-                        ]
-                    ]
+                {|
+                    UserButtons = [ showOrderSummary () ]
+                    AdminButtons = [ showAdministration () ]
                 |}
         ]
     ]
