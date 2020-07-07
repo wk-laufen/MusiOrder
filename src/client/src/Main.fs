@@ -362,9 +362,9 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| Children: R
                     [
                         Bulma.container [
                             spacing.px2
+                            color.hasTextSuccess
                             prop.children [
                                 Html.div [
-                                    color.hasTextSuccess
                                     prop.children [
                                         Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
                                     ]
@@ -380,9 +380,11 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| Children: R
                                         Html.text "!"
                                     ]
                                 ]
-                                Html.br []
-                                yield! orderSummaryView orderSummary
                             ]
+                        ]
+                        Bulma.container [
+                            spacing.mt2
+                            prop.children (orderSummaryView orderSummary)
                         ]
                     ]
 
