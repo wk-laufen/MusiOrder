@@ -65,3 +65,10 @@ type OrderSummary = {
     Balance: float
     LatestOrders: HistoricOrder list
 }
+
+type UserInfo = {
+    FirstName: string
+    LastName: string
+    LatestOrderTimestamp: System.DateTimeOffset option
+    Balance: float
+}

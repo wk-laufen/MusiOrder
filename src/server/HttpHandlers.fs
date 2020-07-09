@@ -129,3 +129,22 @@ let handleGetOrderSummary =
                 return! Successful.OK result next ctx
             | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
         }
+
+let handleGetUsers =
+    fun (next : HttpFunc) (ctx : HttpContext) ->
+        task {
+            match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
+            | Some user when user.Role.Equals("admin", StringComparison.InvariantCultureIgnoreCase) ->
+                let query = """
+                    SELECT `Member`.`firstName`, `Member`.`lastName`, max(datetime(`Order`.`timestamp`, 'localtime')), coalesce(sum(`MemberPayment`.`Amount`), 0) - coalesce(sum(`Order`.`amount` * `Order`.`pricePerUnit`), 0)
+                    FROM `Member`
+                    LEFT OUTER JOIN `MemberPayment` ON `Member`.`id` = `MemberPayment`.`userId`
+                    LEFT OUTER JOIN `Order` ON `Member`.`id` = `Order`.`userId`
+                    GROUP BY `Member`.`id`
+                    ORDER BY `Member`.`lastName`, `Member`.`firstName`
+                """
+                let! result = DB.read query [] (fun reader -> { FirstName = reader.GetString(0); LastName = reader.GetString(1); LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 2; Balance = float <| reader.GetDecimal(3) })
+                return! Successful.OK result next ctx
+            | Some -> return! RequestErrors.FORBIDDEN () next ctx
+            | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
+        }

@@ -20,11 +20,11 @@ let main argv =
         cmd.ExecuteNonQuery() |> ignore
         rowId
 
-    let user1Id = runWithIdParam "INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`) VALUES (@Id, 'Robin', 'Cella', '1234')" []
-    let user2Id = runWithIdParam "INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`) VALUES (@Id, 'Sebastian', 'Manz', 'qwer')" []
-    runWithIdParam "INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`) VALUES (@Id, 'Thomas', 'Morgenstern', 'asdf')" [] |> ignore
-    runWithIdParam "INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`) VALUES (@Id, 'Matheo', 'Goss', 'zxcv')" [] |> ignore
-    runWithIdParam "INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`) VALUES (@Id, 'Dominik', 'Haspel', 'wert')" [] |> ignore
+    let user1Id = runWithIdParam "INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES (@Id, 'Robin', 'Cella', '1234', 'admin')" []
+    let user2Id = runWithIdParam "INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES (@Id, 'Sebastian', 'Manz', 'qwer', 'user')" []
+    runWithIdParam "INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES (@Id, 'Thomas', 'Morgenstern', 'asdf', 'user')" [] |> ignore
+    runWithIdParam "INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES (@Id, 'Matheo', 'Goss', 'zxcv', 'user')" [] |> ignore
+    runWithIdParam "INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES (@Id, 'Dominik', 'Haspel', 'wert', 'user')" [] |> ignore
 
     let drinksId = runWithIdParam "INSERT INTO ArticleGroup (`id`, `grade`, `name`) VALUES (@Id, 1, 'Getränke')" []
     let mealsId = runWithIdParam "INSERT INTO ArticleGroup (`id`, `grade`, `name`) VALUES (@Id, 2, 'Speisen')" []

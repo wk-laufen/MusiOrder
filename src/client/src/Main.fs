@@ -51,6 +51,14 @@ let errorNotificationWithRetry (message: string) onRetry =
         ]
     ]
 
+let loadIconBig =
+    Html.div [
+        color.hasTextPrimary
+        prop.children [
+            Fa.i [ Fa.Solid.Spinner; Fa.Pulse; Fa.Size Fa.Fa8x ] []
+        ]
+    ]
+
 let modal (title: string) onHide (body: ReactElement list) =
     Bulma.modal [
         helpers.isActive
@@ -90,13 +98,16 @@ let authForm title onHide =
         ]
     ]
 
-let orderSummaryView orderSummary =
+let balanceColor balance =
+    if balance >= 5. then color.isSuccess
+    elif balance >= 0. then color.isWarning
+    else color.isDanger
+
+let orderSummaryView (orderSummary: OrderSummary) =
     [
         Html.text "Dein aktuelles Guthaben beträgt: "
         Bulma.tag [
-            if orderSummary.Balance >= 5. then color.isSuccess
-            elif orderSummary.Balance >= 0. then color.isWarning
-            else color.isDanger
+            balanceColor orderSummary.Balance
             control.isLarge
             prop.textf "%.2f€" orderSummary.Balance
         ]
@@ -329,70 +340,56 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| UserButtons
     ]
 
     let authForm =
-        match authKey with
-        | None -> authForm "Bestellung speichern" hideFinishingForm
-        | Some ->
-            let children =
-                match orderState with
-                | Deferred.HasNotStartedYet -> []
-                | Deferred.InProgress ->
-                    [
-                        Html.div [
-                            color.hasTextPrimary
-                            prop.children [
-                                Fa.i [ Fa.Solid.Spinner; Fa.Pulse; Fa.Size Fa.Fa8x ] []
-                            ]
-                        ]
-                    ]
-                | Deferred.Failed ->
-                    [
-                        Bulma.container [
+        match orderState with
+        | Deferred.HasNotStartedYet -> authForm "Bestellung speichern" hideFinishingForm
+        | Deferred.InProgress -> modal "Bestellung speichern" hideFinishingForm [ loadIconBig ]
+        | Deferred.Failed ->
+            modal "Bestellung speichern" hideFinishingForm [
+                Bulma.container [
+                    color.hasTextDanger
+                    spacing.px2
+                    prop.children [
+                        Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                        Bulma.title.p [
                             color.hasTextDanger
-                            spacing.px2
                             prop.children [
-                                Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
-                                Bulma.title.p [
-                                    color.hasTextDanger
-                                    prop.children [
-                                        Html.text "Fehler beim Bestellen."
-                                        Html.br []
-                                        Html.text "Versuche es nochmal mit deinem Musischlüssel."
-                                    ]
-                                ]
+                                Html.text "Fehler beim Bestellen."
+                                Html.br []
+                                Html.text "Versuche es nochmal mit deinem Musischlüssel."
                             ]
                         ]
                     ]
-                | Deferred.Resolved orderSummary ->
-                    [
-                        Bulma.container [
-                            spacing.px2
+                ]
+            ]
+        | Deferred.Resolved orderSummary ->
+            modal "Bestellung speichern" hideFinishingForm [
+                Bulma.container [
+                    spacing.px2
+                    color.hasTextSuccess
+                    prop.children [
+                        Html.div [
+                            prop.children [
+                                Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
+                            ]
+                        ]
+                        Bulma.title.p [
                             color.hasTextSuccess
                             prop.children [
-                                Html.div [
-                                    prop.children [
-                                        Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
-                                    ]
+                                Html.text "Bestellung erfolgreich gespeichert. Prost Mahlzeit, "
+                                Html.span [
+                                    color.hasTextPrimary
+                                    prop.text orderSummary.ClientFullName
                                 ]
-                                Bulma.title.p [
-                                    color.hasTextSuccess
-                                    prop.children [
-                                        Html.text "Bestellung erfolgreich gespeichert. Prost Mahlzeit, "
-                                        Html.span [
-                                            color.hasTextPrimary
-                                            prop.text orderSummary.ClientFullName
-                                        ]
-                                        Html.text "!"
-                                    ]
-                                ]
+                                Html.text "!"
                             ]
                         ]
-                        Bulma.container [
-                            spacing.mt2
-                            prop.children (orderSummaryView orderSummary)
-                        ]
                     ]
-
-            modal "Bestellung speichern" hideFinishingForm children
+                ]
+                Bulma.container [
+                    spacing.mt2
+                    prop.children (orderSummaryView orderSummary)
+                ]
+            ]
 
     [
         match data with
@@ -489,14 +486,7 @@ let showOrderSummary = React.functionComponent (fun () ->
             match orderSummaryState with
             | Deferred.HasNotStartedYet -> Html.none
             | Deferred.InProgress ->
-                modal "Bestellungen anzeigen" hideOrderSummary [
-                    Html.div [
-                        color.hasTextPrimary
-                        prop.children [
-                            Fa.i [ Fa.Solid.Spinner; Fa.Pulse; Fa.Size Fa.Fa8x ] []
-                        ]
-                    ]
-                ]
+                modal "Bestellungen anzeigen" hideOrderSummary [ loadIconBig ]
             | Deferred.Failed ->
                 modal "Bestellungen anzeigen" hideOrderSummary [
                     Bulma.container [
@@ -538,13 +528,142 @@ let showAdministration = React.functionComponent (fun () ->
     let authKey = React.useAuthentication isVisible
     let startAuthenticate () = setVisible true
 
+    let authorize authKey : Async<Result<UserInfo list, unit>> = async {
+        let url = sprintf "/api/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        match! Fetch.``tryGet``(url, caseStrategy = CamelCase) |> Async.AwaitPromise with
+        | Ok result -> return Ok result
+        | Error (FetchFailed response) when response.Status = 403 -> return Error ()
+        | Error e -> return failwith (Helper.message e)
+    }
+
+    let (authorizationState, setAuthorizationState) = React.useState(Deferred.HasNotStartedYet)
+
+    let startAuthorization = React.useDeferredCallback(authorize, setAuthorizationState)
+
     let hideOrderSummary () =
         setVisible false
+        setAuthorizationState Deferred.HasNotStartedYet
+
+    React.useEffect(
+        fun () ->
+            match authKey, authorizationState with
+            | Some authKey, Deferred.HasNotStartedYet -> startAuthorization authKey
+            | Some authKey, Deferred.Failed -> startAuthorization authKey
+            | Some authKey, Deferred.Resolved Error -> startAuthorization authKey
+            | _ -> ()
+        ,
+        [| box authKey |]
+    )
 
     let authForm =
-        match authKey with
-        | None -> authForm "Administration" hideOrderSummary
-        | Some -> modal "Administration" hideOrderSummary [ Html.div [ prop.text "Now what?" ] ]
+        match authorizationState with
+        | Deferred.HasNotStartedYet -> authForm "Administration" hideOrderSummary
+        | Deferred.InProgress -> modal "Administration" hideOrderSummary [ loadIconBig ]
+        | Deferred.Failed ->
+            modal "Administration" hideOrderSummary [
+                Bulma.container [
+                    color.hasTextDanger
+                    spacing.px2
+                    prop.children [
+                        Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                        Bulma.title.p [
+                            color.hasTextDanger
+                            prop.children [
+                                Html.text "Fehler bei der Authorisierung."
+                                Html.br []
+                                Html.text "Versuche es nochmal mit deinem Musischlüssel."
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        | Deferred.Resolved Error ->
+            modal "Administration" hideOrderSummary [
+                Bulma.container [
+                    color.hasTextDanger
+                    spacing.px2
+                    prop.children [
+                        Fa.i [ Fa.Solid.Ban; Fa.Size Fa.Fa8x ] []
+                        Bulma.title.p [
+                            color.hasTextDanger
+                            prop.children [
+                                Html.text "Schlüssel ist nicht authorisiert."
+                                Html.br []
+                                Html.text "Versuche es nochmal mit einem Administrator-Schlüssel."
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        | Deferred.Resolved (Ok users) ->
+            modal "Administration" hideOrderSummary [
+                Bulma.table [
+                    Html.thead [
+                        Html.tr [
+                            Html.th [ prop.text "Nachname" ]
+                            Html.th [ prop.text "Vorname" ]
+                            Html.th [ prop.text "Letzte Bestellung" ]
+                            Html.th [ prop.text "Aktuelles Guthaben" ]
+                            Html.th [ prop.text "Guthaben aufladen" ]
+                        ]
+                    ]
+                    Html.tbody [
+                        for user in users ->
+                            let (latestOrderColor, latestOrderTime) =
+                                user.LatestOrderTimestamp
+                                |> Option.map (fun v ->
+                                    let m = moment(v)
+                                    let daysSinceLatestOrder = moment(System.DateTimeOffset.Now)?diff(m, "days")
+                                    let color =
+                                        if daysSinceLatestOrder < 10. then Some color.isSuccess
+                                        elif daysSinceLatestOrder < 30. then Some color.isWarning
+                                        else Some color.isDanger
+                                    color, moment(v)?fromNow()
+                                )
+                                |> Option.defaultValue (None, "-")
+                            Html.tr [
+                                Html.td [
+                                    text.hasTextLeft
+                                    prop.style [ style.textTransform.uppercase ]
+                                    prop.text user.LastName
+                                ]
+                                Html.td [
+                                    text.hasTextLeft
+                                    prop.text user.FirstName
+                                ]
+                                Html.td [
+                                    match latestOrderColor with
+                                    | Some color -> color
+                                    | None -> ()
+                                    prop.text latestOrderTime
+                                ]
+                                Html.td [
+                                    balanceColor user.Balance
+                                    prop.textf "%.2f€" user.Balance
+                                ]
+                                Html.td [
+                                    Bulma.buttons [
+                                        Bulma.button.button [
+                                            prop.text "+1€"
+                                        ]
+                                        Bulma.button.button [
+                                            prop.text "+2€"
+                                        ]
+                                        Bulma.button.button [
+                                            prop.text "+5€"
+                                        ]
+                                        Bulma.button.button [
+                                            prop.text "+10€"
+                                        ]
+                                        Bulma.button.button [
+                                            prop.text "+20€"
+                                        ]
+                                    ]
+                                ]
+                            ]
+                    ]
+                ]
+            ]
 
     [
         Bulma.button.button [

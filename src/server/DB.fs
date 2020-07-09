@@ -45,10 +45,11 @@ type User = {
     Id: string
     FirstName: string
     LastName: string
+    Role: string
 }
 
 let getUser (AuthKey authKey) =
-    readSingle "SELECT `id`, `firstName`, `lastName` FROM `Member` WHERE `keyCode` = @KeyCode" [ ("@KeyCode", authKey) ] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2) })
+    readSingle "SELECT `id`, `firstName`, `lastName`, `role` FROM `Member` WHERE `keyCode` = @KeyCode" [ ("@KeyCode", authKey) ] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); Role = reader.GetString(3) })
 
 let readIndexed query parameters readRow = task {
     let! list = read query parameters readRow
@@ -69,3 +70,6 @@ let writeMany query parameterLists = task {
     do! tx.CommitAsync()
 }
 
+let tryGet (reader: SqliteDataReader) fn index =
+    if not <| reader.IsDBNull index then fn index |> Some
+    else None

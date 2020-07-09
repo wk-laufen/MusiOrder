@@ -9,6 +9,7 @@ CREATE TABLE `Member` (
     `firstName` TEXT NOT NULL,
     `lastName` TEXT NOT NULL,
     `keyCode` TEXT NOT NULL,
+    `role` TEXT NOT NULL,
     CONSTRAINT unique_keyCode UNIQUE (keyCode)
 );
 
