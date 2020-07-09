@@ -118,8 +118,8 @@ let handleGetOrderSummary =
             match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
             | Some user ->
                 let! latestOrders = DB.read "SELECT `articleName`, `amount`, datetime(`timestamp`, 'localtime') as `time` FROM `Order` WHERE userId = @UserId AND `time` > @OldestTime ORDER BY `time` DESC" [ ("@UserId", box user.Id); ("@OldestTime", DateTimeOffset.Now.AddMonths(-1) |> box) ] (fun reader -> { Timestamp = reader.GetDateTimeOffset(2); ProductName = reader.GetString(0); Amount = reader.GetInt32(1) })
-                let! totalOrderPrice = DB.readSingle "SELECT sum(`amount` * `pricePerUnit`) as `price` FROM `Order` WHERE userId = @UserId" [ ("@UserId", user.Id) ] (fun reader -> reader.GetDecimal(0))
-                let! totalBalance = DB.readSingle "SELECT sum(`amount`) FROM `MemberPayment` WHERE userId = @UserId" [ ("@UserId", user.Id) ] (fun reader -> reader.GetDecimal(0))
+                let! totalOrderPrice = DB.readSingle "SELECT coalesce(sum(`amount` * `pricePerUnit`), 0) as `price` FROM `Order` WHERE userId = @UserId" [ ("@UserId", user.Id) ] (fun reader -> reader.GetDecimal(0))
+                let! totalBalance = DB.readSingle "SELECT coalesce(sum(`amount`), 0) FROM `MemberPayment` WHERE userId = @UserId" [ ("@UserId", user.Id) ] (fun reader -> reader.GetDecimal(0))
                 let result =
                     {
                         ClientFullName = sprintf "%s %s" user.FirstName user.LastName
