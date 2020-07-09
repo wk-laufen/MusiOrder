@@ -129,8 +129,11 @@ module React =
                         key <- ""
                     and listener (e: Browser.Types.Event) =
                         window.clearTimeout timeoutId
-                        key <- key + (e :?> Browser.Types.KeyboardEvent).key
-                        timeoutId <- window.setTimeout (finishAuthKey, 500)
+                        let newKey = (e :?> Browser.Types.KeyboardEvent).key
+                        if newKey = "Enter" then finishAuthKey ()
+                        else
+                            key <- key + newKey
+                            timeoutId <- window.setTimeout (finishAuthKey, 500)
                     window.addEventListener("keydown", listener)
                     React.createDisposable (fun () -> window.removeEventListener("keydown", listener))
                 else
