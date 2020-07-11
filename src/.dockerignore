@@ -1,0 +1,5 @@
+**/bin/
+**/obj/
+**/.fable
+**/deploy
+**/node_modules

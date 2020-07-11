@@ -4,7 +4,7 @@ open System.IO
 
 [<EntryPoint>]
 let main argv =
-    use connection = new SqliteConnection("Data Source=musiorder.db")
+    use connection = new SqliteConnection("Data Source=data\\musiorder.db")
     connection.Open()
 
     let scriptContent = File.ReadAllText "db-schema.sql"
