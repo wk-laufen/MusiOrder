@@ -86,8 +86,8 @@ let configureLogging (ctx: HostBuilderContext) (builder : ILoggingBuilder) =
     |> ignore
 
 [<EntryPoint>]
-let main _ =
-    Host.CreateDefaultBuilder()
+let main args =
+    Host.CreateDefaultBuilder(args)
         .ConfigureWebHostDefaults(fun webHostBuilder -> webHostBuilder.Configure(configureApp) |> ignore)
         .ConfigureLogging(configureLogging)
         .ConfigureServices(configureServices)
