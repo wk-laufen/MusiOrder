@@ -59,7 +59,7 @@ let loadIconBig =
         ]
     ]
 
-let modal (title: string) onHide (body: ReactElement list) =
+let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement list) =
     Bulma.modal [
         helpers.isActive
         prop.children [
@@ -79,6 +79,7 @@ let modal (title: string) onHide (body: ReactElement list) =
                     text.hasTextCentered
                     prop.children body
                 ]
+                Bulma.modalCardFoot footer
             ]
         ]
     ]
@@ -96,7 +97,7 @@ let authForm title onHide =
                 ]
             ]
         ]
-    ]
+    ] []
 
 let balanceColor balance =
     if balance >= 5. then color.isSuccess
@@ -231,7 +232,7 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| UserButtons
         [| box authKey |]
     )
 
-    let productView product =
+    let productView (product: Product) =
         let amount = Map.tryFind product.Id orders
         Bulma.level [
             prop.className "product"
@@ -342,7 +343,7 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| UserButtons
     let authForm =
         match orderState with
         | Deferred.HasNotStartedYet -> authForm "Bestellung speichern" hideFinishingForm
-        | Deferred.InProgress -> modal "Bestellung speichern" hideFinishingForm [ loadIconBig ]
+        | Deferred.InProgress -> modal "Bestellung speichern" hideFinishingForm [ loadIconBig ] []
         | Deferred.Failed ->
             modal "Bestellung speichern" hideFinishingForm [
                 Bulma.container [
@@ -360,7 +361,7 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| UserButtons
                         ]
                     ]
                 ]
-            ]
+            ] []
         | Deferred.Resolved orderSummary ->
             modal "Bestellung speichern" hideFinishingForm [
                 Bulma.container [
@@ -389,7 +390,7 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| UserButtons
                     spacing.mt2
                     prop.children (orderSummaryView orderSummary)
                 ]
-            ]
+            ] []
 
     [
         match data with
@@ -486,7 +487,7 @@ let showOrderSummary = React.functionComponent (fun () ->
             match orderSummaryState with
             | Deferred.HasNotStartedYet -> Html.none
             | Deferred.InProgress ->
-                modal "Bestellungen anzeigen" hideOrderSummary [ loadIconBig ]
+                modal "Bestellungen anzeigen" hideOrderSummary [ loadIconBig ] []
             | Deferred.Failed ->
                 modal "Bestellungen anzeigen" hideOrderSummary [
                     Bulma.container [
@@ -504,11 +505,11 @@ let showOrderSummary = React.functionComponent (fun () ->
                             ]
                         ]
                     ]
-                ]
+                ] []
             | Deferred.Resolved orderSummary ->
                 modal (sprintf "Bestellungen von %s" orderSummary.ClientFullName) hideOrderSummary [
                     Bulma.container (orderSummaryView orderSummary)
-                ]
+                ] []
 
     [
         Bulma.button.button [
@@ -528,10 +529,10 @@ let showAdministration = React.functionComponent (fun () ->
     let authKey = React.useAuthentication isVisible
     let startAuthenticate () = setVisible true
 
-    let authorize authKey : Async<Result<UserInfo list, unit>> = async {
+    let authorize authKey : Async<Result<AuthKey * UserInfo list, unit>> = async {
         let url = sprintf "/api/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
         match! Fetch.``tryGet``(url, caseStrategy = CamelCase) |> Async.AwaitPromise with
-        | Ok result -> return Ok result
+        | Ok result -> return Ok (authKey, result)
         | Error (FetchFailed response) when response.Status = 403 -> return Error ()
         | Error e -> return failwith (Helper.message e)
     }
@@ -539,10 +540,6 @@ let showAdministration = React.functionComponent (fun () ->
     let (authorizationState, setAuthorizationState) = React.useState(Deferred.HasNotStartedYet)
 
     let startAuthorization = React.useDeferredCallback(authorize, setAuthorizationState)
-
-    let hideOrderSummary () =
-        setVisible false
-        setAuthorizationState Deferred.HasNotStartedYet
 
     React.useEffect(
         fun () ->
@@ -555,10 +552,53 @@ let showAdministration = React.functionComponent (fun () ->
         [| box authKey |]
     )
 
+    let (selectedUser, setSelectedUser) = React.useState(None)
+    let selectUser = Some >> setSelectedUser
+
+    let addPayment (payment: Payment) = async {
+        let coders =
+            Extra.empty
+            |> Extra.withCustom AuthKey.encode AuthKey.decoder
+            |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
+        let! (totalAmount: float) = Fetch.post("/api/payment", payment, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
+        return (payment.UserId, totalAmount)
+    }
+
+    let (paymentState, setPaymentState) = React.useState(Deferred.HasNotStartedYet)
+    let startPayment = React.useDeferredCallback(addPayment, setPaymentState)
+
+    React.useEffect (
+        fun () ->
+            paymentState
+            |> Deferred.iter (fun (userId, totalAmount) ->
+                authorizationState
+                |> Deferred.map (fun result ->
+                    result
+                    |> Result.map (fun (authKey, users) ->
+                        let users' =
+                            users
+                            |> List.map (fun user ->
+                                if user.Id = userId then { user with Balance = totalAmount }
+                                else user
+                            )
+                        (authKey, users')
+                    )
+                )
+                |> setAuthorizationState
+            )
+        , [| box paymentState |]
+    )
+
+    let hideOrderSummary () =
+        setVisible false
+        setAuthorizationState Deferred.HasNotStartedYet
+        setSelectedUser None
+        setPaymentState Deferred.HasNotStartedYet
+
     let authForm =
         match authorizationState with
         | Deferred.HasNotStartedYet -> authForm "Administration" hideOrderSummary
-        | Deferred.InProgress -> modal "Administration" hideOrderSummary [ loadIconBig ]
+        | Deferred.InProgress -> modal "Administration" hideOrderSummary [ loadIconBig ] []
         | Deferred.Failed ->
             modal "Administration" hideOrderSummary [
                 Bulma.container [
@@ -576,7 +616,7 @@ let showAdministration = React.functionComponent (fun () ->
                         ]
                     ]
                 ]
-            ]
+            ] []
         | Deferred.Resolved Error ->
             modal "Administration" hideOrderSummary [
                 Bulma.container [
@@ -594,8 +634,8 @@ let showAdministration = React.functionComponent (fun () ->
                         ]
                     ]
                 ]
-            ]
-        | Deferred.Resolved (Ok users) ->
+            ] []
+        | Deferred.Resolved (Ok (authKey, users)) ->
             modal "Administration" hideOrderSummary [
                 Bulma.table [
                     Html.thead [
@@ -604,7 +644,6 @@ let showAdministration = React.functionComponent (fun () ->
                             Html.th [ prop.text "Vorname" ]
                             Html.th [ prop.text "Letzte Bestellung" ]
                             Html.th [ prop.text "Aktuelles Guthaben" ]
-                            Html.th [ prop.text "Guthaben aufladen" ]
                         ]
                     ]
                     Html.tbody [
@@ -622,47 +661,69 @@ let showAdministration = React.functionComponent (fun () ->
                                 )
                                 |> Option.defaultValue (None, "-")
                             Html.tr [
-                                Html.td [
-                                    text.hasTextLeft
-                                    prop.style [ style.textTransform.uppercase ]
-                                    prop.text user.LastName
-                                ]
-                                Html.td [
-                                    text.hasTextLeft
-                                    prop.text user.FirstName
-                                ]
-                                Html.td [
-                                    match latestOrderColor with
-                                    | Some color -> color
-                                    | None -> ()
-                                    prop.text latestOrderTime
-                                ]
-                                Html.td [
-                                    balanceColor user.Balance
-                                    prop.textf "%.2f€" user.Balance
-                                ]
-                                Html.td [
-                                    Bulma.buttons [
-                                        Bulma.button.button [
-                                            prop.text "+1€"
-                                        ]
-                                        Bulma.button.button [
-                                            prop.text "+2€"
-                                        ]
-                                        Bulma.button.button [
-                                            prop.text "+5€"
-                                        ]
-                                        Bulma.button.button [
-                                            prop.text "+10€"
-                                        ]
-                                        Bulma.button.button [
-                                            prop.text "+20€"
-                                        ]
+                                prop.onClick (fun _ -> selectUser user.Id)
+                                if selectedUser = Some user.Id then tr.isSelected
+                                prop.children [
+                                    Html.td [
+                                        text.hasTextLeft
+                                        prop.style [ style.textTransform.uppercase ]
+                                        prop.text user.LastName
+                                    ]
+                                    Html.td [
+                                        text.hasTextLeft
+                                        prop.text user.FirstName
+                                    ]
+                                    Html.td [
+                                        match latestOrderColor with
+                                        | Some color -> color
+                                        | None -> ()
+                                        prop.text latestOrderTime
+                                    ]
+                                    Html.td [
+                                        balanceColor user.Balance
+                                        prop.textf "%.2f€" user.Balance
                                     ]
                                 ]
                             ]
                     ]
                 ]
+            ] [
+                match selectedUser with
+                | Some selectedUserId ->
+                    Html.span [
+                        spacing.mr2
+                        prop.text "Guthaben aufladen:"
+                    ]
+                    Html.div [
+                        Bulma.buttons [
+                            for i in List.choose PositiveInteger.tryCreate [1; 2; 5; 10; 20] ->
+                                Bulma.button.button [
+                                    match paymentState with
+                                    | Deferred.InProgress ->
+                                        prop.disabled true
+                                    | _ -> ()
+                                    prop.textf "+%d€" (PositiveInteger.value i)
+                                    prop.onClick (fun _ -> startPayment { AuthKey = authKey; UserId = selectedUserId; Amount = i })
+                                ]
+                        ]
+                    ]
+                    let icon iconProps faProps =
+                        Bulma.icon [
+                            control.isMedium
+                            yield! iconProps
+                            prop.children [
+                                Fa.i [
+                                    Fa.Size Fa.FaLarge
+                                    yield! faProps
+                                ] []
+                            ]
+                        ]
+                    match paymentState with
+                    | Deferred.HasNotStartedYet -> ()
+                    | Deferred.InProgress -> icon [ color.hasTextPrimary ] [ Fa.Solid.Spinner; Fa.Pulse ]
+                    | Deferred.Failed e -> icon [ color.hasTextDanger; prop.title e.Message ] [ Fa.Solid.Times ]
+                    | Deferred.Resolved -> icon [ color.hasTextSuccess ] [ Fa.Solid.Check ]
+                | None -> ()
             ]
 
     [

@@ -92,7 +92,7 @@ let handlePostOrder =
                                 ("@ArticleName", box articleName)
                                 ("@Amount", PositiveInteger.value entry.Amount |> box)
                                 ("@PricePerUnit", box price)
-                                ("@OrderedAt", box DateTimeOffset.Now)
+                                ("@Timestamp", box DateTimeOffset.Now)
                             ]
                         Ok fn
                         |> Result.apply (Map.tryFind productId articleData |> Result.ofOption ArticleNotFound)
@@ -101,7 +101,7 @@ let handlePostOrder =
                     |> List.sequence
                 match parameters with
                 | Ok parameters ->
-                    do! DB.writeMany "INSERT INTO `Order` (`id`, `userId`, `articleName`, `amount`, `pricePerUnit`, `timestamp`) VALUES (@Id, @UserId, @ArticleName, @Amount, @PricePerUnit, @OrderedAt)" parameters
+                    do! DB.writeMany "INSERT INTO `Order` (`id`, `userId`, `articleName`, `amount`, `pricePerUnit`, `timestamp`) VALUES (@Id, @UserId, @ArticleName, @Amount, @PricePerUnit, @Timestamp)" parameters
                     return! Successful.OK () next ctx
                 | Error errors ->
                     return! RequestErrors.BAD_REQUEST errors next ctx
@@ -117,13 +117,12 @@ let handleGetOrderSummary =
         task {
             match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
             | Some user ->
+                let! balance = DB.getUserBalance user.Id
                 let! latestOrders = DB.read "SELECT `articleName`, `amount`, datetime(`timestamp`, 'localtime') as `time` FROM `Order` WHERE userId = @UserId AND `time` > @OldestTime ORDER BY `time` DESC" [ ("@UserId", box user.Id); ("@OldestTime", DateTimeOffset.Now.AddMonths(-1) |> box) ] (fun reader -> { Timestamp = reader.GetDateTimeOffset(2); ProductName = reader.GetString(0); Amount = reader.GetInt32(1) })
-                let! totalOrderPrice = DB.readSingle "SELECT coalesce(sum(`amount` * `pricePerUnit`), 0) as `price` FROM `Order` WHERE userId = @UserId" [ ("@UserId", user.Id) ] (fun reader -> reader.GetDecimal(0))
-                let! totalBalance = DB.readSingle "SELECT coalesce(sum(`amount`), 0) FROM `MemberPayment` WHERE userId = @UserId" [ ("@UserId", user.Id) ] (fun reader -> reader.GetDecimal(0))
                 let result =
                     {
                         ClientFullName = sprintf "%s %s" user.FirstName user.LastName
-                        Balance = float ((Option.defaultValue 0m totalBalance) - (Option.defaultValue 0m totalOrderPrice))
+                        Balance = float balance
                         LatestOrders = latestOrders
                     }
                 return! Successful.OK result next ctx
@@ -136,15 +135,34 @@ let handleGetUsers =
             match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
             | Some user when user.Role.Equals("admin", StringComparison.InvariantCultureIgnoreCase) ->
                 let query = """
-                    SELECT `Member`.`firstName`, `Member`.`lastName`, max(datetime(`Order`.`timestamp`, 'localtime')), coalesce(sum(`MemberPayment`.`Amount`), 0) - coalesce(sum(`Order`.`amount` * `Order`.`pricePerUnit`), 0)
+                    SELECT `Member`.`id`, `Member`.`firstName`, `Member`.`lastName`, max(datetime(`Order`.`timestamp`, 'localtime')), coalesce(sum(`MemberPayment`.`Amount`), 0) - coalesce(sum(`Order`.`amount` * `Order`.`pricePerUnit`), 0)
                     FROM `Member`
                     LEFT OUTER JOIN `MemberPayment` ON `Member`.`id` = `MemberPayment`.`userId`
                     LEFT OUTER JOIN `Order` ON `Member`.`id` = `Order`.`userId`
                     GROUP BY `Member`.`id`
                     ORDER BY `Member`.`lastName`, `Member`.`firstName`
                 """
-                let! result = DB.read query [] (fun reader -> { FirstName = reader.GetString(0); LastName = reader.GetString(1); LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 2; Balance = float <| reader.GetDecimal(3) })
+                let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 3; Balance = float <| reader.GetDecimal(4) })
                 return! Successful.OK result next ctx
             | Some -> return! RequestErrors.FORBIDDEN () next ctx
             | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
+        }
+
+let handlePostPayment =
+    fun (next : HttpFunc) (ctx : HttpContext) ->
+        task {
+            let! data = ctx.BindModelAsync<Payment>()
+            match! DB.getUser data.AuthKey with
+            | Some user when user.Role.Equals("admin", StringComparison.InvariantCultureIgnoreCase) ->
+                let parameters =
+                    [
+                        ("@Id", sprintf "%O" (Guid.NewGuid()) |> box)
+                        ("@UserId", box data.UserId)
+                        ("@Amount", PositiveInteger.value data.Amount |> box)
+                        ("@Timestamp", box DateTimeOffset.Now)
+                    ]
+                do! DB.write "INSERT INTO `MemberPayment` (`id`, `userId`, `amount`, `timestamp`) VALUES (@Id, @UserId, @Amount, @Timestamp)" parameters
+                let! balance = DB.getUserBalance data.UserId
+                return! Successful.OK (float balance) next ctx
+            | _ -> return! RequestErrors.FORBIDDEN () next ctx
         }

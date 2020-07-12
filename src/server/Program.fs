@@ -29,6 +29,7 @@ let webApp =
                 ]
                 POST >=> choose [
                     route "/order" >=> handlePostOrder
+                    route "/payment" >=> handlePostPayment
                 ]
             ])
         setStatusCode 404 >=> text "Not Found" ]

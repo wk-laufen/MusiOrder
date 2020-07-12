@@ -51,22 +51,33 @@ type User = {
 let getUser (AuthKey authKey) =
     readSingle "SELECT `id`, `firstName`, `lastName`, `role` FROM `Member` WHERE `keyCode` = @KeyCode" [ ("@KeyCode", authKey) ] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); Role = reader.GetString(3) })
 
+let getUserBalance (userId: string) = task {
+    let! totalOrderPrice = readSingle "SELECT coalesce(sum(`amount` * `pricePerUnit`), 0) as `price` FROM `Order` WHERE userId = @UserId" [ ("@UserId", userId) ] (fun reader -> reader.GetDecimal(0))
+    let! totalBalance = readSingle "SELECT coalesce(sum(`amount`), 0) FROM `MemberPayment` WHERE userId = @UserId" [ ("@UserId", userId) ] (fun reader -> reader.GetDecimal(0))
+    return (Option.defaultValue 0m totalBalance) - (Option.defaultValue 0m totalOrderPrice)
+}
+
 let readIndexed query parameters readRow = task {
     let! list = read query parameters readRow
     return Map.ofList list
 }
 
-let write connection query parameters = task {
+let private writeInternal connection query parameters = task {
     let command = createCommand connection query parameters
     let! result = command.ExecuteNonQueryAsync()
     return ()
+}
+
+let write query parameters = task {
+    use connection = createConnection()
+    do! writeInternal connection query parameters
 }
 
 let writeMany query parameterLists = task {
     use connection = createConnection()
     use! tx = connection.BeginTransactionAsync()
     for parameters in parameterLists do
-        do! write connection query parameters
+        do! writeInternal connection query parameters
     do! tx.CommitAsync()
 }
 

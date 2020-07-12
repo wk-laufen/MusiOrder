@@ -67,8 +67,15 @@ type OrderSummary = {
 }
 
 type UserInfo = {
+    Id: string
     FirstName: string
     LastName: string
-    LatestOrderTimestamp: System.DateTimeOffset option
+    LatestOrderTimestamp: DateTimeOffset option
     Balance: float
+}
+
+type Payment = {
+    AuthKey: AuthKey
+    UserId: string
+    Amount: PositiveInteger
 }
