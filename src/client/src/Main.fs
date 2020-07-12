@@ -323,7 +323,7 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| UserButtons
                 prop.onClick (ignore >> resetOrders)
                 prop.children [
                     Bulma.icon [ Fa.i [ Fa.Solid.UndoAlt ] [] ]
-                    Html.span [ prop.text "Bestellung löschen" ]
+                    Html.span [ prop.text "Zurücksetzen" ]
                 ]
             ]
             Bulma.button.button [
@@ -332,7 +332,7 @@ let orderForm = React.functionComponent ("OrderForm", fun (props: {| UserButtons
                 prop.onClick (ignore >> startAuthenticate)
                 prop.children [
                     Bulma.icon [ Fa.i [ Fa.Solid.EuroSign ] [] ]
-                    Html.span [ prop.text "Bestellung speichern" ]
+                    Html.span [ prop.text "Bestellen" ]
                 ]
             ]
             yield! props.UserButtons
@@ -516,7 +516,7 @@ let showOrderSummary = React.functionComponent (fun () ->
             prop.onClick (ignore >> startAuthenticate)
             prop.children [
                 Bulma.icon [ Fa.i [ Fa.Solid.FileAlt ] [] ]
-                Html.span [ prop.text "Bestellungen anzeigen" ]
+                Html.span [ prop.text "Meine Bestellungen" ]
             ]
         ]
         if isVisible then authForm
