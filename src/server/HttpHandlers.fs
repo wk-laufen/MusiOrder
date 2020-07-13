@@ -3,7 +3,6 @@ module MusiOrder.Server.HttpHandlers
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
 open Microsoft.AspNetCore.Http
-open Microsoft.Data.Sqlite
 open MusiOrder.Models
 open System
 
@@ -77,8 +76,15 @@ let handlePostOrder =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
             let! data = ctx.BindModelAsync<Order>()
-            let articleIds = data.Entries |> List.map (fun e -> let (ProductId p) = e.ProductId in p) |> List.toArray |> String.concat ","
-            let! articleData = DB.readIndexed "SELECT `id`, `name`, `price` FROM `Article` WHERE `id` IN (@ArticleIds)" [ ("@ArticleIds", articleIds) ] (fun reader -> reader.GetString(0), (reader.GetString(1), reader.GetDecimal(2)))
+            let! articleData = task {
+                let articleIds = data.Entries |> List.map (fun e -> let (ProductId p) = e.ProductId in p)
+                let parameterNames = articleIds |> Seq.mapi (fun i _ -> sprintf "@ArticleId%d" i) |> String.concat ", "
+                let query = sprintf "SELECT `id`, `name`, `price` FROM `Article` WHERE `id` IN (%s)" parameterNames
+                let parameters =
+                    articleIds
+                    |> List.mapi (fun i productId -> (sprintf "@ArticleId%d" i, productId))
+                return! DB.readIndexed query parameters (fun reader -> reader.GetString(0), (reader.GetString(1), reader.GetDecimal(2)))
+            }
             match! DB.getUser data.AuthKey with
             | Some user ->
                 let parameters =
