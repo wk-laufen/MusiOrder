@@ -141,10 +141,10 @@ let handleGetUsers =
             match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
             | Some user when user.Role.Equals("admin", StringComparison.InvariantCultureIgnoreCase) ->
                 let query = """
-                    SELECT `Member`.`id`, `Member`.`firstName`, `Member`.`lastName`, max(datetime(`Order`.`timestamp`, 'localtime')), coalesce(sum(`MemberPayment`.`Amount`), 0) - coalesce(sum(`Order`.`amount` * `Order`.`pricePerUnit`), 0)
+                    SELECT `Member`.`id`, `Member`.`firstName`, `Member`.`lastName`, `lastOrderTimestamp`, coalesce(`payment`, 0) - coalesce(`orderPrice`, 0) as `balance`
                     FROM `Member`
-                    LEFT OUTER JOIN `MemberPayment` ON `Member`.`id` = `MemberPayment`.`userId`
-                    LEFT OUTER JOIN `Order` ON `Member`.`id` = `Order`.`userId`
+                    LEFT OUTER JOIN (SELECT userId, sum(`amount`) as `payment` FROM `MemberPayment` GROUP BY userId) AS P ON `Member`.`id` = `P`.`userId`
+                    LEFT OUTER JOIN (SELECT userId, max(datetime(`Order`.`timestamp`, 'localtime')) as `lastOrderTimestamp`, sum(`amount` * `pricePerUnit`) as `orderPrice` FROM `Order` GROUP BY userId) AS O ON `Member`.`id` = `O`.`userId`
                     GROUP BY `Member`.`id`
                     ORDER BY `Member`.`lastName`, `Member`.`firstName`
                 """
