@@ -68,73 +68,6 @@ let nav =
         ]
     ]
 
-let showOrderSummary = React.functionComponent (fun () ->
-    let (isVisible, setVisible) = React.useState(false)
-    let authKey = React.useAuthentication isVisible
-    let startAuthenticate () = setVisible true
-
-    let (orderSummaryState, setOrderSummaryState) = React.useState(Deferred.HasNotStartedYet)
-
-    let hideOrderSummary () =
-        setVisible false
-        setOrderSummaryState Deferred.HasNotStartedYet
-
-    let startLoadOrderSummary = React.useDeferredCallback(Api.loadOrderSummary, setOrderSummaryState)
-
-    React.useEffect(
-        fun () ->
-            match authKey, orderSummaryState with
-            | Some authKey, Deferred.HasNotStartedYet
-            | Some authKey, Deferred.Failed -> startLoadOrderSummary authKey
-            | _ -> ()
-        ,
-        [| box authKey |]
-    )
-
-    let authForm =
-        match authKey with
-        | None -> View.authForm "Bestellungen anzeigen" hideOrderSummary
-        | Some ->
-            match orderSummaryState with
-            | Deferred.HasNotStartedYet -> Html.none
-            | Deferred.InProgress ->
-                View.modal "Bestellungen anzeigen" hideOrderSummary [ View.loadIconBig ] []
-            | Deferred.Failed ->
-                View.modal "Bestellungen anzeigen" hideOrderSummary [
-                    Bulma.container [
-                        color.hasTextDanger
-                        spacing.px2
-                        prop.children [
-                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
-                            Bulma.title.p [
-                                color.hasTextDanger
-                                prop.children [
-                                    Html.text "Fehler beim Anzeigen der Bestellungen."
-                                    Html.br []
-                                    Html.text "Versuche es nochmal mit deinem Musischlüssel."
-                                ]
-                            ]
-                        ]
-                    ]
-                ] []
-            | Deferred.Resolved orderSummary ->
-                View.modal (sprintf "Bestellungen von %s" orderSummary.ClientFullName) hideOrderSummary [
-                    Bulma.container (View.orderSummary orderSummary)
-                ] []
-
-    [
-        Bulma.button.button [
-            color.isInfo
-            prop.onClick (ignore >> startAuthenticate)
-            prop.children [
-                Bulma.icon [ Fa.i [ Fa.Solid.FileAlt ] [] ]
-                Html.span [ prop.text "Meine Bestellungen" ]
-            ]
-        ]
-        if isVisible then authForm
-    ]
-)
-
 let showAdministration = React.functionComponent (fun () ->
     let (isVisible, setVisible) = React.useState(false)
     let authKey = React.useAuthentication isVisible
@@ -356,7 +289,7 @@ let main =
             nav
             OrderForm.view
                 {|
-                    UserButtons = [ showOrderSummary () ]
+                    UserButtons = [ OrderSummary.view () ]
                     AdminButtons = [ showAdministration () ]
                 |}
         ]
