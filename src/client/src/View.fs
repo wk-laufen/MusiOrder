@@ -104,17 +104,20 @@ let orderSummary (orderSummary: OrderSummary) =
             prop.textf "%.2f€" orderSummary.Balance
         ]
         Html.br []
-        Html.textf "Deine letzten Bestellungen waren:"
-        Html.ul [
-            for order in orderSummary.LatestOrders ->
-                Html.li [
-                    Html.textf "%s: " (moment(order.Timestamp)?fromNow())
-                    Bulma.tag [
-                        color.isInfo
-                        control.isMedium
-                        spacing.mt2
-                        prop.textf "%d x %s" order.Amount order.ProductName
+        match orderSummary.LatestOrders with
+        | [] -> Html.text "Keine Bestellungen in der letzten Zeit. 😱"
+        | orders ->
+            Html.text "Deine letzten Bestellungen waren:"
+            Html.ul [
+                for order in orders ->
+                    Html.li [
+                        Html.textf "%s: " (moment(order.Timestamp)?fromNow())
+                        Bulma.tag [
+                            color.isInfo
+                            control.isMedium
+                            spacing.mt2
+                            prop.textf "%d x %s" order.Amount order.ProductName
+                        ]
                     ]
-                ]
-        ]
+            ]
     ]
