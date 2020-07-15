@@ -1,5 +1,6 @@
 module Administration
 
+open Api
 open Elmish
 open Fable.Core
 open Fable.Core.JsInterop
@@ -11,10 +12,6 @@ open Feliz.UseElmish
 open MusiOrder.Models
 open Thoth.Fetch
 open Thoth.Json
-
-type LoadError =
-    | Forbidden
-    | RequestError of string
 
 type UserList = {
     AuthKey: AuthKey
@@ -34,27 +31,19 @@ type Model =
     | Hidden
     | Authenticating
     | Loading of AuthKey
-    | LoadError of LoadError
+    | LoadError of LoadUsersError
     | Loaded of UserList
 
 type Msg =
     | Show
     | Load of AuthKey
-    | LoadResult of Result<UserList, LoadError>
+    | LoadResult of Result<UserInfo list, LoadUsersError>
     | SelectUser of userId: string
     | AddPayment of userId: string * amount: PositiveInteger
     | AddPaymentResult of Result<(string * float), exn>
     | Close
 
 let init = Hidden, Cmd.none
-
-let loadUsers authKey = async {
-    let url = sprintf "/api/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    match! Fetch.``tryGet``(url, caseStrategy = CamelCase) |> Async.AwaitPromise with
-    | Ok (users: UserInfo list) -> return Ok (UserList.init authKey users)
-    | Error (FetchFailed response) when response.Status = 403 -> return Error Forbidden
-    | Error e -> return Error (RequestError (Helper.message e))
-}
 
 let addPayment (payment: Payment) = async {
     let coders =
@@ -69,7 +58,10 @@ let update msg state =
     match msg with
     | Show -> Authenticating, Cmd.none
     | Load authKey -> Loading authKey, Cmd.OfAsync.perform loadUsers authKey LoadResult
-    | LoadResult (Ok userList) -> Loaded userList, Cmd.none
+    | LoadResult (Ok users) ->
+        match state with
+        | Loading authKey -> Loaded (UserList.init authKey users), Cmd.none
+        | _ -> state, Cmd.none
     | LoadResult (Error e) -> LoadError e, Cmd.none
     | SelectUser userId ->
         match state with
@@ -130,7 +122,7 @@ let view = React.functionComponent (fun () ->
                     ]
                 ]
             ] []
-        | LoadError RequestError ->
+        | LoadError Other ->
             View.modal "Administration" (fun () -> dispatch Close) [
                 Bulma.container [
                     color.hasTextDanger

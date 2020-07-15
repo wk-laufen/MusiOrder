@@ -1,5 +1,6 @@
 module OrderSummary
 
+open Api
 open Elmish
 open Fable.FontAwesome
 open Feliz
@@ -25,7 +26,7 @@ let init = Hidden, Cmd.none
 let update msg state =
     match msg with
     | Show -> Authenticating, Cmd.none
-    | Load authKey -> Loading authKey, Cmd.OfAsync.either Api.loadOrderSummary authKey (Ok >> LoadResult) (Error >> LoadResult)
+    | Load authKey -> Loading authKey, Cmd.OfAsync.either loadOrderSummary authKey (Ok >> LoadResult) (Error >> LoadResult)
     | LoadResult (Ok orderSummary) -> Loaded orderSummary, Cmd.none
     | LoadResult (Error e) -> LoadError e, Cmd.none
     | Close -> Hidden, Cmd.none

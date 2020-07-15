@@ -141,14 +141,14 @@ let handleGetUsers =
             match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
             | Some user when user.Role.Equals("admin", StringComparison.InvariantCultureIgnoreCase) ->
                 let query = """
-                    SELECT `Member`.`id`, `Member`.`firstName`, `Member`.`lastName`, `lastOrderTimestamp`, coalesce(`payment`, 0) - coalesce(`orderPrice`, 0) as `balance`
+                    SELECT `Member`.`id`, `Member`.`firstName`, `Member`.`lastName`, `Member`.`keyCode`, `lastOrderTimestamp`, coalesce(`payment`, 0) - coalesce(`orderPrice`, 0) as `balance`
                     FROM `Member`
                     LEFT OUTER JOIN (SELECT userId, sum(`amount`) as `payment` FROM `MemberPayment` GROUP BY userId) AS P ON `Member`.`id` = `P`.`userId`
                     LEFT OUTER JOIN (SELECT userId, max(datetime(`Order`.`timestamp`, 'localtime')) as `lastOrderTimestamp`, sum(`amount` * `pricePerUnit`) as `orderPrice` FROM `Order` GROUP BY userId) AS O ON `Member`.`id` = `O`.`userId`
                     GROUP BY `Member`.`id`
                     ORDER BY `Member`.`lastName`, `Member`.`firstName`
                 """
-                let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 3; Balance = float <| reader.GetDecimal(4) })
+                let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); AuthKey = AuthKey <| reader.GetString(3); LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 4; Balance = float <| reader.GetDecimal(5) })
                 return! Successful.OK result next ctx
             | Some -> return! RequestErrors.FORBIDDEN () next ctx
             | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
