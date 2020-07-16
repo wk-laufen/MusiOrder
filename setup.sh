@@ -4,7 +4,7 @@
 
 # Run `sudo raspi-config` and setup Wifi as well as console autologin
 
-apt-get install --no-install-recommends -y xserver-xorg x11-xserver-utils xinit openbox chromium-browser
+apt-get install --no-install-recommends -y xserver-xorg x11-xserver-utils xinit openbox chromium-browser sqlite3
 
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
