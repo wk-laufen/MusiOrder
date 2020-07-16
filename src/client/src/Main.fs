@@ -27,7 +27,10 @@ let nav =
                     ]
                     Bulma.navbarItem.div [
                         Bulma.icon [
-                            Fa.i [ Fa.Solid.Beer; Fa.Size Fa.Fa2x ] []
+                            prop.onClick (fun _ -> window.location.reload ())
+                            prop.children [
+                                Fa.i [ Fa.Solid.Beer; Fa.Size Fa.Fa2x ] []
+                            ]
                         ]
                     ]
                 ]
