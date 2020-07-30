@@ -7,6 +7,7 @@ open Fable.Core.JsInterop
 open Fable.FontAwesome
 open Feliz
 open Feliz.Bulma
+open Feliz.Router
 open Feliz.UseDeferred
 open Feliz.UseElmish
 open MusiOrder.Models
@@ -98,12 +99,22 @@ let view = React.functionComponent (fun () ->
         | _ -> false
     React.useAuthentication acceptsAuthKey (Load >> dispatch)
 
+    let abortButton =
+        Bulma.button.a [
+            spacing.mt6
+            prop.href (Router.format(""))
+            prop.text "Abbrechen"
+        ]
+
     [
         match state with
         | Authenticating ->
             Bulma.section [
                 text.hasTextCentered
-                prop.children [ View.authForm ]
+                prop.children [
+                    View.authForm
+                    abortButton
+                ]
             ]
         | Loading ->
             Bulma.section [
@@ -128,6 +139,7 @@ let view = React.functionComponent (fun () ->
                             Html.text "Versuche es nochmal mit einem Administrator-Schlüssel."
                         ]
                     ]
+                    abortButton
                 ]
             ]
         | LoadError Other ->
@@ -145,6 +157,7 @@ let view = React.functionComponent (fun () ->
                             Html.text "Versuche es nochmal mit deinem Musischlüssel."
                         ]
                     ]
+                    abortButton
                 ]
             ]
         | Loaded userList ->
@@ -208,14 +221,14 @@ let view = React.functionComponent (fun () ->
                     ]
                 ]
             ]
-            match userList.SelectedUser with
-            | Some selectedUserId ->
-                Bulma.section [
-                    prop.className "controls"
-                    prop.children [
-                        Bulma.container [
-                            Bulma.level [
-                                Bulma.levelLeft [
+            Bulma.section [
+                prop.className "controls"
+                prop.children [
+                    Bulma.container [
+                        Bulma.level [
+                            Bulma.levelLeft [
+                                match userList.SelectedUser with
+                                | Some selectedUserId ->
                                     Bulma.levelItem [
                                         prop.text "Guthaben aufladen:"
                                     ]
@@ -250,11 +263,23 @@ let view = React.functionComponent (fun () ->
                                     | Deferred.InProgress -> icon [ color.hasTextPrimary ] [ Fa.Solid.Spinner; Fa.Pulse ]
                                     | Deferred.Failed e -> icon [ color.hasTextDanger; prop.title e.Message ] [ Fa.Solid.Times ]
                                     | Deferred.Resolved -> icon [ color.hasTextSuccess ] [ Fa.Solid.Check ]
+                                | None -> ()
+                            ]
+
+                            Bulma.levelRight [
+                                Bulma.levelItem [
+                                    Bulma.button.a [
+                                        prop.href (Router.format(""))
+                                        prop.children [
+                                            Bulma.icon [ Fa.i [ Fa.Solid.Check ] [] ]
+                                            Html.span [ prop.text "Fertig" ]
+                                        ]
+                                    ]
                                 ]
                             ]
                         ]
                     ]
                 ]
-            | None -> ()
+            ]
     ]
 )
