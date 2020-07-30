@@ -127,16 +127,18 @@ let view = React.functionComponent (fun () ->
                 color.hasTextDanger
                 spacing.px2
                 prop.children [
-                    Fa.stack [ Fa.Stack.Size Fa.Fa4x ] [
-                        Fa.i [ Fa.Solid.Key; Fa.Stack1x ] []
-                        Fa.i [ Fa.Solid.Ban; Fa.Stack2x ] []
-                    ]
-                    Bulma.title.p [
-                        color.hasTextDanger
-                        prop.children [
-                            Html.text "Schlüssel ist nicht authorisiert."
-                            Html.br []
-                            Html.text "Versuche es nochmal mit einem Administrator-Schlüssel."
+                    Bulma.container [
+                        Fa.stack [ Fa.Stack.Size Fa.Fa4x ] [
+                            Fa.i [ Fa.Solid.Key; Fa.Stack1x ] []
+                            Fa.i [ Fa.Solid.Ban; Fa.Stack2x ] []
+                        ]
+                        Bulma.title.p [
+                            color.hasTextDanger
+                            prop.children [
+                                Html.text "Schlüssel ist nicht authorisiert."
+                                Html.br []
+                                Html.text "Versuche es nochmal mit einem Administrator-Schlüssel."
+                            ]
                         ]
                     ]
                     abortButton
