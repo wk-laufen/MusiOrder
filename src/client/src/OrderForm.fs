@@ -266,34 +266,31 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
         ]
 
     let userButtons = Bulma.buttons [
-        prop.className "controls"
-        prop.children [
-            Bulma.button.button [
-                color.isDanger
-                match state.Order with
-                | Drafting order ->
-                    prop.disabled (Map.isEmpty order)
-                    prop.onClick (fun _ -> dispatch ResetOrder)
-                | _ -> ()
-                prop.children [
-                    Bulma.icon [ Fa.i [ Fa.Solid.UndoAlt ] [] ]
-                    Html.span [ prop.text "Zurücksetzen" ]
-                ]
+        Bulma.button.button [
+            color.isDanger
+            match state.Order with
+            | Drafting order ->
+                prop.disabled (Map.isEmpty order)
+                prop.onClick (fun _ -> dispatch ResetOrder)
+            | _ -> ()
+            prop.children [
+                Bulma.icon [ Fa.i [ Fa.Solid.UndoAlt ] [] ]
+                Html.span [ prop.text "Zurücksetzen" ]
             ]
-            Bulma.button.button [
-                color.isSuccess
-                match state.Order with
-                | Drafting order ->
-                    prop.disabled (Map.isEmpty order)
-                    prop.onClick (fun _ -> dispatch Authenticate)
-                | _ -> ()
-                prop.children [
-                    Bulma.icon [ Fa.i [ Fa.Solid.EuroSign ] [] ]
-                    Html.span [ prop.text "Bestellen" ]
-                ]
-            ]
-            yield! props.UserButtons
         ]
+        Bulma.button.button [
+            color.isSuccess
+            match state.Order with
+            | Drafting order ->
+                prop.disabled (Map.isEmpty order)
+                prop.onClick (fun _ -> dispatch Authenticate)
+            | _ -> ()
+            prop.children [
+                Bulma.icon [ Fa.i [ Fa.Solid.EuroSign ] [] ]
+                Html.span [ prop.text "Bestellen" ]
+            ]
+        ]
+        yield! props.UserButtons
     ]
 
     let errorView =
@@ -318,7 +315,7 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
     let authForm =
         match state.Order with
         | Drafting -> Html.none
-        | Authenticating -> View.authForm "Bestellung speichern" (fun () -> dispatch CloseSendOrder)
+        | Authenticating -> View.modalAuthForm "Bestellung speichern" (fun () -> dispatch CloseSendOrder)
         | LoadingUsers -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
         | LoadUsersError (order, _) -> errorView
         | LoadedUsers (order, _, users) ->
@@ -410,7 +407,7 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
             Bulma.section [ View.errorNotificationWithRetry "No products available." (fun () -> dispatch LoadProducts) ]
         | Deferred.Resolved products ->
             Bulma.section [
-                prop.className "products"
+                prop.className "content"
                 prop.children [
                     Bulma.container [
                         for group in products -> productGroupView group
@@ -418,16 +415,19 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
                 ]
             ]
             Bulma.section [
-                Bulma.container [
-                    Bulma.level [
-                        Bulma.levelLeft [
-                            Bulma.levelItem [
-                                userButtons
+                prop.className "controls"
+                prop.children [
+                    Bulma.container [
+                        Bulma.level [
+                            Bulma.levelLeft [
+                                Bulma.levelItem [
+                                    userButtons
+                                ]
                             ]
-                        ]
-                        Bulma.levelRight [
-                            Bulma.levelItem [
-                                Bulma.buttons props.AdminButtons
+                            Bulma.levelRight [
+                                Bulma.levelItem [
+                                    Bulma.buttons props.AdminButtons
+                                ]
                             ]
                         ]
                     ]

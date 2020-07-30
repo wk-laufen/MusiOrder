@@ -75,20 +75,21 @@ let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement
         ]
     ]
 
-let authForm title onHide =
-    modal title onHide [
-        Bulma.container [
-            color.hasTextPrimary
-            spacing.px2
-            prop.children [
-                Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
-                Bulma.title.p [
-                    color.hasTextPrimary
-                    prop.text "Authentifiziere dich mit deinem Musischlüssel"
-                ]
+let authForm =
+    Bulma.container [
+        color.hasTextPrimary
+        spacing.px2
+        prop.children [
+            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+            Bulma.title.p [
+                color.hasTextPrimary
+                prop.text "Authentifiziere dich mit deinem Musischlüssel"
             ]
         ]
-    ] []
+    ]
+
+let modalAuthForm title onHide =
+    modal title onHide [ authForm ] []
 
 let balanceColor balance =
     if balance >= 5. then color.isSuccess

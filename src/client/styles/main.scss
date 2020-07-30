@@ -20,8 +20,9 @@ html {
 .main .controls {
     flex: 0 0 auto;
 }
-.main .products {
+.main .content {
     overflow-y: auto;
+    flex-grow: 1;
 }
 
 .product-name {

@@ -43,7 +43,7 @@ let view = React.functionComponent (fun () ->
     let authForm =
         match state with
         | Hidden -> Html.none
-        | Authenticating -> View.authForm "Bestellungen anzeigen" (fun () -> dispatch Close)
+        | Authenticating -> View.modalAuthForm "Bestellungen anzeigen" (fun () -> dispatch Close)
         | Loading -> View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [ View.loadIconBig ] []
         | LoadError ->
             View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [

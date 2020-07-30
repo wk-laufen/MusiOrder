@@ -164,7 +164,7 @@ let handlePostPayment =
                     [
                         ("@Id", sprintf "%O" (Guid.NewGuid()) |> box)
                         ("@UserId", box data.UserId)
-                        ("@Amount", PositiveInteger.value data.Amount |> box)
+                        ("@Amount", PositiveFloat.value data.Amount |> box)
                         ("@Timestamp", box DateTimeOffset.Now)
                     ]
                 do! DB.write "INSERT INTO `MemberPayment` (`id`, `userId`, `amount`, `timestamp`) VALUES (@Id, @UserId, @Amount, @Timestamp)" parameters

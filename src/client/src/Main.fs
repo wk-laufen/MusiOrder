@@ -1,18 +1,33 @@
 module Main
 
 open Browser.Dom
+open Elmish
 open Fable.Core.JsInterop
 open Fable.FontAwesome
 open Feliz
 open Feliz.Bulma
+open Feliz.Router
+open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
 
 importAll "../styles/main.scss"
 
-let nav =
+type Model = {
+    CurrentUrl: string list
+}
+
+type Msg = UrlChanged of string list
+
+let init = { CurrentUrl = Router.currentUrl() }, Cmd.none
+
+let update msg state =
+    match msg with
+    | UrlChanged segments -> { state with CurrentUrl = segments }, Cmd.none
+
+let nav bgColor (title: string) =
     Bulma.navbar [
-        color.hasBackgroundPrimary
+        bgColor
         prop.className "navigation"
         prop.children [
             Bulma.navbarBrand.div [
@@ -22,12 +37,12 @@ let nav =
                 prop.children [
                     Bulma.navbarItem.div [
                         Bulma.title.h1 [
-                            prop.text "MusiOrder"
+                            prop.text title
                         ]
                     ]
                     Bulma.navbarItem.div [
                         Bulma.icon [
-                            prop.onClick (fun _ -> window.location.reload ())
+                            prop.onClick (fun _ -> window.location.href <- "/")
                             prop.children [
                                 Fa.i [ Fa.Solid.Beer; Fa.Size Fa.Fa2x ] []
                             ]
@@ -38,17 +53,40 @@ let nav =
         ]
     ]
 
-let main =
-    Html.div [
-        prop.className "main"
+let adminPageButton =
+    Bulma.button.a [
+        prop.href (Router.format("administration"))
         prop.children [
-            nav
-            OrderForm.view
-                {|
-                    UserButtons = [ OrderSummary.view () ]
-                    AdminButtons = [ Administration.view () ]
-                |}
+            Bulma.icon [ Fa.i [ Fa.Solid.Cogs ] [] ]
+            Html.span [ prop.text "Administration" ]
         ]
     ]
+
+let main = React.functionComponent (fun () ->
+    let (state, dispatch) = React.useElmish(init, update, [||])
+
+    React.router [
+        router.onUrlChanged (UrlChanged >> dispatch)
+
+        router.children [
+            Html.div [
+                prop.className "main"
+                prop.children [
+                    match state.CurrentUrl with
+                    | [ "administration" ] ->
+                        nav color.hasBackgroundDanger "MusiOrder - Administration"
+                        Administration.view ()
+                    | _ ->
+                        nav color.hasBackgroundPrimary "MusiOrder"
+                        OrderForm.view
+                            {|
+                                UserButtons = [ OrderSummary.view () ]
+                                AdminButtons = [ adminPageButton ]
+                            |}
+                ]
+            ]
+        ]
+    ]
+)
 
 ReactDOM.render(main, document.getElementById "app")

@@ -75,8 +75,23 @@ type UserInfo = {
     Balance: float
 }
 
+type PositiveFloat = private PositiveFloat of float
+
+module PositiveFloat =
+    let tryCreate = function
+        | v when v > 0. -> Some (PositiveFloat v)
+        | _ -> None
+    let value (PositiveFloat v) = v
+    let encode : Encoder<_> = fun (PositiveFloat v) -> Encode.float v
+    let decoder : Decoder<_> =
+        Decode.float
+        |> Decode.andThen (tryCreate >> function
+            | Some v -> Decode.succeed v
+            | None -> Decode.fail "Must be positive"
+        )
+
 type Payment = {
     AuthKey: AuthKey
     UserId: string
-    Amount: PositiveInteger
+    Amount: PositiveFloat
 }
