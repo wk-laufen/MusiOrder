@@ -83,6 +83,7 @@ let authForm =
             Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
             Bulma.title.p [
                 color.hasTextPrimary
+                spacing.mt4
                 prop.text "Authentifiziere dich mit deinem Musischlüssel"
             ]
         ]
