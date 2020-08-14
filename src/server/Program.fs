@@ -60,8 +60,8 @@ let configureApp (ctx: WebHostBuilderContext) (app : IApplicationBuilder) =
         app.UseGiraffeErrorHandler(errorHandler) |> ignore
 
     app
-        .UseStaticFiles()
         .UseDefaultFiles()
+        .UseStaticFiles()
         .UseHttpsRedirection()
         .UseCors(configureCors)
         .UseGiraffe(webApp)
