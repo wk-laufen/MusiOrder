@@ -89,4 +89,6 @@ let main = React.functionComponent (fun () ->
     ]
 )
 
+moment?locale("de-AT")
+
 ReactDOM.render(main, document.getElementById "app")
