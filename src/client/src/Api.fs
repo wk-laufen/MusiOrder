@@ -6,8 +6,11 @@ open Thoth.Fetch
 open Thoth.Json
 
 let loadOrderSummary authKey : Async<OrderSummary> = async {
+    let coders =
+        Extra.empty
+        |> Extra.withDecimal
     let url = sprintf "/api/order/summary?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    return! Fetch.``get``(url, caseStrategy = CamelCase) |> Async.AwaitPromise
+    return! Fetch.``get``(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
 }
 
 type LoadUsersError =
