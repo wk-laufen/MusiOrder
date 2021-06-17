@@ -5,7 +5,6 @@ open Elmish
 open Fable.Core
 open Fable.Core.JsInterop
 open Fable.FontAwesome
-open Fable.React
 open Feliz
 open Feliz.Bulma
 open Feliz.Bulma.Operators
@@ -16,7 +15,7 @@ open MusiOrder.Models
 open Thoth.Json
 open Thoth.Fetch
 
-type UserList = {
+type LoadedModel = {
     Users: UserInfo list
     SelectedUser: string option
     AddPaymentState: Deferred<unit>
@@ -26,14 +25,7 @@ type Model =
     | NotLoaded
     | Loading of AuthKey
     | LoadError of AuthKey * LoadUsersError
-    | Loaded of AuthKey * UserList
-
-module UserList =
-    let init users = {
-        Users = users
-        SelectedUser = None
-        AddPaymentState = Deferred.HasNotStartedYet
-    }
+    | Loaded of AuthKey * LoadedModel
 
 type Msg =
     | Load of AuthKey
@@ -63,7 +55,7 @@ let update msg state =
     | Load authKey -> Loading authKey, Cmd.OfAsync.perform loadUsers authKey LoadResult
     | LoadResult (Ok users) ->
         match state with
-        | Loading authKey -> Loaded (authKey, UserList.init users), Cmd.none
+        | Loading authKey -> Loaded (authKey, { Users = users; SelectedUser = None; AddPaymentState = Deferred.HasNotStartedYet }), Cmd.none
         | _ -> state, Cmd.none
     | LoadResult (Error e) ->
         match state with
@@ -71,24 +63,24 @@ let update msg state =
         | _ -> state, Cmd.none
     | SelectUser userId ->
         match state with
-        | Loaded (authKey, userList) -> Loaded (authKey, { userList with SelectedUser = Some userId }), Cmd.none
+        | Loaded (authKey, state) -> Loaded (authKey, { state with SelectedUser = Some userId }), Cmd.none
         | _ -> state, Cmd.none
     | AddPayment (userId, amount) ->
         match state with
-        | Loaded (authKey, userList) ->
+        | Loaded (authKey, state) ->
             let payment = { AuthKey = authKey; UserId = userId; Amount = amount }
-            Loaded (authKey, { userList with AddPaymentState = Deferred.InProgress }), Cmd.OfAsync.either addPayment payment (Ok >> AddPaymentResult) (Error >> AddPaymentResult)
+            Loaded (authKey, { state with AddPaymentState = Deferred.InProgress }), Cmd.OfAsync.either addPayment payment (Ok >> AddPaymentResult) (Error >> AddPaymentResult)
         | _ -> state, Cmd.none
     | AddPaymentResult (Ok (userId, totalAmount)) ->
         match state with
-        | Loaded (authKey, userList) ->
+        | Loaded (authKey, state) ->
             let users =
-                userList.Users
+                state.Users
                 |> List.map (fun user ->
                     if user.Id = userId then { user with Balance = totalAmount }
                     else user
                 )
-            Loaded (authKey, { userList with Users = users; AddPaymentState = Deferred.Resolved () }), Cmd.none
+            Loaded (authKey, { state with Users = users; AddPaymentState = Deferred.Resolved () }), Cmd.none
         | _ -> state, Cmd.none
     | AddPaymentResult (Error e) ->
         match state with
@@ -111,9 +103,9 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
         Html.none // Handled by parent component
     | LoadError (authKey, Other _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
-    | Loaded (_, userList) ->
+    | Loaded (_, state) ->
         Html.div [
-            match userList.SelectedUser with
+            match state.SelectedUser with
             | Some selectedUserId ->
                 setMenuItems [
                     Bulma.levelItem [
@@ -123,9 +115,9 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
                         Bulma.buttons [
                             let amounts = [
                                 yield!
-                                    userList.SelectedUser
+                                    state.SelectedUser
                                     |> Option.bind (fun userId ->
-                                        userList.Users
+                                        state.Users
                                         |> List.tryFind (fun v -> v.Id = userId)
                                     )
                                     |> Option.filter (fun v -> v.Balance <> 0.m)
@@ -136,7 +128,7 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
                             ]
                             for amount in amounts do
                                 Bulma.button.button [
-                                    match userList.AddPaymentState with
+                                    match state.AddPaymentState with
                                     | Deferred.InProgress ->
                                         prop.disabled true
                                     | _ -> ()
@@ -158,7 +150,7 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
                                 ]
                             ]
                         ]
-                    match userList.AddPaymentState with
+                    match state.AddPaymentState with
                     | Deferred.HasNotStartedYet -> ()
                     | Deferred.InProgress -> icon [ color.hasTextPrimary ] [ Fa.Solid.Spinner; Fa.Pulse ]
                     | Deferred.Failed e -> icon [ color.hasTextDanger; prop.title e.Message ] [ Fa.Solid.Times ]
@@ -179,7 +171,7 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
                             ]
                         ]
                         Html.tbody [
-                            for user in userList.Users ->
+                            for user in state.Users ->
                                 let (latestOrderColor, latestOrderTime) =
                                     user.LatestOrderTimestamp
                                     |> Option.map (fun v ->
@@ -196,13 +188,13 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
                                     prop.onClick (fun _ -> dispatch (SelectUser user.Id))
                                     prop.children [
                                         Html.td [
-                                            if userList.SelectedUser = Some user.Id then tr.isSelected ++ text.hasTextLeft
+                                            if state.SelectedUser = Some user.Id then tr.isSelected ++ text.hasTextLeft
                                             else text.hasTextLeft
                                             prop.style [ style.textTransform.uppercase ]
                                             prop.text user.LastName
                                         ]
                                         Html.td [
-                                            if userList.SelectedUser = Some user.Id then tr.isSelected ++ text.hasTextLeft
+                                            if state.SelectedUser = Some user.Id then tr.isSelected ++ text.hasTextLeft
                                             else text.hasTextLeft
                                             prop.text user.FirstName
                                         ]
