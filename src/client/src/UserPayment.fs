@@ -8,6 +8,7 @@ open Fable.FontAwesome
 open Fable.React
 open Feliz
 open Feliz.Bulma
+open Feliz.Bulma.Operators
 open Feliz.UseDeferred
 open Feliz.UseElmish
 open global.JS
@@ -193,15 +194,16 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
                                     |> Option.defaultValue (None, "-")
                                 Html.tr [
                                     prop.onClick (fun _ -> dispatch (SelectUser user.Id))
-                                    if userList.SelectedUser = Some user.Id then tr.isSelected
                                     prop.children [
                                         Html.td [
-                                            text.hasTextLeft
+                                            if userList.SelectedUser = Some user.Id then tr.isSelected ++ text.hasTextLeft
+                                            else text.hasTextLeft
                                             prop.style [ style.textTransform.uppercase ]
                                             prop.text user.LastName
                                         ]
                                         Html.td [
-                                            text.hasTextLeft
+                                            if userList.SelectedUser = Some user.Id then tr.isSelected ++ text.hasTextLeft
+                                            else text.hasTextLeft
                                             prop.text user.FirstName
                                         ]
                                         Html.td [
