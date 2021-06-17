@@ -76,13 +76,11 @@ let Main () =
                     match state.CurrentUrl with
                     | Administration.route :: subUrl ->
                         nav color.hasBackgroundDanger "MusiOrder - Administration"
-                        // TODO Use `Administration.Tab.route`
-                        match subUrl with
-                        | [ "bestellungen" ] ->
-                            Administration.Administration Administration.Orders
-                        | [ "guthaben" ]
-                        | _ ->
-                            Administration.Administration Administration.UserPayment
+                        let activeTab =
+                            Administration.allTabs
+                            |> List.tryFind (fun v -> subUrl = [ Administration.Tab.toRoute v ])
+                            |> Option.defaultValue (List.head Administration.allTabs)
+                        Administration.Administration activeTab
                     | _ ->
                         nav color.hasBackgroundPrimary "MusiOrder"
                         OrderForm.OrderForm
