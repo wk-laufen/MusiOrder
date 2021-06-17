@@ -1,9 +1,6 @@
 module Administration
 
-open Api
-open Browser.Types
 open Elmish
-open Fable.Core
 open Fable.Core.JsInterop
 open Fable.FontAwesome
 open Fable.React
