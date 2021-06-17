@@ -62,7 +62,8 @@ let adminPageButton =
         ]
     ]
 
-let main = React.functionComponent (fun () ->
+[<ReactComponent>]
+let Main () =
     let (state, dispatch) = React.useElmish(init, update, [||])
 
     React.router [
@@ -73,22 +74,25 @@ let main = React.functionComponent (fun () ->
                 prop.className "main"
                 prop.children [
                     match state.CurrentUrl with
-                    | [ "administration" ] ->
+                    | Administration.route :: subUrl ->
                         nav color.hasBackgroundDanger "MusiOrder - Administration"
-                        Administration.view ()
+                        // TODO Use `Administration.Tab.route`
+                        match subUrl with
+                        | [ "bestellungen" ] ->
+                            Administration.Administration Administration.Orders
+                        | [ "guthaben" ]
+                        | _ ->
+                            Administration.Administration Administration.UserPayment
                     | _ ->
                         nav color.hasBackgroundPrimary "MusiOrder"
-                        OrderForm.view
-                            {|
-                                UserButtons = [ OrderSummary.view () ]
-                                AdminButtons = [ adminPageButton ]
-                            |}
+                        OrderForm.OrderForm
+                            [ OrderSummary.OrderSummary () ]
+                            [ adminPageButton ]
                 ]
             ]
         ]
     ]
-)
 
 moment?locale("de-AT")
 
-ReactDOM.render(main, document.getElementById "app")
+ReactDOM.render(Main, document.getElementById "app")

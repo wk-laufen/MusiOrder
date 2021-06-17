@@ -1,103 +1,76 @@
 module Administration
 
 open Api
+open Browser.Types
 open Elmish
 open Fable.Core
 open Fable.Core.JsInterop
 open Fable.FontAwesome
+open Fable.React
 open Feliz
 open Feliz.Bulma
-open Feliz.Router
-open Feliz.UseDeferred
 open Feliz.UseElmish
+open Feliz.Router
+open global.JS
 open MusiOrder.Models
-open Thoth.Fetch
-open Thoth.Json
 
-type UserList = {
-    AuthKey: AuthKey
-    Users: UserInfo list
-    SelectedUser: string option
-    AddPaymentState: Deferred<unit>
+[<Literal>]
+let route = "administration"
+
+type Tab =
+    | UserPayment
+    | Orders
+module Tab =
+    let title = function
+        | UserPayment -> "Guthaben"
+        | Orders -> "Bestellungen"
+    let toRoute = function
+        | UserPayment -> "guthaben"
+        | Orders -> "bestellungen"
+let allTabs = [ UserPayment; Orders ]
+
+type AuthKeyState =
+    | NoAuthKeyProvided
+    | AuthKeyProvided of AuthKey
+    | InvalidAuthKeyProvided
+
+type Model = {
+    ActiveTab: Tab
+    AuthKey: AuthKeyState
 }
-module UserList =
-    let init authKey users = {
-        AuthKey = authKey
-        Users = users
-        SelectedUser = None
-        AddPaymentState = Deferred.HasNotStartedYet
-    }
-
-type Model =
-    | Authenticating
-    | Loading of AuthKey
-    | LoadError of LoadUsersError
-    | Loaded of UserList
 
 type Msg =
     | Show
-    | Load of AuthKey
-    | LoadResult of Result<UserInfo list, LoadUsersError>
-    | SelectUser of userId: string
-    | AddPayment of userId: string * amount: PositiveFloat
-    | AddPaymentResult of Result<(string * float), exn>
     | Close
 
-let init = Authenticating, Cmd.none
+let init authKey activeTab =
+    let state = {
+        ActiveTab = activeTab
+        AuthKey = authKey
+    }
+    (state, Cmd.none)
 
-let addPayment (payment: Payment) = async {
-    let coders =
-        Extra.empty
-        |> Extra.withCustom AuthKey.encode AuthKey.decoder
-        |> Extra.withCustom PositiveFloat.encode PositiveFloat.decoder
-    let! (totalAmount: float) = Fetch.post("/api/payment", payment, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
-    return (payment.UserId, totalAmount)
-}
-
-let update msg state =
+let update msg (state: Model) =
     match msg with
-    | Show -> Authenticating, Cmd.none
-    | Load authKey -> Loading authKey, Cmd.OfAsync.perform loadUsers authKey LoadResult
-    | LoadResult (Ok users) ->
-        match state with
-        | Loading authKey -> Loaded (UserList.init authKey users), Cmd.none
-        | _ -> state, Cmd.none
-    | LoadResult (Error e) -> LoadError e, Cmd.none
-    | SelectUser userId ->
-        match state with
-        | Loaded userList -> Loaded { userList with SelectedUser = Some userId }, Cmd.none
-        | _ -> state, Cmd.none
-    | AddPayment (userId, amount) ->
-        match state with
-        | Loaded userList ->
-            let payment = { AuthKey = userList.AuthKey; UserId = userId; Amount = amount }
-            Loaded { userList with AddPaymentState = Deferred.InProgress }, Cmd.OfAsync.either addPayment payment (Ok >> AddPaymentResult) (Error >> AddPaymentResult)
-        | _ -> state, Cmd.none
-    | AddPaymentResult (Ok (userId, totalAmount)) ->
-        match state with
-        | Loaded userList ->
-            let users =
-                userList.Users
-                |> List.map (fun user ->
-                    if user.Id = userId then { user with Balance = totalAmount }
-                    else user
-                )
-            Loaded { userList with Users = users; AddPaymentState = Deferred.Resolved () }, Cmd.none
-        | _ -> state, Cmd.none
-    | AddPaymentResult (Error e) ->
-        match state with
-        | Loaded userList -> Loaded { userList with AddPaymentState = Deferred.Failed e }, Cmd.none
-        | _ -> state, Cmd.none
-    | Close -> Authenticating, Cmd.none
+    | Show -> { state with AuthKey = NoAuthKeyProvided }, Cmd.none
+    | Close -> { state with AuthKey = NoAuthKeyProvided }, Cmd.none
 
-let view = React.functionComponent (fun () ->
-    let (state, dispatch) = React.useElmish(init, update, [||])
+[<ReactComponent>]
+let Administration activeTab =
+    let (authKey, setAuthKey) = React.useState(NoAuthKeyProvided)
+    let (state, dispatch) = React.useElmish(init authKey activeTab, update, [| authKey :> obj; activeTab :> obj |])
     let acceptsAuthKey =
-        match state with
-        | Authenticating
-        | LoadError -> true
-        | _ -> false
-    React.useAuthentication acceptsAuthKey (Load >> dispatch)
+        match state.AuthKey with
+        | NoAuthKeyProvided
+        | InvalidAuthKeyProvided -> true
+        | AuthKeyProvided _ -> false
+    React.useAuthentication acceptsAuthKey (AuthKeyProvided >> setAuthKey)
+
+    let tabMenuContainerRef = React.useRef(None)
+    let setTabMenuItems (content: ReactElement list) =
+        match tabMenuContainerRef.current with
+        | Some node -> ReactDOM.createPortal(!!content, node)
+        | None -> nothing
 
     let abortButton =
         Bulma.button.a [
@@ -106,9 +79,9 @@ let view = React.functionComponent (fun () ->
             prop.text "Abbrechen"
         ]
 
-    [
-        match state with
-        | Authenticating ->
+    Html.div [
+        match state.AuthKey with
+        | NoAuthKeyProvided ->
             Bulma.section [
                 text.hasTextCentered
                 prop.children [
@@ -116,12 +89,7 @@ let view = React.functionComponent (fun () ->
                     abortButton
                 ]
             ]
-        | Loading ->
-            Bulma.section [
-                text.hasTextCentered
-                prop.children [ View.loadIconBig ]
-            ]
-        | LoadError Forbidden ->
+        | InvalidAuthKeyProvided ->
             Bulma.section [
                 text.hasTextCentered
                 color.hasTextDanger
@@ -144,83 +112,32 @@ let view = React.functionComponent (fun () ->
                     abortButton
                 ]
             ]
-        | LoadError Other ->
-            Bulma.section [
-                text.hasTextCentered
-                color.hasTextDanger
-                spacing.px2
-                prop.children [
-                    Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
-                    Bulma.title.p [
-                        color.hasTextDanger
-                        prop.children [
-                            Html.text "Fehler bei der Authorisierung."
-                            Html.br []
-                            Html.text "Versuche es nochmal mit deinem Musischlüssel."
-                        ]
-                    ]
-                    abortButton
-                ]
-            ]
-        | Loaded userList ->
+        | AuthKeyProvided _ ->
             Bulma.section [
                 prop.className "content"
                 prop.children [
-                    Bulma.container [
-                        Bulma.table [
-                            table.isFullWidth
-                            prop.children [
-                                Html.thead [
-                                    Html.tr [
-                                        Html.th [ prop.text "Nachname" ]
-                                        Html.th [ prop.text "Vorname" ]
-                                        Html.th [ prop.text "Letzte Bestellung" ]
-                                        Html.th [ prop.text "Aktuelles Guthaben" ]
+                    Bulma.tabs [
+                        Html.ul [
+                            for tab in allTabs ->
+                                Bulma.tab [
+                                    if tab = activeTab then Bulma.tab.isActive
+                                    prop.children [
+                                        Html.a [
+                                            prop.text (Tab.title tab)
+                                            prop.href (Router.format(route, Tab.toRoute tab))
+                                        ]
                                     ]
                                 ]
-                                Html.tbody [
-                                    for user in userList.Users ->
-                                        let (latestOrderColor, latestOrderTime) =
-                                            user.LatestOrderTimestamp
-                                            |> Option.map (fun v ->
-                                                let m = JS.moment(v)
-                                                let daysSinceLatestOrder = JS.moment(System.DateTimeOffset.Now)?diff(m, "days")
-                                                let color =
-                                                    if daysSinceLatestOrder < 10. then Some color.isSuccess
-                                                    elif daysSinceLatestOrder < 30. then Some color.isWarning
-                                                    else Some color.isDanger
-                                                color, JS.moment(v)?fromNow()
-                                            )
-                                            |> Option.defaultValue (None, "-")
-                                        Html.tr [
-                                            prop.onClick (fun _ -> dispatch (SelectUser user.Id))
-                                            if userList.SelectedUser = Some user.Id then tr.isSelected
-                                            prop.children [
-                                                Html.td [
-                                                    text.hasTextLeft
-                                                    prop.style [ style.textTransform.uppercase ]
-                                                    prop.text user.LastName
-                                                ]
-                                                Html.td [
-                                                    text.hasTextLeft
-                                                    prop.text user.FirstName
-                                                ]
-                                                Html.td [
-                                                    match latestOrderColor with
-                                                    | Some color -> color
-                                                    | None -> ()
-                                                    prop.text latestOrderTime
-                                                ]
-                                                Html.td [
-                                                    View.balanceColor user.Balance
-                                                    prop.textf "%.2f€" user.Balance
-                                                ]
-                                            ]
-                                        ]
-                                ]
-                            ]
                         ]
                     ]
+                    let authKeyOpt =
+                        match authKey with
+                        | NoAuthKeyProvided
+                        | InvalidAuthKeyProvided -> None
+                        | AuthKeyProvided authKey -> Some authKey
+                    match activeTab with
+                    | UserPayment -> UserPayment.UserPayment authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | Orders -> ()
                 ]
             ]
             Bulma.section [
@@ -229,43 +146,7 @@ let view = React.functionComponent (fun () ->
                     Bulma.container [
                         Bulma.level [
                             Bulma.levelLeft [
-                                match userList.SelectedUser with
-                                | Some selectedUserId ->
-                                    Bulma.levelItem [
-                                        prop.text "Guthaben aufladen:"
-                                    ]
-                                    Bulma.levelItem [
-                                        Bulma.buttons [
-                                            for i in List.choose PositiveFloat.tryCreate [0.1; 0.2; 0.5; 1.; 2.; 5.; 10.; 20.] do
-                                                Bulma.button.button [
-                                                    match userList.AddPaymentState with
-                                                    | Deferred.InProgress ->
-                                                        prop.disabled true
-                                                    | _ -> ()
-                                                    prop.textf "+%g€" (PositiveFloat.value i)
-                                                    prop.onClick (fun _ -> dispatch (AddPayment (selectedUserId, i)))
-                                                ]
-                                        ]
-                                    ]
-                                    let icon iconProps faProps =
-                                        Bulma.levelItem [
-                                            Bulma.icon [
-                                                control.isMedium
-                                                yield! iconProps
-                                                prop.children [
-                                                    Fa.i [
-                                                        Fa.Size Fa.FaLarge
-                                                        yield! faProps
-                                                    ] []
-                                                ]
-                                            ]
-                                        ]
-                                    match userList.AddPaymentState with
-                                    | Deferred.HasNotStartedYet -> ()
-                                    | Deferred.InProgress -> icon [ color.hasTextPrimary ] [ Fa.Solid.Spinner; Fa.Pulse ]
-                                    | Deferred.Failed e -> icon [ color.hasTextDanger; prop.title e.Message ] [ Fa.Solid.Times ]
-                                    | Deferred.Resolved -> icon [ color.hasTextSuccess ] [ Fa.Solid.Check ]
-                                | None -> ()
+                                prop.ref tabMenuContainerRef
                             ]
 
                             Bulma.levelRight [
@@ -284,4 +165,3 @@ let view = React.functionComponent (fun () ->
                 ]
             ]
     ]
-)

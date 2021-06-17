@@ -54,6 +54,7 @@ let loadProducts = async {
     let coders =
         Extra.empty
         |> Extra.withCustom ProductId.encode ProductId.decoder
+        |> Extra.withDecimal
     let! (products: ProductGroup list) = Fetch.``get``("/api/grouped-products", caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
     return products
 }
@@ -97,7 +98,7 @@ let update msg (state: Model) =
         | _ -> state, Cmd.none
     | ResetOrder ->
         match state.Order with
-        | Drafting -> { state with Order = Drafting Map.empty }, Cmd.none
+        | Drafting _ -> { state with Order = Drafting Map.empty }, Cmd.none
         | _ -> state, Cmd.none
     | Authenticate ->
         match state.Order with
@@ -115,7 +116,7 @@ let update msg (state: Model) =
         match state.Order with
         | LoadingUsers (order, authKey) -> state, Cmd.ofMsg (SendOrder authKey)
         | _ -> state, Cmd.none
-    | LoadUsersResult (Error Other) ->
+    | LoadUsersResult (Error (Other _)) ->
         match state.Order with
         | LoadingUsers (order, authKey) -> { state with Order = LoadUsersError (order, authKey) }, Cmd.none
         | _ -> state, Cmd.none
@@ -125,18 +126,18 @@ let update msg (state: Model) =
         | LoadedUsers (order, _, _)
         | SendError (order, _) -> { state with Order = Sending (order, authKey) }, Cmd.OfAsync.either (uncurry sendOrder) (authKey, order) (Ok >> SendOrderResult) (Error >> SendOrderResult)
         | _ -> state, Cmd.none
-    | SendOrderResult Ok ->
+    | SendOrderResult (Ok _) ->
         match state.Order with
         | Sending (_, authKey) -> { state with Order = Sent (authKey, Deferred.HasNotStartedYet) }, Cmd.ofMsg LoadOrderSummary
         | _ -> state, Cmd.none
-    | SendOrderResult Error ->
+    | SendOrderResult (Error _) ->
         match state.Order with
         | Sending (order, authKey) -> { state with Order = SendError (order, authKey) }, Cmd.none
         | _ -> state, Cmd.none
     | LoadOrderSummary ->
         match state.Order with
         | Sent (authKey, Deferred.HasNotStartedYet)
-        | Sent (authKey, Deferred.Failed) -> { state with Order = Sent (authKey, Deferred.InProgress) }, Cmd.OfAsync.either loadOrderSummary authKey (Ok >> LoadOrderSummaryResult) (Error >> LoadOrderSummaryResult)
+        | Sent (authKey, Deferred.Failed _) -> { state with Order = Sent (authKey, Deferred.InProgress) }, Cmd.OfAsync.either loadOrderSummary authKey (Ok >> LoadOrderSummaryResult) (Error >> LoadOrderSummaryResult)
         | _ -> state, Cmd.none
     | LoadOrderSummaryResult (Ok v) ->
         match state.Order with
@@ -148,28 +149,29 @@ let update msg (state: Model) =
         | _ -> state, Cmd.none
     | CloseSendOrder ->
         match state.Order with
-        | Drafting -> state, Cmd.none
+        | Drafting _ -> state, Cmd.none
         | Authenticating order -> { state with Order = Drafting order }, Cmd.none
         | LoadingUsers (order, _) -> { state with Order = Drafting order }, Cmd.none
         | LoadUsersError (order, _) -> { state with Order = Drafting order }, Cmd.none
         | LoadedUsers (order, _, _) -> { state with Order = Drafting order }, Cmd.none
-        | Sending -> state, Cmd.none
+        | Sending _ -> state, Cmd.none
         | SendError (order, _) -> { state with Order = Drafting order }, Cmd.none
-        | Sent -> { state with Order = Drafting Map.empty}, Cmd.none
+        | Sent _ -> { state with Order = Drafting Map.empty}, Cmd.none
 
-let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: ReactElement list; AdminButtons: ReactElement list |}) ->
+[<ReactComponent>]
+let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list) =
     let (state, dispatch) = React.useElmish(init, update, [||])
 
     let acceptsAuthKey =
         match state.Order with
-        | Drafting -> false
-        | Authenticating order -> true
-        | LoadingUsers (order, _) -> false
-        | LoadUsersError (order, _) -> true
-        | LoadedUsers (order, _, _) -> false
-        | Sending -> false
-        | SendError (order, _) -> true
-        | Sent -> false
+        | Drafting _ -> false
+        | Authenticating _ -> true
+        | LoadingUsers _ -> false
+        | LoadUsersError _ -> true
+        | LoadedUsers _ -> false
+        | Sending _ -> false
+        | SendError _ -> true
+        | Sent _ -> false
     React.useAuthentication acceptsAuthKey (LoadUsers >> dispatch)
 
     let productView (product: Product) =
@@ -182,7 +184,7 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
             | LoadedUsers (order, _, _)
             | Sending (order, _)
             | SendError (order, _) -> Some order
-            | Sent -> None
+            | Sent _ -> None
         let amount = order |> Option.bind (Map.tryFind product.Id)
         Bulma.level [
             prop.className "product"
@@ -214,12 +216,12 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
                                 Bulma.title.p [
                                     title.is5
                                     color.hasTextSuccess
-                                    prop.textf "%.2f€" (float amount * product.Price)
+                                    prop.textf "%.2f€" (decimal amount * product.Price)
                                 ]
                             | None ->
                                 Bulma.title.p [
                                     title.is5
-                                    prop.textf "%.2f€" (float product.Price)
+                                    prop.textf "%.2f€" (decimal product.Price)
                                 ]
                         ]
 
@@ -290,7 +292,7 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
                 Html.span [ prop.text "Bestellen" ]
             ]
         ]
-        yield! props.UserButtons
+        yield! userButtons
     ]
 
     let errorView =
@@ -314,9 +316,9 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
 
     let authForm =
         match state.Order with
-        | Drafting -> Html.none
-        | Authenticating -> View.modalAuthForm "Bestellung speichern" (fun () -> dispatch CloseSendOrder)
-        | LoadingUsers -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
+        | Drafting _ -> Html.none
+        | Authenticating _ -> View.modalAuthForm "Bestellung speichern" (fun () -> dispatch CloseSendOrder)
+        | LoadingUsers _ -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
         | LoadUsersError (order, _) -> errorView
         | LoadedUsers (order, _, users) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
@@ -351,8 +353,8 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
                     ]
                 ]
             ] []
-        | Sending -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
-        | SendError -> errorView
+        | Sending _ -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
+        | SendError _ -> errorView
         | Sent (_, loadSummaryState) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
                 Bulma.container [
@@ -395,7 +397,7 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
                 ]
             ] []
 
-    [
+    Html.div [
         match state.Products with
         | Deferred.HasNotStartedYet ->
             ()
@@ -426,7 +428,7 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
                             ]
                             Bulma.levelRight [
                                 Bulma.levelItem [
-                                    Bulma.buttons props.AdminButtons
+                                    Bulma.buttons adminButtons
                                 ]
                             ]
                         ]
@@ -436,4 +438,3 @@ let view = React.functionComponent ("OrderForm", fun (props: {| UserButtons: Rea
 
         authForm
     ]
-)

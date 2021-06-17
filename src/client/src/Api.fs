@@ -19,6 +19,7 @@ let loadUsers authKey = async {
     let coders =
         Extra.empty
         |> Extra.withCustom AuthKey.encode AuthKey.decoder
+        |> Extra.withDecimal
     match! Fetch.``tryGet``(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise with
     | Ok (users: UserInfo list) -> return Ok users
     | Error (FetchFailed response) when response.Status = 403 -> return Error Forbidden

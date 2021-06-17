@@ -51,7 +51,7 @@ let handleGetGroupedProducts =
                             {
                                 Id = ProductId articleId
                                 Name = articleName
-                                Price = float price
+                                Price = price
                             }
                         )
                     match articles with
@@ -128,7 +128,7 @@ let handleGetOrderSummary =
                 let result =
                     {
                         ClientFullName = sprintf "%s %s" user.FirstName user.LastName
-                        Balance = float balance
+                        Balance = balance
                         LatestOrders = latestOrders
                     }
                 return! Successful.OK result next ctx
@@ -148,9 +148,9 @@ let handleGetUsers =
                     GROUP BY `Member`.`id`
                     ORDER BY `Member`.`lastName`, `Member`.`firstName`
                 """
-                let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); AuthKey = AuthKey <| reader.GetString(3); LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 4; Balance = float <| reader.GetDecimal(5) })
+                let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); AuthKey = AuthKey <| reader.GetString(3); LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 4; Balance = reader.GetDecimal(5) })
                 return! Successful.OK result next ctx
-            | Some -> return! RequestErrors.FORBIDDEN () next ctx
+            | Some _ -> return! RequestErrors.FORBIDDEN () next ctx
             | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
         }
 
@@ -164,11 +164,11 @@ let handlePostPayment =
                     [
                         ("@Id", sprintf "%O" (Guid.NewGuid()) |> box)
                         ("@UserId", box data.UserId)
-                        ("@Amount", PositiveFloat.value data.Amount |> box)
+                        ("@Amount", box data.Amount)
                         ("@Timestamp", box DateTimeOffset.Now)
                     ]
                 do! DB.write "INSERT INTO `MemberPayment` (`id`, `userId`, `amount`, `timestamp`) VALUES (@Id, @UserId, @Amount, @Timestamp)" parameters
                 let! balance = DB.getUserBalance data.UserId
-                return! Successful.OK (float balance) next ctx
+                return! Successful.OK balance next ctx
             | _ -> return! RequestErrors.FORBIDDEN () next ctx
         }

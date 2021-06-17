@@ -31,12 +31,13 @@ let update msg state =
     | LoadResult (Error e) -> LoadError e, Cmd.none
     | Close -> Hidden, Cmd.none
 
-let view = React.functionComponent (fun () ->
+[<ReactComponent>]
+let OrderSummary () =
     let (state, dispatch) = React.useElmish(init, update, [||])
     let acceptsAuthKey =
         match state with
         | Authenticating
-        | LoadError -> true
+        | LoadError _ -> true
         | _ -> false
     React.useAuthentication acceptsAuthKey (Load >> dispatch)
 
@@ -44,8 +45,8 @@ let view = React.functionComponent (fun () ->
         match state with
         | Hidden -> Html.none
         | Authenticating -> View.modalAuthForm "Bestellungen anzeigen" (fun () -> dispatch Close)
-        | Loading -> View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [ View.loadIconBig ] []
-        | LoadError ->
+        | Loading _ -> View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [ View.loadIconBig ] []
+        | LoadError _ ->
             View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [
                 Bulma.container [
                     color.hasTextDanger
@@ -68,7 +69,7 @@ let view = React.functionComponent (fun () ->
                 Bulma.container (View.orderSummary orderSummary)
             ] []
 
-    [
+    Html.div [
         Bulma.button.button [
             color.isInfo
             prop.onClick (fun _ -> dispatch Show)
@@ -79,4 +80,3 @@ let view = React.functionComponent (fun () ->
         ]
         authForm
     ]
-)

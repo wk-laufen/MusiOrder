@@ -93,8 +93,8 @@ let modalAuthForm title onHide =
     modal title onHide [ authForm ] []
 
 let balanceColor balance =
-    if balance >= 5. then color.isSuccess
-    elif balance >= 0. then color.isWarning
+    if balance >= 5.m then color.isSuccess
+    elif balance >= 0.m then color.isWarning
     else color.isDanger
 
 let orderSummary (orderSummary: OrderSummary) =

@@ -15,7 +15,7 @@ module ProductId =
 type Product = {
     Id: ProductId
     Name: string
-    Price: float
+    Price: decimal
 }
 
 type ProductGroup = {
@@ -62,7 +62,7 @@ type HistoricOrder = {
 
 type OrderSummary = {
     ClientFullName: string
-    Balance: float
+    Balance: decimal
     LatestOrders: HistoricOrder list
 }
 
@@ -72,26 +72,11 @@ type UserInfo = {
     LastName: string
     AuthKey: AuthKey
     LatestOrderTimestamp: DateTimeOffset option
-    Balance: float
+    Balance: decimal
 }
-
-type PositiveFloat = private PositiveFloat of float
-
-module PositiveFloat =
-    let tryCreate = function
-        | v when v > 0. -> Some (PositiveFloat v)
-        | _ -> None
-    let value (PositiveFloat v) = v
-    let encode : Encoder<_> = fun (PositiveFloat v) -> Encode.float v
-    let decoder : Decoder<_> =
-        Decode.float
-        |> Decode.andThen (tryCreate >> function
-            | Some v -> Decode.succeed v
-            | None -> Decode.fail "Must be positive"
-        )
 
 type Payment = {
     AuthKey: AuthKey
     UserId: string
-    Amount: PositiveFloat
+    Amount: decimal
 }
