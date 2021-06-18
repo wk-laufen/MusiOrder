@@ -304,12 +304,10 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                                 prop.onClick (fun _ -> dispatch (SendOrder user.AuthKey))
                                 prop.children [
                                     Html.td [
-                                        text.hasTextLeft
-                                        prop.style [ style.textTransform.uppercase ]
+                                        text.isUppercase
                                         prop.text user.LastName
                                     ]
                                     Html.td [
-                                        text.hasTextLeft
                                         prop.text user.FirstName
                                     ]
                                     Html.td [

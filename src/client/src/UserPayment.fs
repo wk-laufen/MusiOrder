@@ -176,14 +176,12 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
                                     prop.onClick (fun _ -> dispatch (SelectUser user.Id))
                                     prop.children [
                                         Html.td [
-                                            if state.SelectedUser = Some user.Id then tr.isSelected ++ text.hasTextLeft
-                                            else text.hasTextLeft
+                                            if state.SelectedUser = Some user.Id then tr.isSelected
                                             prop.style [ style.textTransform.uppercase ]
                                             prop.text user.LastName
                                         ]
                                         Html.td [
-                                            if state.SelectedUser = Some user.Id then tr.isSelected ++ text.hasTextLeft
-                                            else text.hasTextLeft
+                                            if state.SelectedUser = Some user.Id then tr.isSelected
                                             prop.text user.FirstName
                                         ]
                                         Html.td [
