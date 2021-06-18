@@ -148,7 +148,7 @@ let handleGetUsers =
                     GROUP BY `Member`.`id`
                     ORDER BY `Member`.`lastName`, `Member`.`firstName`
                 """
-                let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); AuthKey = AuthKey <| reader.GetString(3); LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 4; Balance = reader.GetDecimal(5) })
+                let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey; LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 4; Balance = reader.GetDecimal(5) })
                 return! Successful.OK result next ctx
             | Some _ -> return! RequestErrors.FORBIDDEN () next ctx
             | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx

@@ -8,9 +8,8 @@ CREATE TABLE `Member` (
     `id` TEXT NOT NULL PRIMARY KEY,
     `firstName` TEXT NOT NULL,
     `lastName` TEXT NOT NULL,
-    `keyCode` TEXT NOT NULL,
-    `role` TEXT NOT NULL,
-    CONSTRAINT unique_keyCode UNIQUE (keyCode)
+    `keyCode` TEXT UNIQUE,
+    `role` TEXT NOT NULL
 );
 
 CREATE TABLE `MemberPayment` (

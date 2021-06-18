@@ -70,7 +70,7 @@ type UserInfo = {
     Id: string
     FirstName: string
     LastName: string
-    AuthKey: AuthKey
+    AuthKey: AuthKey option
     LatestOrderTimestamp: DateTimeOffset option
     Balance: decimal
 }

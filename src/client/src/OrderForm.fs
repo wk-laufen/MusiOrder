@@ -5,6 +5,7 @@ open Elmish
 open Fable.FontAwesome
 open Feliz
 open Feliz.Bulma
+open Feliz.Bulma.Operators
 open Feliz.UseDeferred
 open Feliz.UseElmish
 open MusiOrder.Models
@@ -74,7 +75,7 @@ let update msg (state: Model) =
         | _ -> state, Cmd.none
     | LoadUsers authKey ->
         match state.Order with
-        | Authenticating order -> { state with Order = LoadingUsers (order, authKey) }, Cmd.OfAsync.perform loadUsers authKey LoadUsersResult
+        | Authenticating order -> { state with Order = LoadingUsers (order, authKey) }, Cmd.OfAsync.perform loadUserInfo authKey LoadUsersResult
         | _ -> state, Cmd.none
     | LoadUsersResult (Ok users) ->
         match state.Order with
@@ -293,31 +294,40 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | LoadedUsers (order, _, users) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
                 Bulma.table [
-                    Html.thead [
-                        Html.tr [
-                            Html.th [ prop.text "Nachname" ]
-                            Html.th [ prop.text "Vorname" ]
-                            Html.th [ prop.text "Aktuelles Guthaben" ]
-                        ]
-                    ]
-                    Html.tbody [
-                        for user in users ->
+                    table.isFullWidth
+                    prop.children [
+                        Html.thead [
                             Html.tr [
-                                prop.onClick (fun _ -> dispatch (SendOrder user.AuthKey))
-                                prop.children [
-                                    Html.td [
-                                        text.isUppercase
-                                        prop.text user.LastName
-                                    ]
-                                    Html.td [
-                                        prop.text user.FirstName
-                                    ]
-                                    Html.td [
-                                        View.balanceColor user.Balance
-                                        prop.textf "%.2f€" user.Balance
+                                Html.th [ prop.text "Nachname" ]
+                                Html.th [ prop.text "Vorname" ]
+                                Html.th [ prop.text "Aktuelles Guthaben" ]
+                                Html.th []
+                            ]
+                        ]
+                        Html.tbody [
+                            for user in users ->
+                                Html.tr [
+                                    match user.AuthKey with
+                                    | Some authKey -> prop.onClick (fun _ -> dispatch (SendOrder authKey))
+                                    | None -> color.hasTextGreyLight
+
+                                    prop.children [
+                                        Html.td [
+                                            text.hasTextLeft
+                                            ++ text.isUppercase
+                                            prop.text user.LastName
+                                        ]
+                                        Html.td [
+                                            text.hasTextLeft
+                                            prop.text user.FirstName
+                                        ]
+                                        Html.td [
+                                            View.balanceColor user.Balance
+                                            prop.textf "%.2f€" user.Balance
+                                        ]
                                     ]
                                 ]
-                            ]
+                        ]
                     ]
                 ]
             ] []
