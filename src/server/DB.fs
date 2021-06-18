@@ -3,6 +3,7 @@ module DB
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.Data.Sqlite
 open MusiOrder.Models
+open System
 
 let private dbPath =
     match System.Environment.GetEnvironmentVariable "DB_PATH" |> Option.ofObj with
@@ -47,6 +48,9 @@ type User = {
     LastName: string
     Role: string
 }
+module User =
+    let isAdmin user =
+        user.Role.Equals("admin", StringComparison.InvariantCultureIgnoreCase)
 
 let getUser (AuthKey authKey) =
     readSingle "SELECT `id`, `firstName`, `lastName`, `role` FROM `Member` WHERE `keyCode` = @KeyCode" [ ("@KeyCode", authKey) ] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); Role = reader.GetString(3) })

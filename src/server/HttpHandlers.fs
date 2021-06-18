@@ -139,7 +139,7 @@ let handleGetUsers =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
             match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
-            | Some user when user.Role.Equals("admin", StringComparison.InvariantCultureIgnoreCase) ->
+            | Some user when DB.User.isAdmin user ->
                 let query = """
                     SELECT `Member`.`id`, `Member`.`firstName`, `Member`.`lastName`, `Member`.`keyCode`, `lastOrderTimestamp`, coalesce(`payment`, 0) - coalesce(`orderPrice`, 0) as `balance`
                     FROM `Member`
@@ -159,7 +159,7 @@ let handlePostPayment =
         task {
             let! data = ctx.BindModelAsync<Payment>()
             match! DB.getUser data.AuthKey with
-            | Some user when user.Role.Equals("admin", StringComparison.InvariantCultureIgnoreCase) ->
+            | Some user when DB.User.isAdmin user ->
                 let parameters =
                     [
                         ("@Id", sprintf "%O" (Guid.NewGuid()) |> box)
