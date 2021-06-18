@@ -91,6 +91,8 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
         Html.none // Handled by parent component
     | LoadError (authKey, Other _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
+    | Loaded (_, { Users = [] }) ->
+        View.infoNotification "Keine Benutzer vorhanden"
     | Loaded (_, state) ->
         Html.div [
             match state.SelectedUser with

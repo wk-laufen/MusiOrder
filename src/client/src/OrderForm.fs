@@ -231,8 +231,10 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
 
     let productGroupView group =
         Bulma.box [
-            yield Bulma.title.h3 [ prop.text group.Name ]
-            for product in group.Products -> productView product
+            Bulma.title.h3 [ prop.text group.Name ]
+            match group.Products with
+            | [] -> View.infoNotification "Keine Artikel vorhanden"
+            | products -> yield! List.map productView products
         ]
 
     let userButtons = Bulma.buttons [
@@ -373,12 +375,14 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             Bulma.section [ View.errorNotificationWithRetry error.Message (fun () -> dispatch LoadProducts) ]
         | Deferred.Resolved [] ->
             Bulma.section [ View.errorNotificationWithRetry "No products available." (fun () -> dispatch LoadProducts) ]
-        | Deferred.Resolved products ->
+        | Deferred.Resolved productGroups ->
             Bulma.section [
                 prop.className "content"
                 prop.children [
                     Bulma.container [
-                        for group in products -> productGroupView group
+                        match productGroups with
+                        | [] -> View.infoNotification "Keine Artikel vorhanden"
+                        | productGroups -> yield! List.map productGroupView productGroups
                     ]
                 ]
             ]
