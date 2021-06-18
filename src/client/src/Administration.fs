@@ -134,7 +134,7 @@ let Administration activeTab =
                         | AuthKeyProvided authKey -> Some authKey
                     match activeTab with
                     | UserPayment -> UserPayment.UserPayment authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
-                    | Orders -> OrdersAdministration.OrdersAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | Orders -> OrderAdministration.OrderAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                 ]
             ]
             Bulma.section [

@@ -1,4 +1,4 @@
-module OrdersAdministration
+module OrderAdministration
 
 open Api
 open Elmish
@@ -69,7 +69,7 @@ let update msg state =
         | _ -> state, Cmd.none
 
 [<ReactComponent>]
-let OrdersAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> ReactElement) =
+let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> ReactElement) =
     let (state, dispatch) = React.useElmish(init authKey, update, [| authKey :> obj |])
 
     match state with
