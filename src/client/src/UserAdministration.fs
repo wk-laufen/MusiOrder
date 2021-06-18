@@ -2,6 +2,7 @@ module UserAdministration
 
 open Api
 open Elmish
+open Fable.FontAwesome
 open Feliz
 open Feliz.Bulma
 open Feliz.UseElmish
@@ -10,6 +11,7 @@ open MusiOrder.Models
 
 type LoadedModel = {
     Users: UserData list
+    VisibleKeyCodeUserIds: Set<string>
 }
 
 type Model =
@@ -21,6 +23,7 @@ type Model =
 type Msg =
     | Load of AuthKey
     | LoadResult of Result<UserData list, FetchError>
+    | ShowAuthKey of userId: string
 
 let init authKey =
     match authKey with
@@ -36,12 +39,16 @@ let update msg state =
     | LoadResult (Ok users) ->
         match state with
         | Loading authKey ->
-            Loaded (authKey, { Users = users }),
+            Loaded (authKey, { Users = users; VisibleKeyCodeUserIds = Set.empty }),
             Cmd.none
         | _ -> state, Cmd.none
     | LoadResult (Error e) ->
         match state with
         | Loading authKey -> LoadError (authKey, e), Cmd.none
+        | _ -> state, Cmd.none
+    | ShowAuthKey userId ->
+        match state with
+        | Loaded (authKey, state) -> Loaded (authKey, { state with VisibleKeyCodeUserIds = Set.add userId state.VisibleKeyCodeUserIds }), Cmd.none
         | _ -> state, Cmd.none
 
 [<ReactComponent>]
@@ -87,7 +94,30 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                         prop.text user.FirstName
                                     ]
                                     Html.td [
-                                        prop.text (user.AuthKey |> Option.map AuthKey.toString |> Option.defaultValue "-")
+                                        match user.AuthKey with
+                                        | Some authKey ->
+                                            if Set.contains user.Id state.VisibleKeyCodeUserIds then
+                                                prop.text (AuthKey.toString authKey)
+                                            else
+                                                prop.children [
+                                                    Bulma.level [
+                                                        Bulma.levelLeft [
+                                                            Bulma.levelItem [
+                                                                prop.text "**********"
+                                                            ]
+                                                            Bulma.levelItem [
+                                                                Bulma.button.a [
+                                                                    prop.onClick (fun _ -> dispatch (ShowAuthKey user.Id))
+                                                                    
+                                                                    prop.children [
+                                                                        Bulma.icon [ Fa.i [ Fa.Solid.Eye ] [] ]
+                                                                    ]
+                                                                ]
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                        | None -> prop.text "-"
                                     ]
                                     Html.td [
                                         prop.text (UserRole.toString user.Role)
