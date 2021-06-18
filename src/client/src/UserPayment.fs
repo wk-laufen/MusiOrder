@@ -2,7 +2,6 @@ module UserPayment
 
 open Api
 open Elmish
-open Fable.Core
 open Fable.Core.JsInterop
 open Fable.FontAwesome
 open Feliz
@@ -12,8 +11,6 @@ open Feliz.UseDeferred
 open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
-open Thoth.Json
-open Thoth.Fetch
 
 type LoadedModel = {
     Users: UserInfo list
@@ -40,15 +37,6 @@ let init authKey =
         NotLoaded, Cmd.ofMsg (Load authKey)
     | None ->
         NotLoaded, Cmd.none
-
-let addPayment (payment: Payment) = async {
-    let coders =
-        Extra.empty
-        |> Extra.withCustom AuthKey.encode AuthKey.decoder
-        |> Extra.withDecimal
-    let! (totalAmount: decimal) = Fetch.post("/api/payment", payment, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
-    return (payment.UserId, totalAmount)
-}
 
 let update msg state =
     match msg with

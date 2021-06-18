@@ -2,15 +2,12 @@ module OrderForm
 
 open Api
 open Elmish
-open Fable.Core
 open Fable.FontAwesome
 open Feliz
 open Feliz.Bulma
 open Feliz.UseDeferred
 open Feliz.UseElmish
 open MusiOrder.Models
-open Thoth.Fetch
-open Thoth.Json
 
 type OrderState =
     | Drafting of Map<ProductId, int>
@@ -49,35 +46,6 @@ let init =
             Order = Drafting Map.empty
         }
     state, Cmd.ofMsg LoadProducts
-
-let loadProducts = async {
-    let coders =
-        Extra.empty
-        |> Extra.withCustom ProductId.encode ProductId.decoder
-        |> Extra.withDecimal
-    let! (products: ProductGroup list) = Fetch.``get``("/api/grouped-products", caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
-    return products
-}
-
-let sendOrder authKey order = async {
-    let body =
-        {
-            AuthKey = authKey
-            Entries =
-                order
-                |> Map.toList
-                |> List.choose (fun (productId, amount) ->
-                    PositiveInteger.tryCreate amount
-                    |> Option.map (fun amount -> { ProductId = productId; Amount = amount })
-                )
-        }
-    let coders =
-        Extra.empty
-        |> Extra.withCustom ProductId.encode ProductId.decoder
-        |> Extra.withCustom AuthKey.encode AuthKey.decoder
-        |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
-    do! Fetch.post("/api/order", body, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
-}
 
 let update msg (state: Model) =
     match msg with
