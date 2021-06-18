@@ -172,3 +172,31 @@ let handlePostPayment =
                 return! Successful.OK balance next ctx
             | _ -> return! RequestErrors.FORBIDDEN () next ctx
         }
+
+let handleGetOrderInfo =
+    fun (next: HttpFunc) (ctx: HttpContext) ->
+        task {
+            match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
+            | Some user when DB.User.isAdmin user ->
+                let query = """
+                    SELECT `O`.`id`, `M`.`firstName`, `M`.`lastName`, `O`.`articleName`, `O`.`amount`, `O`.`pricePerUnit`, `O`.`timestamp`
+                    FROM `Order` AS `O`
+                    JOIN `Member` AS `M` ON `M`.id = `O`.userId
+                    WHERE `O`.`timestamp` > @OldestTime
+                    ORDER BY `O`.`timestamp` DESC
+                """
+                let! result = DB.read query [ ("@OldestTime", DateTimeOffset.Now.AddMonths(-1) |> box) ] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); ArticleName = reader.GetString(3); Amount = reader.GetInt32(4); PricePerUnit = reader.GetDecimal(5); Timestamp = reader.GetDateTimeOffset(6) })
+                return! Successful.OK result next ctx
+            | Some _ -> return! RequestErrors.FORBIDDEN () next ctx
+            | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
+        }
+
+let handleDeleteOrder orderId =
+    fun (next : HttpFunc) (ctx : HttpContext) ->
+        task {
+            match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
+            | Some user when DB.User.isAdmin user ->
+                do! DB.write "DELETE FROM `Order` WHERE `id` = @Id" [ ("@Id", box orderId) ]
+                return! Successful.OK () next ctx
+            | _ -> return! RequestErrors.FORBIDDEN () next ctx
+        }

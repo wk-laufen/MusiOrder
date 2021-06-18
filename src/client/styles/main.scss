@@ -10,7 +10,9 @@ $fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
 html {
     overflow-y: auto;
 }
-
+table td {
+    vertical-align: middle !important;
+}
 .main {
     display: flex;
     flex-direction: column;

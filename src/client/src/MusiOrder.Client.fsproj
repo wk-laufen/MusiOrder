@@ -13,6 +13,7 @@
         <Compile Include="OrderForm.fs" />
         <Compile Include="OrderSummary.fs" />
         <Compile Include="UserPayment.fs" />
+        <Compile Include="OrdersAdministration.fs" />
         <Compile Include="Administration.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>

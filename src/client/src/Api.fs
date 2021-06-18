@@ -66,3 +66,19 @@ let addPayment (payment: Payment) = async {
     let! (totalAmount: decimal) = Fetch.post("/api/payment", payment, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
     return (payment.UserId, totalAmount)
 }
+
+let loadOrderInfo authKey = async {
+    let coders =
+        Extra.empty
+        |> Extra.withDecimal
+    let url = sprintf "/api/order/info?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+    match! Fetch.tryGet(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise with
+    | Ok (orders: OrderInfo list) -> return Ok orders
+    | Error (FetchFailed response) when response.Status = 403 -> return Error Forbidden
+    | Error e -> return Error (Other (Helper.message e))
+}
+
+let deleteOrder authKey orderId = async {
+    let url = sprintf "/api/order/%s?authKey=%s" (JS.encodeURIComponent orderId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+    do! Fetch.delete(url, caseStrategy = CamelCase) |> Async.AwaitPromise
+}

@@ -80,3 +80,13 @@ type Payment = {
     UserId: string
     Amount: decimal
 }
+
+type OrderInfo = {
+    Id: string
+    FirstName: string
+    LastName: string
+    ArticleName: string
+    Amount: int
+    PricePerUnit: decimal
+    Timestamp: DateTimeOffset
+}

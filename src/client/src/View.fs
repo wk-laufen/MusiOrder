@@ -42,6 +42,19 @@ let errorNotificationWithRetry (message: string) onRetry =
         ]
     ]
 
+let infoNotification (message: string) =
+    Bulma.notification [
+        color.isInfo
+        prop.children [
+            Bulma.levelItem [
+                Bulma.title.p [
+                    title.is4
+                    prop.text message
+                ]
+            ]
+        ]
+    ]
+
 let loadIconBig =
     Html.div [
         color.hasTextPrimary

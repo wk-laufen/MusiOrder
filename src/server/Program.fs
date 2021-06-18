@@ -25,11 +25,15 @@ let webApp =
                 GET >=> choose [
                     route "/grouped-products" >=> handleGetGroupedProducts
                     route "/order/summary" >=> handleGetOrderSummary
+                    route "/order/info" >=> handleGetOrderInfo
                     route "/users" >=> handleGetUsers
                 ]
                 POST >=> choose [
                     route "/order" >=> handlePostOrder
                     route "/payment" >=> handlePostPayment
+                ]
+                DELETE >=> choose [
+                    routef "/order/%s" handleDeleteOrder
                 ]
             ])
         setStatusCode 404 >=> text "Not Found" ]
