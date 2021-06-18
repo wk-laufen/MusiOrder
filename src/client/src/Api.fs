@@ -19,7 +19,7 @@ let loadOrderSummary authKey : Async<OrderSummary> = async {
         Extra.empty
         |> Extra.withDecimal
     let url = sprintf "/api/order/summary?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    return! Fetch.``get``(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
+    return! Fetch.get(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
 }
 
 type LoadUsersError =
@@ -32,7 +32,7 @@ let loadUsers authKey = async {
         Extra.empty
         |> Extra.withCustom AuthKey.encode AuthKey.decoder
         |> Extra.withDecimal
-    match! Fetch.``tryGet``(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise with
+    match! Fetch.tryGet(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise with
     | Ok (users: UserInfo list) -> return Ok users
     | Error (FetchFailed response) when response.Status = 403 -> return Error Forbidden
     | Error e -> return Error (Other (Helper.message e))
