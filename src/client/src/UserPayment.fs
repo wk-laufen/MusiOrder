@@ -99,7 +99,7 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
             | Some selectedUserId ->
                 setMenuItems [
                     Bulma.levelItem [
-                        prop.text "Guthaben aufladen:"
+                        prop.text "Guthaben ändern:"
                     ]
                     Bulma.levelItem [
                         Bulma.buttons [
