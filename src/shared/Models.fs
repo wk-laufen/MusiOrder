@@ -7,6 +7,27 @@ open Thoth.Json
 open Thoth.Json.Net
 #endif
 
+type PositiveInteger = private PositiveInteger of int
+
+module PositiveInteger =
+    let tryCreate = function
+        | v when v > 0 -> Some (PositiveInteger v)
+        | _ -> None
+    let value (PositiveInteger v) = v
+    let encode : Encoder<_> = fun (PositiveInteger v) -> Encode.int v
+    let decoder : Decoder<_> =
+        Decode.int
+        |> Decode.andThen (tryCreate >> function
+            | Some v -> Decode.succeed v
+            | None -> Decode.fail "Must be positive"
+        )
+
+type AuthKey = AuthKey of string
+module AuthKey =
+    let encode : Encoder<_> = fun (AuthKey v) -> Encode.string v
+    let decoder : Decoder<_> = Decode.string |> Decode.map AuthKey
+    let toString (AuthKey authKey) = authKey
+
 type ProductId = ProductId of string
 module ProductId =
     let encode : Encoder<_> = fun (ProductId v) -> Encode.string v
@@ -23,31 +44,10 @@ type ProductGroup = {
     Products: Product list
 }
 
-type PositiveInteger = private PositiveInteger of int
-
-module PositiveInteger =
-    let tryCreate = function
-        | v when v > 0 -> Some (PositiveInteger v)
-        | _ -> None
-    let value (PositiveInteger v) = v
-    let encode : Encoder<_> = fun (PositiveInteger v) -> Encode.int v
-    let decoder : Decoder<_> =
-        Decode.int
-        |> Decode.andThen (tryCreate >> function
-            | Some v -> Decode.succeed v
-            | None -> Decode.fail "Must be positive"
-        )
-
 type OrderEntry = {
     ProductId: ProductId
     Amount: PositiveInteger
 }
-
-type AuthKey = AuthKey of string
-module AuthKey =
-    let encode : Encoder<_> = fun (AuthKey v) -> Encode.string v
-    let decoder : Decoder<_> = Decode.string |> Decode.map AuthKey
-    let toString (AuthKey authKey) = authKey
 
 type Order = {
     AuthKey: AuthKey
@@ -89,4 +89,22 @@ type OrderInfo = {
     Amount: int
     PricePerUnit: decimal
     Timestamp: DateTimeOffset
+}
+
+type UserRole = Admin | User
+module UserRole =
+    let tryParse v =
+        if String.Equals(v, "admin", StringComparison.InvariantCultureIgnoreCase) then Some Admin
+        elif String.Equals(v, "user", StringComparison.InvariantCultureIgnoreCase) then Some User
+        else None
+    let toString = function
+        | Admin -> "Administrator"
+        | User -> "Benutzer"
+
+type UserData = {
+    Id: string
+    FirstName: string
+    LastName: string
+    AuthKey: AuthKey option
+    Role: UserRole
 }

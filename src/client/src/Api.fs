@@ -26,8 +26,8 @@ type FetchError =
     | Forbidden
     | Other of string
 
-let loadUsers authKey = async {
-    let url = sprintf "/api/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+let loadUserInfo authKey = async {
+    let url = sprintf "/api/user/info?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
     let coders =
         Extra.empty
         |> Extra.withCustom AuthKey.encode AuthKey.decoder
@@ -81,4 +81,15 @@ let loadOrderInfo authKey = async {
 let deleteOrder authKey orderId = async {
     let url = sprintf "/api/order/%s?authKey=%s" (JS.encodeURIComponent orderId) (AuthKey.toString authKey |> JS.encodeURIComponent)
     do! Fetch.delete(url, caseStrategy = CamelCase) |> Async.AwaitPromise
+}
+
+let loadUserData authKey = async {
+    let url = sprintf "/api/user?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+    let coders =
+        Extra.empty
+        |> Extra.withCustom AuthKey.encode AuthKey.decoder
+    match! Fetch.tryGet(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise with
+    | Ok (users: UserData list) -> return Ok users
+    | Error (FetchFailed response) when response.Status = 403 -> return Error Forbidden
+    | Error e -> return Error (Other (Helper.message e))
 }

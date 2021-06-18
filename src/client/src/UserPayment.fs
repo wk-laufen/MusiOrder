@@ -40,7 +40,7 @@ let init authKey =
 
 let update msg state =
     match msg with
-    | Load authKey -> Loading authKey, Cmd.OfAsync.perform loadUsers authKey LoadResult
+    | Load authKey -> Loading authKey, Cmd.OfAsync.perform loadUserInfo authKey LoadResult
     | LoadResult (Ok users) ->
         match state with
         | Loading authKey -> Loaded (authKey, { Users = users; SelectedUser = None; AddPaymentState = Deferred.HasNotStartedYet }), Cmd.none

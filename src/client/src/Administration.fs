@@ -17,14 +17,17 @@ let route = "administration"
 type Tab =
     | UserPayment
     | Orders
+    | Users
 module Tab =
     let title = function
         | UserPayment -> "Guthaben"
         | Orders -> "Bestellungen"
+        | Users -> "Benutzer"
     let toRoute = function
         | UserPayment -> "guthaben"
         | Orders -> "bestellungen"
-let allTabs = [ UserPayment; Orders ]
+        | Users -> "benutzer"
+let allTabs = [ UserPayment; Orders; Users ]
 
 type AuthKeyState =
     | NoAuthKeyProvided
@@ -135,6 +138,7 @@ let Administration activeTab =
                     match activeTab with
                     | UserPayment -> UserPayment.UserPayment authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                     | Orders -> OrderAdministration.OrderAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | Users -> UserAdministration.UserAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                 ]
             ]
             Bulma.section [

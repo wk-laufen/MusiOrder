@@ -135,7 +135,7 @@ let handleGetOrderSummary =
             | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
         }
 
-let handleGetUsers =
+let handleGetUserInfo =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
             match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
@@ -149,6 +149,22 @@ let handleGetUsers =
                     ORDER BY `Member`.`lastName`, `Member`.`firstName`
                 """
                 let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey; LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 4; Balance = reader.GetDecimal(5) })
+                return! Successful.OK result next ctx
+            | Some _ -> return! RequestErrors.FORBIDDEN () next ctx
+            | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
+        }
+
+let handleGetUserData =
+    fun (next : HttpFunc) (ctx : HttpContext) ->
+        task {
+            match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
+            | Some user when DB.User.isAdmin user ->
+                let query = """
+                    SELECT `id`, `firstName`, `lastName`, `keyCode`, `role`
+                    FROM `Member`
+                    ORDER BY `Member`.`lastName`, `Member`.`firstName`
+                """
+                let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey; Role = reader.GetString(4) |> fun roleName -> UserRole.tryParse roleName |> Option.defaultWith (fun () -> failwithf "Can't parse user role \"%s\"" roleName) })
                 return! Successful.OK result next ctx
             | Some _ -> return! RequestErrors.FORBIDDEN () next ctx
             | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
