@@ -32,7 +32,7 @@ type Msg =
     | ResetOrder
     | Authenticate
     | LoadUsers of AuthKey
-    | LoadUsersResult of Result<UserInfo list, LoadUsersError>
+    | LoadUsersResult of Result<UserInfo list, FetchError>
     | SendOrder of AuthKey
     | SendOrderResult of Result<unit, exn>
     | LoadOrderSummary

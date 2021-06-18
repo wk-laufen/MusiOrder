@@ -22,7 +22,7 @@ let loadOrderSummary authKey : Async<OrderSummary> = async {
     return! Fetch.get(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
 }
 
-type LoadUsersError =
+type FetchError =
     | Forbidden
     | Other of string
 
