@@ -5,6 +5,7 @@ open Elmish
 open Fable.FontAwesome
 open Feliz
 open Feliz.Bulma
+open Feliz.Bulma.Operators
 open Feliz.UseElmish
 open MusiOrder.Models
 
@@ -49,8 +50,9 @@ let OrderSummary () =
         | LoadError _ ->
             View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [
                 Bulma.container [
-                    color.hasTextDanger
-                    spacing.px2
+                    text.hasTextCentered
+                    ++ color.hasTextDanger
+                    ++ spacing.px2
                     prop.children [
                         Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
                         Bulma.title.p [
@@ -66,7 +68,10 @@ let OrderSummary () =
             ] []
         | Loaded orderSummary ->
             View.modal (sprintf "Bestellungen von %s" orderSummary.ClientFullName) (fun () -> dispatch Close) [
-                Bulma.container (View.orderSummary orderSummary)
+                Bulma.container [
+                    text.hasTextCentered
+                    prop.children (View.orderSummary orderSummary)
+                ]
             ] []
 
     Html.div [

@@ -4,6 +4,7 @@ open Fable.Core.JsInterop
 open Fable.FontAwesome
 open Feliz
 open Feliz.Bulma
+open Feliz.Bulma.Operators
 open global.JS
 open MusiOrder.Models
 
@@ -57,7 +58,9 @@ let infoNotification (message: string) =
 
 let loadIconBig =
     Html.div [
-        color.hasTextPrimary
+        text.hasTextCentered
+        ++ color.hasTextPrimary
+        ++ spacing.py2
         prop.children [
             Fa.i [ Fa.Solid.Spinner; Fa.Pulse; Fa.Size Fa.Fa8x ] []
         ]
@@ -79,10 +82,7 @@ let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement
                         prop.onClick (ignore >> onHide)
                     ]
                 ]
-                Bulma.modalCardBody [
-                    text.hasTextCentered
-                    prop.children body
-                ]
+                Bulma.modalCardBody body
                 Bulma.modalCardFoot footer
             ]
         ]
@@ -90,8 +90,9 @@ let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement
 
 let authForm =
     Bulma.container [
-        color.hasTextPrimary
-        spacing.px2
+        text.hasTextCentered
+        ++ color.hasTextPrimary
+        ++ spacing.px2
         prop.children [
             Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
             Bulma.title.p [

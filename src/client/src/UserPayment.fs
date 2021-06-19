@@ -81,11 +81,7 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
 
     match state with
     | NotLoaded -> Html.none // Handled by parent component
-    | Loading _ ->
-        Html.div [
-            text.hasTextCentered
-            prop.children [ View.loadIconBig ]
-        ]
+    | Loading _ -> View.loadIconBig
     | LoadError (_, Forbidden) ->
         setAuthKeyInvalid ()
         Html.none // Handled by parent component

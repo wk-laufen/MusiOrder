@@ -6,6 +6,7 @@ open Fable.FontAwesome
 open Fable.React
 open Feliz
 open Feliz.Bulma
+open Feliz.Bulma.Operators
 open Feliz.UseElmish
 open Feliz.Router
 open global.JS
@@ -92,8 +93,8 @@ let Administration activeTab =
         | InvalidAuthKeyProvided ->
             Bulma.section [
                 text.hasTextCentered
-                color.hasTextDanger
-                spacing.px2
+                ++ color.hasTextDanger
+                ++ spacing.px2
                 prop.children [
                     Bulma.container [
                         Fa.stack [ Fa.Stack.Size Fa.Fa4x ] [
@@ -114,7 +115,7 @@ let Administration activeTab =
             ]
         | AuthKeyProvided _ ->
             Bulma.section [
-                prop.className "content"
+                prop.className "main-content"
                 prop.children [
                     Bulma.tabs [
                         Html.ul [

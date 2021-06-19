@@ -269,8 +269,9 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
     let errorView =
         View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
             Bulma.container [
-                color.hasTextDanger
-                spacing.px2
+                text.hasTextCentered
+                ++ color.hasTextDanger
+                ++ spacing.px2
                 prop.children [
                     Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
                     Bulma.title.p [
@@ -336,8 +337,9 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | Sent (_, loadSummaryState) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
                 Bulma.container [
-                    spacing.px2
-                    color.hasTextSuccess
+                    text.hasTextCentered
+                    ++ spacing.px2
+                    ++ color.hasTextSuccess
                     prop.children [
                         Html.div [
                             prop.children [
@@ -387,7 +389,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             Bulma.section [ View.errorNotificationWithRetry "No products available." (fun () -> dispatch LoadProducts) ]
         | Deferred.Resolved productGroups ->
             Bulma.section [
-                prop.className "content"
+                prop.className "main-content"
                 prop.children [
                     Bulma.container [
                         match productGroups with

@@ -74,11 +74,7 @@ let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement li
 
     match state with
     | NotLoaded -> Html.none // Handled by parent component
-    | Loading _ ->
-        Html.div [
-            text.hasTextCentered
-            prop.children [ View.loadIconBig ]
-        ]
+    | Loading _ -> View.loadIconBig
     | LoadError (_, Forbidden) ->
         setAuthKeyInvalid ()
         Html.none // Handled by parent component
@@ -89,6 +85,7 @@ let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement li
     | Loaded (_, state) ->
         Bulma.container [
             Bulma.table [
+                table.isFullWidth
                 prop.children [
                     Html.thead [
                         Html.tr [
