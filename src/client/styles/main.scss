@@ -1,5 +1,6 @@
 $primary: rgba(169, 132, 20, 0.7);
 @import "~bulma";
+@import "~fable-form-simple-bulma";
 
 $fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
 @import "~@fortawesome/fontawesome-free/scss/fontawesome";
@@ -12,6 +13,10 @@ html {
 }
 table td {
     vertical-align: middle !important;
+}
+input[type="checkbox"],
+input[type="radio"] {
+    margin-right: 0.5em;
 }
 .main {
     display: flex;
@@ -26,6 +31,10 @@ table td {
     overflow-y: auto;
     flex-grow: 1;
 }
+
+// .feliz-form .field:last-child { // submit button
+//     display: none;
+// }
 
 .product-name {
     justify-content: left;

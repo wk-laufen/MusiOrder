@@ -98,11 +98,21 @@ module UserRole =
         elif String.Equals(v, "user", StringComparison.InvariantCultureIgnoreCase) then Some User
         else None
     let toString = function
+        | Admin -> "admin"
+        | User -> "user"
+    let label = function
         | Admin -> "Administrator"
         | User -> "Benutzer"
 
-type UserData = {
+type ExistingUserData = {
     Id: string
+    FirstName: string
+    LastName: string
+    AuthKey: AuthKey option
+    Role: UserRole
+}
+
+type NewUserData = {
     FirstName: string
     LastName: string
     AuthKey: AuthKey option

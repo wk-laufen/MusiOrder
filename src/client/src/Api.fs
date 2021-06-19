@@ -89,7 +89,15 @@ let loadUserData authKey = async {
         Extra.empty
         |> Extra.withCustom AuthKey.encode AuthKey.decoder
     match! Fetch.tryGet(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise with
-    | Ok (users: UserData list) -> return Ok users
+    | Ok (users: ExistingUserData list) -> return Ok users
     | Error (FetchFailed response) when response.Status = 403 -> return Error Forbidden
     | Error e -> return Error (Other (Helper.message e))
+}
+
+let updateUser authKey userId (user: NewUserData) = async {
+    do! Fetch.put(sprintf "/api/user/%s?authKey=%s" userId (AuthKey.toString authKey |> JS.encodeURIComponent), user, caseStrategy = CamelCase) |> Async.AwaitPromise
+}
+
+let createUser authKey (user: NewUserData) = async {
+    do! Fetch.post(sprintf "/api/user?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent), user, caseStrategy = CamelCase) |> Async.AwaitPromise
 }
