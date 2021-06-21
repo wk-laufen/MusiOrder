@@ -69,10 +69,28 @@ let loadUserData authKey = async {
     | Error e -> return Error (Other (Helper.message e))
 }
 
-let updateUser authKey userId (user: NewUserData) = async {
-    do! Fetch.put(sprintf "/api/user/%s?authKey=%s" userId (AuthKey.toString authKey |> JS.encodeURIComponent), user, caseStrategy = CamelCase) |> Async.AwaitPromise
+type SaveUserHttpError =
+    | SaveUserError of SaveUserError
+    | Other of string
+
+let updateUser authKey userId (user: UserData) = async {
+    match! Fetch.tryPut(sprintf "/api/user/%s?authKey=%s" userId (AuthKey.toString authKey |> JS.encodeURIComponent), user, caseStrategy = CamelCase, extra = Json.coders) |> Async.AwaitPromise with
+    | Ok () -> return Ok ()
+    | Error (FetchFailed response) when response.Status = 400 ->
+        let! e = response.text() |> Async.AwaitPromise
+        match Decode.Auto.fromString(e, caseStrategy = CamelCase, extra = Json.coders) with
+        | Ok e -> return Error (SaveUserError e)
+        | Error e -> return Error (Other e)
+    | Error e -> return Error (Other (Helper.message e))
 }
 
-let createUser authKey (user: NewUserData) = async {
-    do! Fetch.post(sprintf "/api/user?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent), user, caseStrategy = CamelCase) |> Async.AwaitPromise
+let createUser authKey (user: UserData) = async {
+    match! Fetch.tryPost(sprintf "/api/user?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent), user, caseStrategy = CamelCase, extra = Json.coders) |> Async.AwaitPromise with
+    | Ok (userId: string) -> return Ok userId
+    | Error (FetchFailed response) when response.Status = 400 ->
+        let! e = response.text() |> Async.AwaitPromise
+        match Decode.Auto.fromString(e, caseStrategy = CamelCase, extra = Json.coders) with
+        | Ok e -> return Error (SaveUserError e)
+        | Error e -> return Error (Other e)
+    | Error e -> return Error (Other (Helper.message e))
 }

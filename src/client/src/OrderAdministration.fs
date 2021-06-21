@@ -78,7 +78,7 @@ let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement li
     | LoadError (_, Forbidden) ->
         setAuthKeyInvalid ()
         Html.none // Handled by parent component
-    | LoadError (authKey, Other _) ->
+    | LoadError (authKey, FetchError.Other _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
     | Loaded (_, { Orders = [] }) ->
         View.infoNotification "Keine Bestellungen vorhanden"

@@ -18,12 +18,19 @@ type UserFormData = {
     Role: string
 }
 module UserFormData =
-    let fromUserData (v: ExistingUserData) =
+    let fromUserData (v: UserData) =
         {
-            FirstName = v.FirstName
-            LastName = v.LastName
+            FirstName = v.FirstName.Value
+            LastName = v.LastName.Value
             AuthKey = v.AuthKey |> Option.map AuthKey.toString |> Option.defaultValue ""
             Role = UserRole.toString v.Role
+        }
+    let empty =
+        {
+            FirstName = ""
+            LastName = ""
+            AuthKey = ""
+            Role = UserRole.toString User
         }
 
 type EditingUser = {
@@ -48,9 +55,10 @@ type Msg =
     | LoadResult of Result<ExistingUserData list, FetchError>
     | ShowAuthKey of userId: string
     | EditUser of ExistingUserData
+    | EditNewUser
     | FormChanged of Form.View.Model<UserFormData>
-    | SaveUser of NewUserData
-    | SaveUserResult of Result<unit, exn>
+    | SaveUser of UserData
+    | SaveUserResult of Result<string, SaveUserHttpError>
     | CancelEditUser
 
 let init authKey =
@@ -83,7 +91,13 @@ let update msg state =
     | EditUser user ->
         match state with
         | Loaded (authKey, state) ->
-            Loaded (authKey, { state with EditingUser = Some { Id = Some user.Id; Data = Form.View.idle (UserFormData.fromUserData user) } }),
+            Loaded (authKey, { state with EditingUser = Some { Id = Some user.Id; Data = Form.View.idle (UserFormData.fromUserData user.Data) } }),
+            Cmd.none
+        | _ -> state, Cmd.none
+    | EditNewUser ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with EditingUser = Some { Id = None; Data = Form.View.idle UserFormData.empty } }),
             Cmd.none
         | _ -> state, Cmd.none
     | FormChanged formData ->
@@ -98,25 +112,30 @@ let update msg state =
             let state = Loaded (authKey, { state with EditingUser = Some { editingUser with Data = { editingUser.Data with State = Form.View.State.Loading } } })
             let cmd =
                 match editingUser.Id with
-                | Some userId -> Cmd.OfAsync.either (updateUser authKey userId) user (Ok >> SaveUserResult) (Error >> SaveUserResult)
-                | None -> Cmd.OfAsync.either (createUser authKey) user (Ok >> SaveUserResult) (Error >> SaveUserResult)
+                | Some userId -> Cmd.OfAsync.perform (updateUser authKey userId) user (Result.map (fun () -> userId) >> SaveUserResult)
+                | None -> Cmd.OfAsync.perform (createUser authKey) user SaveUserResult
             state, cmd
         | _ -> state, Cmd.none
-    | SaveUserResult (Ok ()) ->
+    | SaveUserResult (Ok userId) ->
         match state with
         | Loaded (authKey, ({ EditingUser = Some editingUser } as state)) ->
-            Loaded (authKey, { state with EditingUser = Some { editingUser with Data = { editingUser.Data with State = Form.View.State.Success "Benutzer erfolgreich gespeichert." } } }),
+            Loaded (authKey, { state with EditingUser = Some { editingUser with Id = Some userId; Data = { editingUser.Data with State = Form.View.State.Success "Benutzer erfolgreich gespeichert." } } }),
             Cmd.none
         | _ -> state, Cmd.none
-    | SaveUserResult (Error _) ->
+    | SaveUserResult (Error e) ->
         match state with
         | Loaded (authKey, ({ EditingUser = Some editingUser } as state)) ->
-            Loaded (authKey, { state with EditingUser = Some { editingUser with Data = { editingUser.Data with State = Form.View.State.Success "Fehler beim Speichern des Benutzers." } } }),
+            let message =
+                match e with
+                | SaveUserError DowngradeSelfNotAllowed -> "Fehler beim Speichern des Benutzers: Rollenwechsel nicht erlaubt."
+                | SaveUserError KeyCodeTaken -> "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits vergeben."
+                | Other _ -> "Fehler beim Speichern des Benutzers."
+            Loaded (authKey, { state with EditingUser = Some { editingUser with Data = { editingUser.Data with State = Form.View.State.Error message } } }),
             Cmd.none
         | _ -> state, Cmd.none
     | CancelEditUser ->
         match state with
-        | Loaded (authKey, state) -> Loaded (authKey, { state with EditingUser = None }), Cmd.none
+        | Loaded (authKey, state) -> Loaded (authKey, { state with EditingUser = None }), Cmd.ofMsg (Load authKey)
         | _ -> state, Cmd.none
 
 [<ReactComponent>]
@@ -129,12 +148,27 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
     | LoadError (_, Forbidden) ->
         setAuthKeyInvalid ()
         Html.none // Handled by parent component
-    | LoadError (authKey, Other _) ->
+    | LoadError (authKey, FetchError.Other _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
     | Loaded (_, { Users = [] }) ->
         View.infoNotification "Keine Benutzer vorhanden"
     | Loaded (_, state) ->
+
         Html.div [
+            setMenuItems [
+                Bulma.levelItem [
+                    Bulma.button.a [
+                        color.isSuccess
+                        prop.onClick (fun _ -> dispatch EditNewUser)
+                        
+                        prop.children [
+                            Bulma.icon [ Fa.i [ Fa.Solid.Plus ] [] ]
+                            Html.span [ prop.text "Neuer Benutzer" ]
+                        ]
+                    ]
+                ]
+            ]
+
             Bulma.container [
                 Bulma.table [
                     table.isFullWidth
@@ -154,13 +188,13 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                     prop.children [
                                         Html.td [
                                             text.isUppercase
-                                            prop.text user.LastName
+                                            prop.text user.Data.LastName.Value
                                         ]
                                         Html.td [
-                                            prop.text user.FirstName
+                                            prop.text user.Data.FirstName.Value
                                         ]
                                         Html.td [
-                                            match user.AuthKey with
+                                            match user.Data.AuthKey with
                                             | Some authKey ->
                                                 if Set.contains user.Id state.VisibleKeyCodeUserIds then
                                                     prop.text (AuthKey.toString authKey)
@@ -186,7 +220,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                             | None -> prop.text "-"
                                         ]
                                         Html.td [
-                                            prop.text (UserRole.label user.Role)
+                                            prop.text (UserRole.label user.Data.Role)
                                         ]
                                         Html.td [
                                             Bulma.level [
@@ -218,10 +252,9 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                         Form.textField
                             {
                                 Parser = fun value ->
-                                    if not <| System.String.IsNullOrWhiteSpace value then
-                                        Ok value
-                                    else
-                                        Error "Vorname darf nicht leer sein"
+                                    match NotEmptyString.tryCreate value with
+                                    | Some v -> Ok v
+                                    | None -> Error "Vorname darf nicht leer sein"
                                 Value = fun user -> user.FirstName
                                 Update = fun v user -> { user with FirstName = v }
                                 Error = fun _ -> None
@@ -236,10 +269,9 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                         Form.textField
                             {
                                 Parser = fun value ->
-                                    if not <| System.String.IsNullOrWhiteSpace value then
-                                        Ok value
-                                    else
-                                        Error "Nachname darf nicht leer sein"
+                                    match NotEmptyString.tryCreate value with
+                                    | Some v -> Ok v
+                                    | None -> Error "Nachname darf nicht leer sein"
                                 Value = fun user -> user.LastName
                                 Update = fun v user -> { user with LastName = v }
                                 Error = fun _ -> None
@@ -251,7 +283,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                             }
                     
                     let authKeyField =
-                        Form.textField
+                        let config: Fable.Form.Base.FieldConfig<Field.TextField.Attributes, string, _, _> =
                             {
                                 Parser = fun value ->
                                     if System.String.IsNullOrWhiteSpace value then Ok None
@@ -265,6 +297,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                         Placeholder = "Schlüssel zum Lesegerät halten, Nummer händisch eingeben oder leer lassen"
                                     }
                             }
+                        Fable.Form.Base.field (fun _ -> false) (fun x -> Form.Field.Text (Form.TextRaw, x)) config
 
                     let roleField =
                         Form.radioField
@@ -301,50 +334,66 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                     | Some _ -> "Benutzer bearbeiten"
                     | None -> "Benutzer anlegen"
 
-                View.modal title (fun () -> dispatch CancelEditUser)
-                    [
-                        Html.div [
-                            prop.className "feliz-form"
-                            prop.children [
-                                Form.View.asHtml
-                                    {
-                                        Dispatch = dispatch
-                                        OnChange = FormChanged
-                                        Action = "Speichern"
-                                        Validation = Form.View.ValidateOnSubmit
-                                    }
-                                    form
-                                    editingUser.Data
-                            ]
-                        ]
-                    ]
-                    [
-                        Bulma.level [
-                            prop.classes [ "is-flex-grow-1" ]
-                            prop.children [
-                                Bulma.levelLeft []
-                                Bulma.levelRight [
-                                    Bulma.levelItem [
-                                        Bulma.button.a [
-                                            color.isPrimary
-                                            if editingUser.Data.State = Form.View.Loading then button.isLoading
-                                            prop.children [
-                                                Bulma.icon [ Fa.i [ Fa.Solid.Save ] [] ]
-                                                Html.span "Speichern"
+                let formView (config: Form.View.FormConfig<Msg>) =
+                    Html.form [
+                        prop.onSubmit (fun ev ->
+                            ev.stopPropagation()
+                            ev.preventDefault()
+
+                            config.OnSubmit
+                            |> Option.map dispatch
+                            |> Option.defaultWith ignore
+                        )
+                        prop.children [
+                            View.modal title (fun () -> dispatch CancelEditUser)
+                                [
+                                    yield! config.Fields
+                                ]
+                                [
+                                    Bulma.level [
+                                        prop.classes [ "is-flex-grow-1" ]
+                                        prop.children [
+                                            Bulma.levelLeft []
+                                            Bulma.levelRight [
+                                                match config.State with
+                                                | Form.View.Error error ->
+                                                    Bulma.levelItem [
+                                                        Form.View.errorMessage error
+                                                    ]
+                                                | Form.View.Success success ->
+                                                    Bulma.levelItem [
+                                                        text.hasTextCentered
+                                                        color.hasTextSuccess
+                                                        text.hasTextWeightBold
+
+                                                        prop.text success
+                                                    ]
+                                                | Form.View.Loading
+                                                | Form.View.Idle -> ()
+
+                                                Bulma.levelItem [
+                                                    Bulma.button.button [
+                                                        color.isPrimary
+                                                        prop.text config.Action
+                                                        if config.State = Form.View.Loading then
+                                                            button.isLoading
+                                                    ]
+                                                ]
                                             ]
-                                            prop.onClick (fun e ->
-                                                // Trigger submit button click
-                                                e.currentTarget :?> Browser.Types.HTMLElement
-                                                |> fun e -> e.closest(".modal-card")
-                                                |> Option.get
-                                                |> fun e -> e.querySelector(".field:last-child button") :?> Browser.Types.HTMLButtonElement
-                                                |> fun e -> e.click()
-                                            )
                                         ]
                                     ]
                                 ]
-                            ]
                         ]
                     ]
+
+                let htmlViewConfig = { Form.View.htmlViewConfig with Form = formView }
+                let config: Form.View.ViewConfig<_, _> =
+                    {
+                        Dispatch = dispatch
+                        OnChange = FormChanged
+                        Action = "Speichern"
+                        Validation = Form.View.ValidateOnSubmit
+                    }
+                Form.View.custom htmlViewConfig config form editingUser.Data
             | None -> ()
         ]

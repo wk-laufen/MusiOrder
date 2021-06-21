@@ -85,7 +85,7 @@ let update msg (state: Model) =
         match state.Order with
         | LoadingUsers (order, authKey) -> state, Cmd.ofMsg (SendOrder authKey)
         | _ -> state, Cmd.none
-    | LoadUsersResult (Error (Other _)) ->
+    | LoadUsersResult (Error (FetchError.Other _)) ->
         match state.Order with
         | LoadingUsers (order, authKey) -> { state with Order = LoadUsersError (order, authKey) }, Cmd.none
         | _ -> state, Cmd.none

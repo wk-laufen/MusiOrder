@@ -22,6 +22,21 @@ module PositiveInteger =
             | None -> Decode.fail "Must be positive"
         )
 
+type NotEmptyString =
+    private NotEmptyString of string
+    with member x.Value = let (NotEmptyString v) = x in v
+module NotEmptyString =
+    let tryCreate v =
+        if String.IsNullOrWhiteSpace v then None
+        else Some (NotEmptyString v)
+    let encode : Encoder<_> = fun (NotEmptyString v) -> Encode.string v
+    let decoder : Decoder<_> =
+        Decode.string
+        |> Decode.andThen (tryCreate >> function
+            | Some v -> Decode.succeed v
+            | None -> Decode.fail "Must be non-empty"
+        )
+
 type AuthKey = AuthKey of string
 module AuthKey =
     let encode : Encoder<_> = fun (AuthKey v) -> Encode.string v
@@ -104,24 +119,33 @@ module UserRole =
         | Admin -> "Administrator"
         | User -> "Benutzer"
 
-type ExistingUserData = {
-    Id: string
-    FirstName: string
-    LastName: string
+type UserData = {
+    FirstName: NotEmptyString
+    LastName: NotEmptyString
     AuthKey: AuthKey option
     Role: UserRole
 }
 
-type NewUserData = {
-    FirstName: string
-    LastName: string
-    AuthKey: AuthKey option
-    Role: UserRole
+type ExistingUserData = {
+    Id: string
+    Data: UserData
 }
+module ExistingUserData =
+    let create userId userData =
+        {
+            Id = userId
+            Data = userData
+        }
+
+type SaveUserError =
+    | DowngradeSelfNotAllowed
+    | KeyCodeTaken
+
 module Json =
     let coders =
         Extra.empty
         |> Extra.withCustom ProductId.encode ProductId.decoder
         |> Extra.withCustom AuthKey.encode AuthKey.decoder
         |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
+        |> Extra.withCustom NotEmptyString.encode NotEmptyString.decoder
         |> Extra.withDecimal

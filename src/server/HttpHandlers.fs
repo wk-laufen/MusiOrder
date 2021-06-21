@@ -3,6 +3,7 @@ module MusiOrder.Server.HttpHandlers
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
 open Microsoft.AspNetCore.Http
+open Microsoft.Data.Sqlite
 open MusiOrder.Models
 open System
 
@@ -164,7 +165,17 @@ let handleGetUserData =
                     FROM `Member`
                     ORDER BY `Member`.`lastName`, `Member`.`firstName`
                 """
-                let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey; Role = reader.GetString(4) |> fun roleName -> UserRole.tryParse roleName |> Option.defaultWith (fun () -> failwithf "Can't parse user role \"%s\"" roleName) })
+                let! result = DB.read query [] (fun reader ->
+                    let userId = reader.GetString(0)
+                    {
+                        Id = userId
+                        Data = {
+                            FirstName = reader.GetString(1) |> NotEmptyString.tryCreate |> Option.defaultWith (fun () -> failwithf "DB error: First name of user with id \"%s\" is empty" userId)
+                            LastName = reader.GetString(2) |> NotEmptyString.tryCreate |> Option.defaultWith (fun () -> failwithf "DB error: Last name of user with id \"%s\" is empty" userId)
+                            AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey
+                            Role = reader.GetString(4) |> fun roleName -> UserRole.tryParse roleName |> Option.defaultWith (fun () -> failwithf "DB error: Can't parse user role \"%s\"" roleName)
+                        }
+                    })
                 return! Successful.OK result next ctx
             | Some _ -> return! RequestErrors.FORBIDDEN () next ctx
             | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
@@ -214,5 +225,57 @@ let handleDeleteOrder orderId =
             | Some user when DB.User.isAdmin user ->
                 do! DB.write "DELETE FROM `Order` WHERE `id` = @Id" [ ("@Id", box orderId) ]
                 return! Successful.OK () next ctx
+            | _ -> return! RequestErrors.FORBIDDEN () next ctx
+        }
+
+let handleCreateUser =
+    fun (next : HttpFunc) (ctx : HttpContext) ->
+        task {
+            let! data = ctx.BindModelAsync<UserData>()
+            match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
+            | Some user when DB.User.isAdmin user ->
+                try
+                    let newUserId = sprintf "%O" (Guid.NewGuid())
+                    do!
+                        DB.write
+                            "INSERT INTO `Member` (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES(@Id, @FirstName, @LastName, @KeyCode, @Role)"
+                            [
+                                ("@Id", box newUserId)
+                                ("@FirstName", box data.FirstName.Value)
+                                ("@LastName", box data.LastName.Value)
+                                ("@KeyCode", data.AuthKey |> Option.map (AuthKey.toString >> box) |> Option.defaultValue (box DBNull.Value))
+                                ("@Role", box (UserRole.toString data.Role))
+                            ]
+                    return! Successful.OK newUserId next ctx
+                with
+                    | :? SqliteException as e when e.Message = "SQLite Error 19: 'UNIQUE constraint failed: Member.keyCode'." ->
+                        return! RequestErrors.BAD_REQUEST KeyCodeTaken next ctx
+            | _ -> return! RequestErrors.FORBIDDEN () next ctx
+        }
+
+let handleUpdateUser userId =
+    fun (next : HttpFunc) (ctx : HttpContext) ->
+        task {
+            let! data = ctx.BindModelAsync<UserData>()
+            match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
+            | Some user when DB.User.isAdmin user ->
+                if user.Id = userId && data.Role <> Admin then
+                    return! RequestErrors.BAD_REQUEST DowngradeSelfNotAllowed next ctx
+                else
+                    try
+                        do!
+                            DB.write
+                                "UPDATE `Member` SET `firstName` = @FirstName, `lastName` = @LastName, `keyCode` = @KeyCode, `role` = @Role WHERE `id` = @Id"
+                                [
+                                    ("@Id", box userId)
+                                    ("@FirstName", box data.FirstName.Value)
+                                    ("@LastName", box data.LastName.Value)
+                                    ("@KeyCode", data.AuthKey |> Option.map (AuthKey.toString >> box) |> Option.defaultValue (box DBNull.Value))
+                                    ("@Role", box (UserRole.toString data.Role))
+                                ]
+                        return! Successful.OK () next ctx
+                    with
+                        | :? SqliteException as e when e.Message = "SQLite Error 19: 'UNIQUE constraint failed: Member.keyCode'." ->
+                            return! RequestErrors.BAD_REQUEST KeyCodeTaken next ctx
             | _ -> return! RequestErrors.FORBIDDEN () next ctx
         }

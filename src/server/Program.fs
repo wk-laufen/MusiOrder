@@ -32,6 +32,10 @@ let webApp =
                 POST >=> choose [
                     route "/order" >=> handlePostOrder
                     route "/payment" >=> handlePostPayment
+                    route "/user" >=> handleCreateUser
+                ]
+                PUT >=> choose [
+                    routef "/user/%s" handleUpdateUser
                 ]
                 DELETE >=> choose [
                     routef "/order/%s" handleDeleteOrder
