@@ -118,3 +118,10 @@ type NewUserData = {
     AuthKey: AuthKey option
     Role: UserRole
 }
+module Json =
+    let coders =
+        Extra.empty
+        |> Extra.withCustom ProductId.encode ProductId.decoder
+        |> Extra.withCustom AuthKey.encode AuthKey.decoder
+        |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
+        |> Extra.withDecimal

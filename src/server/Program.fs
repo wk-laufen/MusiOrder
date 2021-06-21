@@ -77,13 +77,7 @@ let configureServices (services : IServiceCollection) =
         .AddGiraffe()
     |> ignore
 
-    let jsonCoders =
-        Extra.empty
-        |> Extra.withCustom ProductId.encode ProductId.decoder
-        |> Extra.withCustom AuthKey.encode AuthKey.decoder
-        |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
-        |> Extra.withDecimal
-    services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = jsonCoders)) |> ignore
+    services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = Json.coders)) |> ignore
 
 let configureLogging (ctx: HostBuilderContext) (builder : ILoggingBuilder) =
     builder

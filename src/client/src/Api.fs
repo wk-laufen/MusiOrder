@@ -6,20 +6,14 @@ open Thoth.Fetch
 open Thoth.Json
 
 let loadProducts = async {
-    let coders =
-        Extra.empty
-        |> Extra.withCustom ProductId.encode ProductId.decoder
-        |> Extra.withDecimal
-    let! (products: ProductGroup list) = Fetch.get("/api/grouped-products", caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
+    let! (products: ProductGroup list) = Fetch.get("/api/grouped-products", caseStrategy = CamelCase, extra = Json.coders) |> Async.AwaitPromise
     return products
 }
 
-let loadOrderSummary authKey : Async<OrderSummary> = async {
-    let coders =
-        Extra.empty
-        |> Extra.withDecimal
+let loadOrderSummary authKey = async {
     let url = sprintf "/api/order/summary?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    return! Fetch.get(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
+    let! (orderSummary: OrderSummary) = Fetch.get(url, caseStrategy = CamelCase, extra = Json.coders) |> Async.AwaitPromise
+    return orderSummary
 }
 
 type FetchError =
@@ -28,11 +22,7 @@ type FetchError =
 
 let loadUserInfo authKey = async {
     let url = sprintf "/api/user/info?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    let coders =
-        Extra.empty
-        |> Extra.withCustom AuthKey.encode AuthKey.decoder
-        |> Extra.withDecimal
-    match! Fetch.tryGet(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise with
+    match! Fetch.tryGet(url, caseStrategy = CamelCase, extra = Json.coders) |> Async.AwaitPromise with
     | Ok (users: UserInfo list) -> return Ok users
     | Error (FetchFailed response) when response.Status = 403 -> return Error Forbidden
     | Error e -> return Error (Other (Helper.message e))
@@ -50,29 +40,17 @@ let sendOrder authKey order = async {
                     |> Option.map (fun amount -> { ProductId = productId; Amount = amount })
                 )
         }
-    let coders =
-        Extra.empty
-        |> Extra.withCustom ProductId.encode ProductId.decoder
-        |> Extra.withCustom AuthKey.encode AuthKey.decoder
-        |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
-    do! Fetch.post("/api/order", body, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
+    do! Fetch.post("/api/order", body, caseStrategy = CamelCase, extra = Json.coders) |> Async.AwaitPromise
 }
 
 let addPayment (payment: Payment) = async {
-    let coders =
-        Extra.empty
-        |> Extra.withCustom AuthKey.encode AuthKey.decoder
-        |> Extra.withDecimal
-    let! (totalAmount: decimal) = Fetch.post("/api/payment", payment, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise
+    let! (totalAmount: decimal) = Fetch.post("/api/payment", payment, caseStrategy = CamelCase, extra = Json.coders) |> Async.AwaitPromise
     return (payment.UserId, totalAmount)
 }
 
 let loadOrderInfo authKey = async {
-    let coders =
-        Extra.empty
-        |> Extra.withDecimal
     let url = sprintf "/api/order/info?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    match! Fetch.tryGet(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise with
+    match! Fetch.tryGet(url, caseStrategy = CamelCase, extra = Json.coders) |> Async.AwaitPromise with
     | Ok (orders: OrderInfo list) -> return Ok orders
     | Error (FetchFailed response) when response.Status = 403 -> return Error Forbidden
     | Error e -> return Error (Other (Helper.message e))
@@ -80,15 +58,12 @@ let loadOrderInfo authKey = async {
 
 let deleteOrder authKey orderId = async {
     let url = sprintf "/api/order/%s?authKey=%s" (JS.encodeURIComponent orderId) (AuthKey.toString authKey |> JS.encodeURIComponent)
-    do! Fetch.delete(url, caseStrategy = CamelCase) |> Async.AwaitPromise
+    do! Fetch.delete(url, caseStrategy = CamelCase, extra = Json.coders) |> Async.AwaitPromise
 }
 
 let loadUserData authKey = async {
     let url = sprintf "/api/user?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    let coders =
-        Extra.empty
-        |> Extra.withCustom AuthKey.encode AuthKey.decoder
-    match! Fetch.tryGet(url, caseStrategy = CamelCase, extra = coders) |> Async.AwaitPromise with
+    match! Fetch.tryGet(url, caseStrategy = CamelCase, extra = Json.coders) |> Async.AwaitPromise with
     | Ok (users: ExistingUserData list) -> return Ok users
     | Error (FetchFailed response) when response.Status = 403 -> return Error Forbidden
     | Error e -> return Error (Other (Helper.message e))
