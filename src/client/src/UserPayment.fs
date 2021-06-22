@@ -21,15 +21,15 @@ type LoadedModel = {
 type Model =
     | NotLoaded
     | Loading of AuthKey
-    | LoadError of AuthKey * FetchError
+    | LoadError of AuthKey * ApiError<LoadUserDataError>
     | Loaded of AuthKey * LoadedModel
 
 type Msg =
     | Load of AuthKey
-    | LoadResult of Result<UserInfo list, FetchError>
+    | LoadResult of Result<UserInfo list, ApiError<LoadUserDataError>>
     | SelectUser of userId: string
     | AddPayment of userId: string * amount: decimal
-    | AddPaymentResult of Result<(string * decimal), exn>
+    | AddPaymentResult of Result<(string * decimal), ApiError<AddPaymentError>>
 
 let init authKey =
     match authKey with
@@ -57,7 +57,7 @@ let update msg state =
         match state with
         | Loaded (authKey, state) ->
             let payment = { AuthKey = authKey; UserId = userId; Amount = amount }
-            Loaded (authKey, { state with AddPaymentState = Deferred.InProgress }), Cmd.OfAsync.either addPayment payment (Ok >> AddPaymentResult) (Error >> AddPaymentResult)
+            Loaded (authKey, { state with AddPaymentState = Deferred.InProgress }), Cmd.OfAsync.perform addPayment payment (Result.map (fun v -> (userId, v)) >> AddPaymentResult)
         | _ -> state, Cmd.none
     | AddPaymentResult (Ok (userId, totalAmount)) ->
         match state with
@@ -72,7 +72,7 @@ let update msg state =
         | _ -> state, Cmd.none
     | AddPaymentResult (Error e) ->
         match state with
-        | Loaded (authKey, userList) -> Loaded (authKey, { userList with AddPaymentState = Deferred.Failed e }), Cmd.none
+        | Loaded (authKey, userList) -> Loaded (authKey, { userList with AddPaymentState = Deferred.Failed (exn "Fehler beim Speichern der Zahlung") }), Cmd.none
         | _ -> state, Cmd.none
 
 [<ReactComponent>]
@@ -82,10 +82,11 @@ let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Re
     match state with
     | NotLoaded -> Html.none // Handled by parent component
     | Loading _ -> View.loadIconBig
-    | LoadError (_, Forbidden) ->
+    | LoadError (_, ExpectedError LoadUserDataError.InvalidAuthKey)
+    | LoadError (_, ExpectedError LoadUserDataError.NotAuthorized) ->
         setAuthKeyInvalid ()
         Html.none // Handled by parent component
-    | LoadError (authKey, FetchError.Other _) ->
+    | LoadError (authKey, UnexpectedError _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
     | Loaded (_, { Users = [] }) ->
         View.infoNotification "Keine Benutzer vorhanden"

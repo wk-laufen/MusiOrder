@@ -137,9 +137,37 @@ module ExistingUserData =
             Data = userData
         }
 
+type LoadOrderSummaryError =
+    | InvalidAuthKey
+
+type OrderEntryError =
+    | ArticleNotFound
+
+type AddOrderError =
+    | InvalidAuthKey
+    | OrderEntryErrors of ProductId * OrderEntryError list
+
+type LoadUserDataError =
+    | InvalidAuthKey
+    | NotAuthorized
+
+type AddPaymentError =
+    | InvalidAuthKey
+    | NotAuthorized
+
+type LoadOrderInfoError =
+    | InvalidAuthKey
+    | NotAuthorized
+
+type DeleteOrderError =
+    | InvalidAuthKey
+    | NotAuthorized
+
 type SaveUserError =
     | DowngradeSelfNotAllowed
     | KeyCodeTaken of string option
+    | InvalidAuthKey
+    | NotAuthorized
 
 module Json =
     let coders =

@@ -28,16 +28,16 @@ type Model =
 
 type Msg =
     | LoadProducts
-    | LoadProductsResult of Result<ProductGroup list, exn>
+    | LoadProductsResult of Result<ProductGroup list, string>
     | ChangeOrderAmount of ProductId * delta: int
     | ResetOrder
     | Authenticate
     | LoadUsers of AuthKey
-    | LoadUsersResult of Result<UserInfo list, FetchError>
+    | LoadUsersResult of Result<UserInfo list, ApiError<LoadUserDataError>>
     | SendOrder of AuthKey
-    | SendOrderResult of Result<unit, exn>
+    | SendOrderResult of Result<unit, ApiError<AddOrderError list>>
     | LoadOrderSummary
-    | LoadOrderSummaryResult of Result<OrderSummary, exn>
+    | LoadOrderSummaryResult of Result<OrderSummary, ApiError<LoadOrderSummaryError>>
     | CloseSendOrder
 
 let init =
@@ -50,9 +50,15 @@ let init =
 
 let update msg (state: Model) =
     match msg with
-    | LoadProducts -> { state with Products = Deferred.InProgress }, Cmd.OfAsync.either (fun () -> loadProducts) () (Ok >> LoadProductsResult) (Error >> LoadProductsResult)
-    | LoadProductsResult (Ok v) -> { state with Products = Deferred.Resolved v }, Cmd.none
-    | LoadProductsResult (Error e) -> { state with Products = Deferred.Failed e }, Cmd.none
+    | LoadProducts ->
+        { state with Products = Deferred.InProgress },
+        Cmd.OfAsync.perform (fun () -> loadProducts) () LoadProductsResult
+    | LoadProductsResult (Ok v) ->
+        { state with Products = Deferred.Resolved v },
+        Cmd.none
+    | LoadProductsResult (Error e) ->
+        { state with Products = Deferred.Failed (exn "Fehler beim Laden der Artikel.") },
+        Cmd.none
     | ChangeOrderAmount (productId, delta) ->
         match state.Order with
         | Drafting order ->
@@ -75,25 +81,34 @@ let update msg (state: Model) =
         | _ -> state, Cmd.none
     | LoadUsers authKey ->
         match state.Order with
-        | Authenticating order -> { state with Order = LoadingUsers (order, authKey) }, Cmd.OfAsync.perform loadUserInfo authKey LoadUsersResult
+        | Authenticating order ->
+            { state with Order = LoadingUsers (order, authKey) },
+            Cmd.OfAsync.perform loadUserInfo authKey LoadUsersResult
         | _ -> state, Cmd.none
     | LoadUsersResult (Ok users) ->
         match state.Order with
-        | LoadingUsers (order, authKey) -> { state with Order = LoadedUsers (order, authKey, users) }, Cmd.none
+        | LoadingUsers (order, authKey) ->
+            { state with Order = LoadedUsers (order, authKey, users) },
+            Cmd.none
         | _ -> state, Cmd.none
-    | LoadUsersResult (Error Forbidden) ->
+    | LoadUsersResult (Error (ExpectedError LoadUserDataError.NotAuthorized)) ->
         match state.Order with
         | LoadingUsers (order, authKey) -> state, Cmd.ofMsg (SendOrder authKey)
         | _ -> state, Cmd.none
-    | LoadUsersResult (Error (FetchError.Other _)) ->
+    | LoadUsersResult (Error (ExpectedError LoadUserDataError.InvalidAuthKey))
+    | LoadUsersResult (Error (UnexpectedError _)) ->
         match state.Order with
-        | LoadingUsers (order, authKey) -> { state with Order = LoadUsersError (order, authKey) }, Cmd.none
+        | LoadingUsers (order, authKey) ->
+            { state with Order = LoadUsersError (order, authKey) },
+            Cmd.none
         | _ -> state, Cmd.none
     | SendOrder authKey ->
         match state.Order with
         | LoadingUsers (order, _)
         | LoadedUsers (order, _, _)
-        | SendError (order, _) -> { state with Order = Sending (order, authKey) }, Cmd.OfAsync.either (uncurry sendOrder) (authKey, order) (Ok >> SendOrderResult) (Error >> SendOrderResult)
+        | SendError (order, _) ->
+            { state with Order = Sending (order, authKey) },
+            Cmd.OfAsync.perform (uncurry sendOrder) (authKey, order) SendOrderResult
         | _ -> state, Cmd.none
     | SendOrderResult (Ok _) ->
         match state.Order with
@@ -106,15 +121,21 @@ let update msg (state: Model) =
     | LoadOrderSummary ->
         match state.Order with
         | Sent (authKey, Deferred.HasNotStartedYet)
-        | Sent (authKey, Deferred.Failed _) -> { state with Order = Sent (authKey, Deferred.InProgress) }, Cmd.OfAsync.either loadOrderSummary authKey (Ok >> LoadOrderSummaryResult) (Error >> LoadOrderSummaryResult)
+        | Sent (authKey, Deferred.Failed _) ->
+            { state with Order = Sent (authKey, Deferred.InProgress) },
+            Cmd.OfAsync.perform loadOrderSummary authKey LoadOrderSummaryResult
         | _ -> state, Cmd.none
     | LoadOrderSummaryResult (Ok v) ->
         match state.Order with
-        | Sent (authKey, Deferred.InProgress) -> { state with Order = Sent (authKey, Deferred.Resolved v) }, Cmd.none
+        | Sent (authKey, Deferred.InProgress) ->
+            { state with Order = Sent (authKey, Deferred.Resolved v) },
+            Cmd.none
         | _ -> state, Cmd.none
     | LoadOrderSummaryResult (Error e) ->
         match state.Order with
-        | Sent (authKey, Deferred.InProgress) -> { state with Order = Sent (authKey, Deferred.Failed e) }, Cmd.none
+        | Sent (authKey, Deferred.InProgress) ->
+            { state with Order = Sent (authKey, Deferred.Failed (exn "Fehler beim Laden der Bestellübersicht")) },
+            Cmd.none
         | _ -> state, Cmd.none
     | CloseSendOrder ->
         match state.Order with

@@ -13,13 +13,13 @@ type Model =
     | Hidden
     | Authenticating
     | Loading of AuthKey
-    | LoadError of exn
+    | LoadError of ApiError<LoadOrderSummaryError>
     | Loaded of OrderSummary
 
 type Msg =
     | Show
     | Load of AuthKey
-    | LoadResult of Result<OrderSummary, exn>
+    | LoadResult of Result<OrderSummary, ApiError<LoadOrderSummaryError>>
     | Close
 
 let init = Hidden, Cmd.none
@@ -27,7 +27,7 @@ let init = Hidden, Cmd.none
 let update msg state =
     match msg with
     | Show -> Authenticating, Cmd.none
-    | Load authKey -> Loading authKey, Cmd.OfAsync.either loadOrderSummary authKey (Ok >> LoadResult) (Error >> LoadResult)
+    | Load authKey -> Loading authKey, Cmd.OfAsync.perform loadOrderSummary authKey LoadResult
     | LoadResult (Ok orderSummary) -> Loaded orderSummary, Cmd.none
     | LoadResult (Error e) -> LoadError e, Cmd.none
     | Close -> Hidden, Cmd.none

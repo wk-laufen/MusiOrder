@@ -47,18 +47,18 @@ type LoadedModel = {
 type Model =
     | NotLoaded
     | Loading of AuthKey
-    | LoadError of AuthKey * FetchError
+    | LoadError of AuthKey * ApiError<LoadUserDataError>
     | Loaded of AuthKey * LoadedModel
 
 type Msg =
     | Load of AuthKey
-    | LoadResult of Result<ExistingUserData list, FetchError>
+    | LoadResult of Result<ExistingUserData list, ApiError<LoadUserDataError>>
     | ShowAuthKey of userId: string
     | EditUser of ExistingUserData
     | EditNewUser
     | FormChanged of Form.View.Model<UserFormData>
     | SaveUser of UserData
-    | SaveUserResult of Result<string, SaveUserHttpError>
+    | SaveUserResult of Result<string, ApiError<SaveUserError>>
     | CancelEditUser
 
 let init authKey =
@@ -125,13 +125,15 @@ let update msg state =
     | SaveUserResult (Error e) ->
         match state with
         | Loaded (authKey, ({ EditingUser = Some editingUser } as state)) ->
-            let message =
+            let errorMessage =
                 match e with
-                | SaveUserError DowngradeSelfNotAllowed -> "Fehler beim Speichern des Benutzers: Rollenwechsel nicht erlaubt."
-                | SaveUserError (KeyCodeTaken None) -> "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits vergeben."
-                | SaveUserError (KeyCodeTaken (Some userName)) -> sprintf "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits an %s vergeben." userName
-                | Other _ -> "Fehler beim Speichern des Benutzers."
-            Loaded (authKey, { state with EditingUser = Some { editingUser with Data = { editingUser.Data with State = Form.View.State.Error message } } }),
+                | ExpectedError DowngradeSelfNotAllowed -> "Fehler beim Speichern des Benutzers: Rollenwechsel nicht erlaubt."
+                | ExpectedError (KeyCodeTaken None) -> "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits vergeben."
+                | ExpectedError (KeyCodeTaken (Some userName)) -> sprintf "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits an %s vergeben." userName
+                | ExpectedError SaveUserError.InvalidAuthKey
+                | ExpectedError SaveUserError.NotAuthorized
+                | UnexpectedError _ -> "Fehler beim Speichern des Benutzers."
+            Loaded (authKey, { state with EditingUser = Some { editingUser with Data = { editingUser.Data with State = Form.View.State.Error errorMessage } } }),
             Cmd.none
         | _ -> state, Cmd.none
     | CancelEditUser ->
@@ -146,10 +148,11 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
     match state with
     | NotLoaded -> Html.none // Handled by parent component
     | Loading _ -> View.loadIconBig
-    | LoadError (_, Forbidden) ->
+    | LoadError (_, ExpectedError LoadUserDataError.InvalidAuthKey)
+    | LoadError (_, ExpectedError LoadUserDataError.NotAuthorized) ->
         setAuthKeyInvalid ()
         Html.none // Handled by parent component
-    | LoadError (authKey, FetchError.Other _) ->
+    | LoadError (authKey, UnexpectedError _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
     | Loaded (_, { Users = [] }) ->
         View.infoNotification "Keine Benutzer vorhanden"

@@ -19,14 +19,14 @@ type LoadedModel = {
 type Model =
     | NotLoaded
     | Loading of AuthKey
-    | LoadError of AuthKey * FetchError
+    | LoadError of AuthKey * ApiError<LoadOrderInfoError>
     | Loaded of AuthKey * LoadedModel
 
 type Msg =
     | Load of AuthKey
-    | LoadResult of Result<OrderInfo list, FetchError>
+    | LoadResult of Result<OrderInfo list, ApiError<LoadOrderInfoError>>
     | DeleteOrder of orderId: string
-    | DeleteOrderResult of orderId: string * Result<unit, exn>
+    | DeleteOrderResult of orderId: string * Result<unit, ApiError<DeleteOrderError>>
 
 let init authKey =
     match authKey with
@@ -53,7 +53,7 @@ let update msg state =
         match state with
         | Loaded (authKey, state) ->
             Loaded (authKey, { state with DeleteOrderState = Map.add orderId Deferred.InProgress state.DeleteOrderState }),
-            Cmd.OfAsync.either (deleteOrder authKey) orderId (fun () -> DeleteOrderResult (orderId, Ok ())) (fun e -> DeleteOrderResult (orderId, Error e))
+            Cmd.OfAsync.perform (deleteOrder authKey) orderId (fun v -> DeleteOrderResult (orderId, v))
         | _ -> state, Cmd.none
     | DeleteOrderResult (orderId, Ok ()) ->
         match state with
@@ -64,7 +64,12 @@ let update msg state =
     | DeleteOrderResult (orderId, Error e) ->
         match state with
         | Loaded (authKey, state) ->
-            Loaded (authKey, { state with DeleteOrderState = Map.add orderId (Deferred.Failed e) state.DeleteOrderState }),
+            let errorMessage =
+                match e with
+                | ExpectedError DeleteOrderError.InvalidAuthKey
+                | ExpectedError DeleteOrderError.NotAuthorized
+                | UnexpectedError _ -> "Fehler beim Löschen der Bestellung"
+            Loaded (authKey, { state with DeleteOrderState = Map.add orderId (Deferred.Failed (exn errorMessage)) state.DeleteOrderState }),
             Cmd.none
         | _ -> state, Cmd.none
 
@@ -75,10 +80,11 @@ let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement li
     match state with
     | NotLoaded -> Html.none // Handled by parent component
     | Loading _ -> View.loadIconBig
-    | LoadError (_, Forbidden) ->
+    | LoadError (_, ExpectedError LoadOrderInfoError.InvalidAuthKey)
+    | LoadError (_, ExpectedError LoadOrderInfoError.NotAuthorized) ->
         setAuthKeyInvalid ()
         Html.none // Handled by parent component
-    | LoadError (authKey, FetchError.Other _) ->
+    | LoadError (authKey, UnexpectedError _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
     | Loaded (_, { Orders = [] }) ->
         View.infoNotification "Keine Bestellungen vorhanden"

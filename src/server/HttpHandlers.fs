@@ -66,13 +66,6 @@ let handleGetGroupedProducts =
             return! Successful.OK response next ctx
         }
 
-type OrderEntryError =
-    | ArticleNotFound
-
-type AddOrderError =
-    | InvalidAuthKey
-    | OrderEntryErrors of ProductId * OrderEntryError list
-
 let handlePostOrder =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
@@ -113,11 +106,8 @@ let handlePostOrder =
                 | Error errors ->
                     return! RequestErrors.BAD_REQUEST errors next ctx
             | None ->
-                return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
+                return! RequestErrors.BAD_REQUEST [ AddOrderError.InvalidAuthKey ] next ctx
         }
-
-type GetOrderSummaryError =
-    | InvalidAuthKey
 
 let handleGetOrderSummary =
     fun (next : HttpFunc) (ctx : HttpContext) ->
@@ -133,7 +123,7 @@ let handleGetOrderSummary =
                         LatestOrders = latestOrders
                     }
                 return! Successful.OK result next ctx
-            | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
+            | None -> return! RequestErrors.BAD_REQUEST LoadOrderSummaryError.InvalidAuthKey next ctx
         }
 
 let handleGetUserInfo =
@@ -151,8 +141,8 @@ let handleGetUserInfo =
                 """
                 let! result = DB.read query [] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey; LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 4; Balance = reader.GetDecimal(5) })
                 return! Successful.OK result next ctx
-            | Some _ -> return! RequestErrors.FORBIDDEN () next ctx
-            | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
+            | Some _ -> return! RequestErrors.BAD_REQUEST LoadUserDataError.NotAuthorized next ctx
+            | None -> return! RequestErrors.BAD_REQUEST LoadUserDataError.InvalidAuthKey next ctx
         }
 
 let handleGetUserData =
@@ -177,8 +167,8 @@ let handleGetUserData =
                         }
                     })
                 return! Successful.OK result next ctx
-            | Some _ -> return! RequestErrors.FORBIDDEN () next ctx
-            | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
+            | Some _ -> return! RequestErrors.BAD_REQUEST LoadUserDataError.NotAuthorized next ctx
+            | None -> return! RequestErrors.BAD_REQUEST LoadUserDataError.InvalidAuthKey next ctx
         }
 
 let handlePostPayment =
@@ -197,7 +187,8 @@ let handlePostPayment =
                 do! DB.write "INSERT INTO `MemberPayment` (`id`, `userId`, `amount`, `timestamp`) VALUES (@Id, @UserId, @Amount, @Timestamp)" parameters
                 let! balance = DB.getUserBalance data.UserId
                 return! Successful.OK balance next ctx
-            | _ -> return! RequestErrors.FORBIDDEN () next ctx
+            | Some _ -> return! RequestErrors.BAD_REQUEST AddPaymentError.InvalidAuthKey next ctx
+            | None -> return! RequestErrors.BAD_REQUEST AddPaymentError.NotAuthorized next ctx
         }
 
 let handleGetOrderInfo =
@@ -214,8 +205,8 @@ let handleGetOrderInfo =
                 """
                 let! result = DB.read query [ ("@OldestTime", DateTimeOffset.Now.AddMonths(-1) |> box) ] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); ArticleName = reader.GetString(3); Amount = reader.GetInt32(4); PricePerUnit = reader.GetDecimal(5); Timestamp = reader.GetDateTimeOffset(6) })
                 return! Successful.OK result next ctx
-            | Some _ -> return! RequestErrors.FORBIDDEN () next ctx
-            | None -> return! RequestErrors.BAD_REQUEST InvalidAuthKey next ctx
+            | Some _ -> return! RequestErrors.BAD_REQUEST LoadOrderInfoError.NotAuthorized next ctx
+            | None -> return! RequestErrors.BAD_REQUEST LoadOrderInfoError.InvalidAuthKey next ctx
         }
 
 let handleDeleteOrder orderId =
@@ -225,68 +216,65 @@ let handleDeleteOrder orderId =
             | Some user when DB.User.isAdmin user ->
                 do! DB.write "DELETE FROM `Order` WHERE `id` = @Id" [ ("@Id", box orderId) ]
                 return! Successful.OK () next ctx
-            | _ -> return! RequestErrors.FORBIDDEN () next ctx
+            | Some _ -> return! RequestErrors.BAD_REQUEST DeleteOrderError.NotAuthorized next ctx
+            | None -> return! RequestErrors.BAD_REQUEST DeleteOrderError.InvalidAuthKey next ctx
         }
 
-let handleCreateUser =
+let private saveUser fn =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
             let! data = ctx.BindModelAsync<UserData>()
             match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
             | Some user when DB.User.isAdmin user ->
                 try
-                    let newUserId = sprintf "%O" (Guid.NewGuid())
-                    do!
-                        DB.write
-                            "INSERT INTO `Member` (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES(@Id, @FirstName, @LastName, @KeyCode, @Role)"
-                            [
-                                ("@Id", box newUserId)
-                                ("@FirstName", box data.FirstName.Value)
-                                ("@LastName", box data.LastName.Value)
-                                ("@KeyCode", data.AuthKey |> Option.map (AuthKey.toString >> box) |> Option.defaultValue (box DBNull.Value))
-                                ("@Role", box (UserRole.toString data.Role))
-                            ]
-                    return! Successful.OK newUserId next ctx
+                    return! fn user data next ctx
                 with
                     | :? SqliteException as e when e.Message = "SQLite Error 19: 'UNIQUE constraint failed: Member.keyCode'." ->
-                        return! RequestErrors.BAD_REQUEST KeyCodeTaken next ctx
-            | _ -> return! RequestErrors.FORBIDDEN () next ctx
+                        let! userName = task {
+                            try
+                                let! userName =
+                                    DB.readSingle
+                                        "SELECT `lastName`, `firstName` FROM `Member` WHERE `keyCode` = @KeyCode"
+                                        [ ("@KeyCode", data.AuthKey |> Option.get |> AuthKey.toString |> box) ]
+                                        (fun reader -> sprintf "%s %s" (reader.GetString(0)) (reader.GetString(1)))
+                                return userName
+                            with _ -> return None
+                        }
+                        return! RequestErrors.BAD_REQUEST (KeyCodeTaken userName) next ctx
+            | Some _ -> return! RequestErrors.BAD_REQUEST SaveUserError.NotAuthorized next ctx
+            | None -> return! RequestErrors.BAD_REQUEST SaveUserError.InvalidAuthKey next ctx
         }
 
+let handleCreateUser : HttpHandler =
+    saveUser (fun admin data next ctx -> task {
+        let newUserId = sprintf "%O" (Guid.NewGuid())
+        do!
+            DB.write
+                "INSERT INTO `Member` (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES(@Id, @FirstName, @LastName, @KeyCode, @Role)"
+                [
+                    ("@Id", box newUserId)
+                    ("@FirstName", box data.FirstName.Value)
+                    ("@LastName", box data.LastName.Value)
+                    ("@KeyCode", data.AuthKey |> Option.map (AuthKey.toString >> box) |> Option.defaultValue (box DBNull.Value))
+                    ("@Role", box (UserRole.toString data.Role))
+                ]
+        return! Successful.OK newUserId next ctx
+    })
+
 let handleUpdateUser userId =
-    fun (next : HttpFunc) (ctx : HttpContext) ->
-        task {
-            let! data = ctx.BindModelAsync<UserData>()
-            match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> DB.getUser) with
-            | Some user when DB.User.isAdmin user ->
-                if user.Id = userId && data.Role <> Admin then
-                    return! RequestErrors.BAD_REQUEST DowngradeSelfNotAllowed next ctx
-                else
-                    let dbAuthKey = data.AuthKey |> Option.map (AuthKey.toString >> box) |> Option.defaultValue (box DBNull.Value)
-                    try
-                        do!
-                            DB.write
-                                "UPDATE `Member` SET `firstName` = @FirstName, `lastName` = @LastName, `keyCode` = @KeyCode, `role` = @Role WHERE `id` = @Id"
-                                [
-                                    ("@Id", box userId)
-                                    ("@FirstName", box data.FirstName.Value)
-                                    ("@LastName", box data.LastName.Value)
-                                    ("@KeyCode", dbAuthKey)
-                                    ("@Role", box (UserRole.toString data.Role))
-                                ]
-                        return! Successful.OK () next ctx
-                    with
-                        | :? SqliteException as e when e.Message = "SQLite Error 19: 'UNIQUE constraint failed: Member.keyCode'." ->
-                            let! userName = task {
-                                try
-                                    let! userName =
-                                        DB.readSingle
-                                            "SELECT `lastName`, `firstName` FROM `Member` WHERE `keyCode` = @KeyCode"
-                                            [ ("@KeyCode", dbAuthKey) ]
-                                            (fun reader -> sprintf "%s %s" (reader.GetString(0)) (reader.GetString(1)))
-                                    return userName
-                                with _ -> return None
-                            }
-                            return! RequestErrors.BAD_REQUEST (KeyCodeTaken userName) next ctx
-            | _ -> return! RequestErrors.FORBIDDEN () next ctx
-        }
+    saveUser (fun admin data next ctx -> task {
+        if admin.Id = userId && data.Role <> Admin then
+            return! RequestErrors.BAD_REQUEST DowngradeSelfNotAllowed next ctx
+        else
+            do!
+                DB.write
+                    "UPDATE `Member` SET `firstName` = @FirstName, `lastName` = @LastName, `keyCode` = @KeyCode, `role` = @Role WHERE `id` = @Id"
+                    [
+                        ("@Id", box userId)
+                        ("@FirstName", box data.FirstName.Value)
+                        ("@LastName", box data.LastName.Value)
+                        ("@KeyCode", data.AuthKey |> Option.map (AuthKey.toString >> box) |> Option.defaultValue (box DBNull.Value))
+                        ("@Role", box (UserRole.toString data.Role))
+                    ]
+            return! Successful.OK () next ctx
+    })
