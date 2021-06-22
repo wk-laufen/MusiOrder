@@ -350,34 +350,38 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                     yield! config.Fields
                                 ]
                                 [
-                                    Bulma.level [
+                                    Bulma.field.div [
                                         prop.classes [ "is-flex-grow-1" ]
+                                        field.isGrouped
+                                        field.isGroupedRight
+
                                         prop.children [
-                                            Bulma.levelLeft []
-                                            Bulma.levelRight [
-                                                match config.State with
-                                                | Form.View.Error error ->
-                                                    Bulma.levelItem [
+                                            match config.State with
+                                            | Form.View.Error error ->
+                                                Bulma.control.div [
+                                                    prop.classes [ "is-align-self-center"; "is-flex-shrink-1" ]
+                                                    prop.children [
                                                         Form.View.errorMessage error
                                                     ]
-                                                | Form.View.Success success ->
-                                                    Bulma.levelItem [
-                                                        text.hasTextCentered
-                                                        color.hasTextSuccess
-                                                        text.hasTextWeightBold
+                                                ]
+                                            | Form.View.Success success ->
+                                                Bulma.control.div [
+                                                    prop.classes [ "is-align-self-center"; "is-flex-shrink-1" ]
+                                                    text.hasTextCentered
+                                                    color.hasTextSuccess
+                                                    text.hasTextWeightBold
 
-                                                        prop.text success
-                                                    ]
-                                                | Form.View.Loading
-                                                | Form.View.Idle -> ()
+                                                    prop.text success
+                                                ]
+                                            | Form.View.Loading
+                                            | Form.View.Idle -> ()
 
-                                                Bulma.levelItem [
-                                                    Bulma.button.button [
-                                                        color.isPrimary
-                                                        prop.text config.Action
-                                                        if config.State = Form.View.Loading then
-                                                            button.isLoading
-                                                    ]
+                                            Bulma.control.div [
+                                                Bulma.button.button [
+                                                    color.isPrimary
+                                                    prop.text config.Action
+                                                    if config.State = Form.View.Loading then
+                                                        button.isLoading
                                                 ]
                                             ]
                                         ]
