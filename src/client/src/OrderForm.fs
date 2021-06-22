@@ -386,6 +386,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                 ]
                 Bulma.container [
                     spacing.mt2
+                    text.hasTextCentered
                     prop.children [
                         match loadSummaryState with
                         | Deferred.HasNotStartedYet
