@@ -128,7 +128,8 @@ let update msg state =
             let message =
                 match e with
                 | SaveUserError DowngradeSelfNotAllowed -> "Fehler beim Speichern des Benutzers: Rollenwechsel nicht erlaubt."
-                | SaveUserError KeyCodeTaken -> "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits vergeben."
+                | SaveUserError (KeyCodeTaken None) -> "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits vergeben."
+                | SaveUserError (KeyCodeTaken (Some userName)) -> sprintf "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits an %s vergeben." userName
                 | Other _ -> "Fehler beim Speichern des Benutzers."
             Loaded (authKey, { state with EditingUser = Some { editingUser with Data = { editingUser.Data with State = Form.View.State.Error message } } }),
             Cmd.none

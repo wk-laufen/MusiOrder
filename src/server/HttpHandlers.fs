@@ -262,6 +262,7 @@ let handleUpdateUser userId =
                 if user.Id = userId && data.Role <> Admin then
                     return! RequestErrors.BAD_REQUEST DowngradeSelfNotAllowed next ctx
                 else
+                    let dbAuthKey = data.AuthKey |> Option.map (AuthKey.toString >> box) |> Option.defaultValue (box DBNull.Value)
                     try
                         do!
                             DB.write
@@ -270,12 +271,22 @@ let handleUpdateUser userId =
                                     ("@Id", box userId)
                                     ("@FirstName", box data.FirstName.Value)
                                     ("@LastName", box data.LastName.Value)
-                                    ("@KeyCode", data.AuthKey |> Option.map (AuthKey.toString >> box) |> Option.defaultValue (box DBNull.Value))
+                                    ("@KeyCode", dbAuthKey)
                                     ("@Role", box (UserRole.toString data.Role))
                                 ]
                         return! Successful.OK () next ctx
                     with
                         | :? SqliteException as e when e.Message = "SQLite Error 19: 'UNIQUE constraint failed: Member.keyCode'." ->
-                            return! RequestErrors.BAD_REQUEST KeyCodeTaken next ctx
+                            let! userName = task {
+                                try
+                                    let! userName =
+                                        DB.readSingle
+                                            "SELECT `lastName`, `firstName` FROM `Member` WHERE `keyCode` = @KeyCode"
+                                            [ ("@KeyCode", dbAuthKey) ]
+                                            (fun reader -> sprintf "%s %s" (reader.GetString(0)) (reader.GetString(1)))
+                                    return userName
+                                with _ -> return None
+                            }
+                            return! RequestErrors.BAD_REQUEST (KeyCodeTaken userName) next ctx
             | _ -> return! RequestErrors.FORBIDDEN () next ctx
         }

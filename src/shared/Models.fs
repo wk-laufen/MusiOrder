@@ -139,7 +139,7 @@ module ExistingUserData =
 
 type SaveUserError =
     | DowngradeSelfNotAllowed
-    | KeyCodeTaken
+    | KeyCodeTaken of string option
 
 module Json =
     let coders =
