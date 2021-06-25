@@ -14,7 +14,7 @@ let retryButton onRetry =
         prop.onClick (ignore >> onRetry)
         prop.children [
             Bulma.icon [ Fa.i [ Fa.Solid.SyncAlt ] [] ]
-            Html.span [ prop.text "Retry" ]
+            Html.span [ prop.text "Wiederholen" ]
         ]
     ]
 
