@@ -44,61 +44,76 @@ let inline handleErrors request = async {
     | Error e -> return Error (UnexpectedError (Helper.message e))
 }
 
-let loadProducts : Async<Result<ProductGroup list, string>> = async {
-    let! result = tryGet "/api/grouped-products"
-    return result |> Result.mapError Helper.message
-}
+module Order =
+    open MusiOrder.Models.Order
 
-let loadOrderSummary authKey : Async<Result<OrderSummary, ApiError<LoadOrderSummaryError>>> = async {
-    let url = sprintf "/api/order/summary?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    return! tryGet url |> handleErrors
-}
+    let loadProducts : Async<Result<ProductGroup list, string>> = async {
+        let! result = tryGet "/api/order/products"
+        return result |> Result.mapError Helper.message
+    }
 
-let loadUserInfo authKey : Async<Result<UserInfo list, ApiError<LoadUserDataError>>> = async {
-    let url = sprintf "/api/user/info?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    return! tryGet url |> handleErrors
-}
+    let loadOrderSummary authKey : Async<Result<OrderSummary, ApiError<LoadOrderSummaryError>>> = async {
+        let url = sprintf "/api/order/summary?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryGet url |> handleErrors
+    }
 
-let sendOrder authKey order : Async<Result<unit, ApiError<AddOrderError list>>> = async {
-    let body =
-        {
-            AuthKey = authKey
-            Entries =
-                order
-                |> Map.toList
-                |> List.choose (fun (productId, amount) ->
-                    PositiveInteger.tryCreate amount
-                    |> Option.map (fun amount -> { ProductId = productId; Amount = amount })
-                )
-        }
-    return! tryPost "/api/order" body |> handleErrors
-}
+    let loadUsers authKey : Async<Result<UserInfo list, ApiError<LoadUsersError>>> = async {
+        let url = sprintf "/api/order/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryGet url |> handleErrors
+    }
 
-let addPayment (payment: Payment) : Async<Result<decimal, ApiError<AddPaymentError>>> = async {
-    return! tryPost "/api/payment" payment |> handleErrors
-}
+    let sendOrder authKey order : Async<Result<unit, ApiError<AddOrderError list>>> = async {
+        let body =
+            order
+            |> Map.toList
+            |> List.choose (fun (productId, amount) ->
+                PositiveInteger.tryCreate amount
+                |> Option.map (fun amount -> { ProductId = productId; Amount = amount })
+            )
+        let url = sprintf "/api/order?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPost url body |> handleErrors
+    }
 
-let loadOrderInfo authKey : Async<Result<OrderInfo list, ApiError<LoadOrderInfoError>>> = async {
-    let url = sprintf "/api/order/info?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    return! tryGet url |> handleErrors
-}
+module UserPaymentAdministration =
+    open MusiOrder.Models.UserPaymentAdministration
 
-let deleteOrder authKey orderId : Async<Result<unit, ApiError<DeleteOrderError>>> = async {
-    let url = sprintf "/api/order/%s?authKey=%s" (JS.encodeURIComponent orderId) (AuthKey.toString authKey |> JS.encodeURIComponent)
-    return! tryDelete url |> handleErrors
-}
+    let loadUsers authKey : Async<Result<UserInfo list, ApiError<LoadUsersError>>> = async {
+        let url = sprintf "/api/administration/user-payment/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryGet url |> handleErrors
+    }
 
-let loadUserData authKey : Async<Result<ExistingUserData list, ApiError<LoadUserDataError>>> = async {
-    let url = sprintf "/api/user?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    return! tryGet url |> handleErrors
-}
+    let addPayment authKey (UserId userId) (payment: Payment) : Async<Result<decimal, ApiError<AddPaymentError>>> = async {
+        let url = sprintf "/api/administration/user-payment/%s?authKey=%s" (JS.encodeURIComponent userId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPost url payment |> handleErrors
+    }
 
-let updateUser authKey userId (user: UserData) : Async<Result<unit, ApiError<SaveUserError>>> = async {
-    let url = sprintf "/api/user/%s?authKey=%s" userId (AuthKey.toString authKey |> JS.encodeURIComponent)
-    return! tryPut url user |> handleErrors
-}
+module UserAdministration =
+    open MusiOrder.Models.UserAdministration
 
-let createUser authKey (user: UserData) : Async<Result<string, ApiError<SaveUserError>>> = async {
-    let url = sprintf "/api/user?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
-    return! tryPost url user |> handleErrors
-}
+    let loadUserData authKey : Async<Result<ExistingUserData list, ApiError<LoadExistingUsersError>>> = async {
+        let url = sprintf "/api/administration/user/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryGet url |> handleErrors
+    }
+
+    let createUser authKey (user: UserData) : Async<Result<UserId, ApiError<SaveUserError>>> = async {
+        let url = sprintf "/api/administration/user/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPost url user |> handleErrors
+    }
+
+    let updateUser authKey (UserId userId) (user: UserData) : Async<Result<unit, ApiError<SaveUserError>>> = async {
+        let url = sprintf "/api/administration/user/users/%s?authKey=%s" userId (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPut url user |> handleErrors
+    }
+
+module OrderAdministration =
+    open MusiOrder.Models.OrderAdministration
+
+    let loadOrderInfo authKey : Async<Result<OrderInfo list, ApiError<LoadOrderInfoError>>> = async {
+        let url = sprintf "/api/administration/order/orders?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryGet url |> handleErrors
+    }
+
+    let deleteOrder authKey orderId : Async<Result<unit, ApiError<DeleteOrderError>>> = async {
+        let url = sprintf "/api/administration/order/orders/%s?authKey=%s" (JS.encodeURIComponent orderId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryDelete url |> handleErrors
+    }

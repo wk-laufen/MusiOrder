@@ -1,6 +1,7 @@
 module OrderAdministration
 
 open Api
+open Api.OrderAdministration
 open Elmish
 open Fable.Core.JsInterop
 open Fable.FontAwesome
@@ -10,6 +11,7 @@ open Feliz.UseDeferred
 open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
+open MusiOrder.Models.OrderAdministration
 
 type LoadedModel = {
     Orders: OrderInfo list
@@ -117,7 +119,7 @@ let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement li
                                         prop.text order.FirstName
                                     ]
                                     Html.td [
-                                        prop.textf "%d x %s à %.2f€" order.Amount order.ArticleName order.PricePerUnit
+                                        prop.textf "%d x %s à %.2f€" order.Amount order.ProductName order.PricePerUnit
                                     ]
                                     Html.td [
                                         let relativeTime: string = moment(order.Timestamp)?fromNow()

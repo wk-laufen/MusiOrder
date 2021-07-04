@@ -1,6 +1,7 @@
 module OrderForm
 
 open Api
+open Api.Order
 open Elmish
 open Fable.FontAwesome
 open Feliz
@@ -9,6 +10,7 @@ open Feliz.Bulma.Operators
 open Feliz.UseDeferred
 open Feliz.UseElmish
 open MusiOrder.Models
+open MusiOrder.Models.Order
 
 type OrderState =
     | Drafting of Map<ProductId, int>
@@ -33,7 +35,7 @@ type Msg =
     | ResetOrder
     | Authenticate
     | LoadUsers of AuthKey
-    | LoadUsersResult of Result<UserInfo list, ApiError<LoadUserDataError>>
+    | LoadUsersResult of Result<UserInfo list, ApiError<LoadUsersError>>
     | SendOrder of AuthKey
     | SendOrderResult of Result<unit, ApiError<AddOrderError list>>
     | LoadOrderSummary
@@ -83,7 +85,7 @@ let update msg (state: Model) =
         match state.Order with
         | Authenticating order ->
             { state with Order = LoadingUsers (order, authKey) },
-            Cmd.OfAsync.perform loadUserInfo authKey LoadUsersResult
+            Cmd.OfAsync.perform loadUsers authKey LoadUsersResult
         | _ -> state, Cmd.none
     | LoadUsersResult (Ok users) ->
         match state.Order with
@@ -91,11 +93,11 @@ let update msg (state: Model) =
             { state with Order = LoadedUsers (order, authKey, users) },
             Cmd.none
         | _ -> state, Cmd.none
-    | LoadUsersResult (Error (ExpectedError LoadUserDataError.NotAuthorized)) ->
+    | LoadUsersResult (Error (ExpectedError LoadUsersError.NotAuthorized)) ->
         match state.Order with
         | LoadingUsers (order, authKey) -> state, Cmd.ofMsg (SendOrder authKey)
         | _ -> state, Cmd.none
-    | LoadUsersResult (Error (ExpectedError LoadUserDataError.InvalidAuthKey))
+    | LoadUsersResult (Error (ExpectedError LoadUsersError.InvalidAuthKey))
     | LoadUsersResult (Error (UnexpectedError _)) ->
         match state.Order with
         | LoadingUsers (order, authKey) ->
@@ -394,7 +396,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                         | Deferred.Failed error ->
                             View.errorNotificationWithRetry error.Message (fun () -> dispatch LoadOrderSummary)
                         | Deferred.Resolved orderSummary ->
-                            yield! View.orderSummary orderSummary
+                            yield! View.Order.orderSummary orderSummary
                     ]
                 ]
             ] []

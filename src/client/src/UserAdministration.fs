@@ -1,6 +1,7 @@
 module UserAdministration
 
 open Api
+open Api.UserAdministration
 open Elmish
 open Fable.FontAwesome
 open Fable.Form.Simple
@@ -10,6 +11,7 @@ open Feliz.Bulma
 open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
+open MusiOrder.Models.UserAdministration
 
 type UserFormData = {
     FirstName: string
@@ -34,31 +36,31 @@ module UserFormData =
         }
 
 type EditingUser = {
-    Id: string option
+    Id: UserId option
     Data: Form.View.Model<UserFormData>
 }
 
 type LoadedModel = {
     Users: ExistingUserData list
-    VisibleKeyCodeUserIds: Set<string>
+    VisibleKeyCodeUserIds: Set<UserId>
     EditingUser: EditingUser option
 }
 
 type Model =
     | NotLoaded
     | Loading of AuthKey
-    | LoadError of AuthKey * ApiError<LoadUserDataError>
+    | LoadError of AuthKey * ApiError<LoadExistingUsersError>
     | Loaded of AuthKey * LoadedModel
 
 type Msg =
     | Load of AuthKey
-    | LoadResult of Result<ExistingUserData list, ApiError<LoadUserDataError>>
-    | ShowAuthKey of userId: string
+    | LoadResult of Result<ExistingUserData list, ApiError<LoadExistingUsersError>>
+    | ShowAuthKey of UserId
     | EditUser of ExistingUserData
     | EditNewUser
     | FormChanged of Form.View.Model<UserFormData>
     | SaveUser of UserData
-    | SaveUserResult of Result<string, ApiError<SaveUserError>>
+    | SaveUserResult of Result<UserId, ApiError<SaveUserError>>
     | CancelEditUser
 
 let init authKey =
@@ -148,8 +150,8 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
     match state with
     | NotLoaded -> Html.none // Handled by parent component
     | Loading _ -> View.loadIconBig
-    | LoadError (_, ExpectedError LoadUserDataError.InvalidAuthKey)
-    | LoadError (_, ExpectedError LoadUserDataError.NotAuthorized) ->
+    | LoadError (_, ExpectedError LoadExistingUsersError.InvalidAuthKey)
+    | LoadError (_, ExpectedError LoadExistingUsersError.NotAuthorized) ->
         setAuthKeyInvalid ()
         Html.none // Handled by parent component
     | LoadError (authKey, UnexpectedError _) ->

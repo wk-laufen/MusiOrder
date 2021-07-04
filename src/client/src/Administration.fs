@@ -137,7 +137,7 @@ let Administration activeTab =
                         | InvalidAuthKeyProvided -> None
                         | AuthKeyProvided authKey -> Some authKey
                     match activeTab with
-                    | UserPayment -> UserPayment.UserPayment authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | UserPayment -> UserPaymentAdministration.UserPaymentAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                     | Orders -> OrderAdministration.OrderAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                     | Users -> UserAdministration.UserAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                 ]

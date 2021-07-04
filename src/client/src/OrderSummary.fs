@@ -1,6 +1,7 @@
 module OrderSummary
 
 open Api
+open Api.Order
 open Elmish
 open Fable.FontAwesome
 open Feliz
@@ -8,6 +9,7 @@ open Feliz.Bulma
 open Feliz.Bulma.Operators
 open Feliz.UseElmish
 open MusiOrder.Models
+open MusiOrder.Models.Order
 
 type Model =
     | Hidden
@@ -70,7 +72,7 @@ let OrderSummary () =
             View.modal (sprintf "Bestellungen von %s" orderSummary.ClientFullName) (fun () -> dispatch Close) [
                 Bulma.container [
                     text.hasTextCentered
-                    prop.children (View.orderSummary orderSummary)
+                    prop.children (View.Order.orderSummary orderSummary)
                 ]
             ] []
 

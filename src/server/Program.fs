@@ -10,7 +10,6 @@ open Microsoft.Extensions.DependencyInjection
 open Giraffe
 open Giraffe.Serialization
 open MusiOrder.Models
-open MusiOrder.Server.HttpHandlers
 open Thoth.Json.Net
 open Thoth.Json.Giraffe
 
@@ -20,28 +19,42 @@ open Thoth.Json.Giraffe
 
 let webApp =
     choose [
-        subRoute "/api"
-            (choose [
-                GET >=> choose [
-                    route "/grouped-products" >=> handleGetGroupedProducts
-                    route "/order/summary" >=> handleGetOrderSummary
-                    route "/order/info" >=> handleGetOrderInfo
-                    route "/user" >=> handleGetUserData
-                    route "/user/info" >=> handleGetUserInfo
-                ]
-                POST >=> choose [
-                    route "/order" >=> handlePostOrder
-                    route "/payment" >=> handlePostPayment
-                    route "/user" >=> handleCreateUser
-                ]
-                PUT >=> choose [
-                    routef "/user/%s" handleUpdateUser
-                ]
-                DELETE >=> choose [
-                    routef "/order/%s" handleDeleteOrder
-                ]
+        subRoute "/api" (
+            choose [
+                subRoute "/order" (
+                    choose [
+                        GET >=> route "/products" >=> HttpHandler.Order.handleGetProducts
+                        GET >=> route "/summary" >=> HttpHandler.Order.handleGetOrderSummary
+                        GET >=> route "/users" >=> HttpHandler.Order.handleGetUsers
+                        POST >=> route "" >=> HttpHandler.Order.handlePostOrder
+                    ]
+                )
+                subRoute "/administration" (
+                    choose [
+                        subRoute "/user-payment" (
+                            choose [
+                                GET >=> route "/users" >=> HttpHandler.UserPaymentAdministration.handleGetUsers
+                                POST >=> routef "/%s" HttpHandler.UserPaymentAdministration.handlePostPayment
+                            ]
+                        )
+                        subRoute "/user" (
+                            choose [
+                                GET >=> route "/users" >=> HttpHandler.UserAdministration.handleGetUsers
+                                POST >=> route "/users" >=> HttpHandler.UserAdministration.handlePostUser
+                                PUT >=> routef "/users/%s" HttpHandler.UserAdministration.handlePutUser
+                            ]
+                        )
+                        subRoute "/order" (
+                            choose [
+                                GET >=> route "/orders" >=> HttpHandler.OrderAdministration.handleGetOrders
+                                DELETE >=> routef "/orders/%s" HttpHandler.OrderAdministration.handleDeleteOrder
+                            ]
+                        )
+                    ]
+                )
             ])
-        setStatusCode 404 >=> text "Not Found" ]
+        setStatusCode 404 >=> text "Not Found"
+    ]
 
 // ---------------------------------
 // Error handler

@@ -1,6 +1,7 @@
-module UserPayment
+module UserPaymentAdministration
 
 open Api
+open Api.UserPaymentAdministration
 open Elmish
 open Fable.Core.JsInterop
 open Fable.FontAwesome
@@ -11,25 +12,26 @@ open Feliz.UseDeferred
 open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
+open MusiOrder.Models.UserPaymentAdministration
 
 type LoadedModel = {
     Users: UserInfo list
-    SelectedUser: string option
+    SelectedUser: UserId option
     AddPaymentState: Deferred<unit>
 }
 
 type Model =
     | NotLoaded
     | Loading of AuthKey
-    | LoadError of AuthKey * ApiError<LoadUserDataError>
+    | LoadError of AuthKey * ApiError<LoadUsersError>
     | Loaded of AuthKey * LoadedModel
 
 type Msg =
     | Load of AuthKey
-    | LoadResult of Result<UserInfo list, ApiError<LoadUserDataError>>
-    | SelectUser of userId: string
-    | AddPayment of userId: string * amount: decimal
-    | AddPaymentResult of Result<(string * decimal), ApiError<AddPaymentError>>
+    | LoadResult of Result<UserInfo list, ApiError<LoadUsersError>>
+    | SelectUser of UserId
+    | AddPayment of UserId * amount: decimal
+    | AddPaymentResult of Result<(UserId * decimal), ApiError<AddPaymentError>>
 
 let init authKey =
     match authKey with
@@ -40,7 +42,7 @@ let init authKey =
 
 let update msg state =
     match msg with
-    | Load authKey -> Loading authKey, Cmd.OfAsync.perform loadUserInfo authKey LoadResult
+    | Load authKey -> Loading authKey, Cmd.OfAsync.perform loadUsers authKey LoadResult
     | LoadResult (Ok users) ->
         match state with
         | Loading authKey -> Loaded (authKey, { Users = users; SelectedUser = None; AddPaymentState = Deferred.HasNotStartedYet }), Cmd.none
@@ -56,8 +58,8 @@ let update msg state =
     | AddPayment (userId, amount) ->
         match state with
         | Loaded (authKey, state) ->
-            let payment = { AuthKey = authKey; UserId = userId; Amount = amount }
-            Loaded (authKey, { state with AddPaymentState = Deferred.InProgress }), Cmd.OfAsync.perform addPayment payment (Result.map (fun v -> (userId, v)) >> AddPaymentResult)
+            let payment = { Amount = amount }
+            Loaded (authKey, { state with AddPaymentState = Deferred.InProgress }), Cmd.OfAsync.perform (addPayment authKey userId) payment (Result.map (fun v -> (userId, v)) >> AddPaymentResult)
         | _ -> state, Cmd.none
     | AddPaymentResult (Ok (userId, totalAmount)) ->
         match state with
@@ -76,14 +78,14 @@ let update msg state =
         | _ -> state, Cmd.none
 
 [<ReactComponent>]
-let UserPayment authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> ReactElement) =
+let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> ReactElement) =
     let (state, dispatch) = React.useElmish(init authKey, update, [| authKey :> obj |])
 
     match state with
     | NotLoaded -> Html.none // Handled by parent component
     | Loading _ -> View.loadIconBig
-    | LoadError (_, ExpectedError LoadUserDataError.InvalidAuthKey)
-    | LoadError (_, ExpectedError LoadUserDataError.NotAuthorized) ->
+    | LoadError (_, ExpectedError LoadUsersError.InvalidAuthKey)
+    | LoadError (_, ExpectedError LoadUsersError.NotAuthorized) ->
         setAuthKeyInvalid ()
         Html.none // Handled by parent component
     | LoadError (authKey, UnexpectedError _) ->

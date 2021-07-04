@@ -16,8 +16,9 @@
 
   <ItemGroup>
     <Compile Include="..\shared\Models.fs" />
+    <Compile Include="Utils.fs" />
     <Compile Include="DB.fs" />
-    <Compile Include="HttpHandlers.fs" />
+    <Compile Include="HttpHandler.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

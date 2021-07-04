@@ -48,131 +48,150 @@ module ProductId =
     let encode : Encoder<_> = fun (ProductId v) -> Encode.string v
     let decoder : Decoder<_> = Decode.string |> Decode.map ProductId
 
-type Product = {
-    Id: ProductId
-    Name: string
-    Price: decimal
-}
+type UserId = UserId of string
+module UserId =
+    let encode : Encoder<_> = fun (UserId v) -> Encode.string v
+    let decoder : Decoder<_> = Decode.string |> Decode.map UserId
 
-type ProductGroup = {
-    Name: string
-    Products: Product list
-}
+module Order =
+    type Product = {
+        Id: ProductId
+        Name: string
+        Price: decimal
+    }
 
-type OrderEntry = {
-    ProductId: ProductId
-    Amount: PositiveInteger
-}
+    type ProductGroup = {
+        Name: string
+        Products: Product list
+    }
 
-type Order = {
-    AuthKey: AuthKey
-    Entries: OrderEntry list
-}
+    type UserInfo = {
+        FirstName: string
+        LastName: string
+        AuthKey: AuthKey option
+        Balance: decimal
+    }
 
-type HistoricOrder = {
-    Timestamp: DateTimeOffset
-    ProductName: string
-    Amount: int
-}
+    type NewOrderEntry = {
+        ProductId: ProductId
+        Amount: PositiveInteger
+    }
 
-type OrderSummary = {
-    ClientFullName: string
-    Balance: decimal
-    LatestOrders: HistoricOrder list
-}
+    type NewOrder = NewOrderEntry list
 
-type UserInfo = {
-    Id: string
-    FirstName: string
-    LastName: string
-    AuthKey: AuthKey option
-    LatestOrderTimestamp: DateTimeOffset option
-    Balance: decimal
-}
+    type HistoricOrder = {
+        Timestamp: DateTimeOffset
+        ProductName: string
+        Amount: int
+    }
 
-type Payment = {
-    AuthKey: AuthKey
-    UserId: string
-    Amount: decimal
-}
+    type OrderSummary = {
+        ClientFullName: string
+        Balance: decimal
+        LatestOrders: HistoricOrder list
+    }
 
-type OrderInfo = {
-    Id: string
-    FirstName: string
-    LastName: string
-    ArticleName: string
-    Amount: int
-    PricePerUnit: decimal
-    Timestamp: DateTimeOffset
-}
+    type LoadUsersError =
+        | InvalidAuthKey
+        | NotAuthorized
 
-type UserRole = Admin | User
-module UserRole =
-    let tryParse v =
-        if String.Equals(v, "admin", StringComparison.InvariantCultureIgnoreCase) then Some Admin
-        elif String.Equals(v, "user", StringComparison.InvariantCultureIgnoreCase) then Some User
-        else None
-    let toString = function
-        | Admin -> "admin"
-        | User -> "user"
-    let label = function
-        | Admin -> "Administrator"
-        | User -> "Benutzer"
+    type LoadOrderSummaryError =
+        | InvalidAuthKey
 
-type UserData = {
-    FirstName: NotEmptyString
-    LastName: NotEmptyString
-    AuthKey: AuthKey option
-    Role: UserRole
-}
+    type OrderEntryError =
+        | ProductNotFound
 
-type ExistingUserData = {
-    Id: string
-    Data: UserData
-}
-module ExistingUserData =
-    let create userId userData =
-        {
-            Id = userId
-            Data = userData
-        }
+    type AddOrderError =
+        | InvalidAuthKey
+        | OrderEntryErrors of ProductId * OrderEntryError list
 
-type LoadOrderSummaryError =
-    | InvalidAuthKey
+module UserPaymentAdministration =
+    type UserInfo = {
+        Id: UserId
+        FirstName: string
+        LastName: string
+        LatestOrderTimestamp: DateTimeOffset option
+        Balance: decimal
+    }
 
-type OrderEntryError =
-    | ArticleNotFound
+    type Payment = {
+        Amount: decimal
+    }
 
-type AddOrderError =
-    | InvalidAuthKey
-    | OrderEntryErrors of ProductId * OrderEntryError list
+    type LoadUsersError =
+        | InvalidAuthKey
+        | NotAuthorized
 
-type LoadUserDataError =
-    | InvalidAuthKey
-    | NotAuthorized
+    type AddPaymentError =
+        | InvalidAuthKey
+        | NotAuthorized
 
-type AddPaymentError =
-    | InvalidAuthKey
-    | NotAuthorized
+module UserAdministration =
+    type UserRole = Admin | User
+    module UserRole =
+        let tryParse v =
+            if String.Equals(v, "admin", StringComparison.InvariantCultureIgnoreCase) then Some Admin
+            elif String.Equals(v, "user", StringComparison.InvariantCultureIgnoreCase) then Some User
+            else None
+        let toString = function
+            | Admin -> "admin"
+            | User -> "user"
+        let label = function
+            | Admin -> "Administrator"
+            | User -> "Benutzer"
 
-type LoadOrderInfoError =
-    | InvalidAuthKey
-    | NotAuthorized
+    type UserData = {
+        FirstName: NotEmptyString
+        LastName: NotEmptyString
+        AuthKey: AuthKey option
+        Role: UserRole
+    }
 
-type DeleteOrderError =
-    | InvalidAuthKey
-    | NotAuthorized
+    type ExistingUserData = {
+        Id: UserId
+        Data: UserData
+    }
+    module ExistingUserData =
+        let create userId userData =
+            {
+                Id = userId
+                Data = userData
+            }
 
-type SaveUserError =
-    | DowngradeSelfNotAllowed
-    | KeyCodeTaken of string option
-    | InvalidAuthKey
-    | NotAuthorized
+    type LoadExistingUsersError =
+        | InvalidAuthKey
+        | NotAuthorized
+
+    type SaveUserError =
+        | DowngradeSelfNotAllowed
+        | KeyCodeTaken of string option
+        | InvalidAuthKey
+        | NotAuthorized
+
+module OrderAdministration =
+    type OrderInfo = {
+        Id: string
+        FirstName: string
+        LastName: string
+        ProductName: string
+        Amount: int
+        PricePerUnit: decimal
+        Timestamp: DateTimeOffset
+    }
+
+    type LoadOrderInfoError =
+        | InvalidAuthKey
+        | NotAuthorized
+
+    type DeleteOrderError =
+        | InvalidAuthKey
+        | NotAuthorized
 
 module Json =
     let coders =
         Extra.empty
         |> Extra.withCustom ProductId.encode ProductId.decoder
+        |> Extra.withCustom UserId.encode UserId.decoder
         |> Extra.withCustom AuthKey.encode AuthKey.decoder
         |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
         |> Extra.withCustom NotEmptyString.encode NotEmptyString.decoder

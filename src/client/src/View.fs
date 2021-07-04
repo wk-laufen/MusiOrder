@@ -6,7 +6,6 @@ open Feliz
 open Feliz.Bulma
 open Feliz.Bulma.Operators
 open global.JS
-open MusiOrder.Models
 
 let retryButton onRetry =
     Bulma.button.button [
@@ -111,29 +110,32 @@ let balanceColor balance =
     elif balance >= 0.m then color.isWarning
     else color.isDanger
 
-let orderSummary (orderSummary: OrderSummary) =
-    [
-        Html.text "Dein aktuelles Guthaben beträgt: "
-        Bulma.tag [
-            balanceColor orderSummary.Balance
-            control.isLarge
-            prop.textf "%.2f€" orderSummary.Balance
-        ]
-        Html.br []
-        match orderSummary.LatestOrders with
-        | [] -> Html.text "Keine Bestellungen in der letzten Zeit. 😱"
-        | orders ->
-            Html.text "Deine letzten Bestellungen waren:"
-            Html.ul [
-                for order in orders ->
-                    Html.li [
-                        Html.textf "%s: " (moment(order.Timestamp)?fromNow())
-                        Bulma.tag [
-                            color.isInfo
-                            control.isMedium
-                            spacing.mt2
-                            prop.textf "%d x %s" order.Amount order.ProductName
-                        ]
-                    ]
+module Order =
+    open MusiOrder.Models.Order
+
+    let orderSummary (orderSummary: OrderSummary) =
+        [
+            Html.text "Dein aktuelles Guthaben beträgt: "
+            Bulma.tag [
+                balanceColor orderSummary.Balance
+                control.isLarge
+                prop.textf "%.2f€" orderSummary.Balance
             ]
-    ]
+            Html.br []
+            match orderSummary.LatestOrders with
+            | [] -> Html.text "Keine Bestellungen in der letzten Zeit. 😱"
+            | orders ->
+                Html.text "Deine letzten Bestellungen waren:"
+                Html.ul [
+                    for order in orders ->
+                        Html.li [
+                            Html.textf "%s: " (moment(order.Timestamp)?fromNow())
+                            Bulma.tag [
+                                color.isInfo
+                                control.isMedium
+                                spacing.mt2
+                                prop.textf "%d x %s" order.Amount order.ProductName
+                            ]
+                        ]
+                ]
+        ]
