@@ -365,9 +365,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                     ++ color.hasTextSuccess
                     prop.children [
                         Html.div [
-                            prop.children [
-                                Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
-                            ]
+                            Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
                         ]
                         Bulma.title.p [
                             color.hasTextSuccess
