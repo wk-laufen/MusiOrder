@@ -14,6 +14,8 @@ let useAuthentication isActive setAuthKey =
                     setAuthKey (AuthKey key)
                     key <- ""
                 and listener (e: Browser.Types.Event) =
+                    e.preventDefault()
+                    e.stopPropagation()
                     window.clearTimeout timeoutId
                     let newKey = (e :?> Browser.Types.KeyboardEvent).key
                     if newKey = "Enter" then finishAuthKey ()
