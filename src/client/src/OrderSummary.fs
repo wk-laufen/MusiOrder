@@ -76,7 +76,7 @@ let OrderSummary () =
                 ]
             ] []
 
-    Html.div [
+    React.fragment [
         Bulma.button.button [
             color.isInfo
             prop.onClick (fun _ -> dispatch Show)

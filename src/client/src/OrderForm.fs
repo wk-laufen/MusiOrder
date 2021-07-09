@@ -401,7 +401,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                 ]
             ] []
 
-    Html.div [
+    React.fragment [
         match state.Products with
         | Deferred.HasNotStartedYet ->
             ()

@@ -99,7 +99,7 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
     | Loaded (_, { Users = [] }) ->
         View.infoNotification "Keine Benutzer vorhanden"
     | Loaded (_, state) ->
-        Html.div [
+        React.fragment [
             match state.SelectedUser with
             | Some selectedUserId ->
                 setMenuItems [

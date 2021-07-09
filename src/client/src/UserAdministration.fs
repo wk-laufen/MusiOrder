@@ -165,7 +165,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
     | Loaded (_, { Users = [] }) ->
         View.infoNotification "Keine Benutzer vorhanden"
     | Loaded (_, state) ->
-        Html.div [
+        React.fragment [
             setMenuItems [
                 Bulma.levelItem [
                     Bulma.button.a [
