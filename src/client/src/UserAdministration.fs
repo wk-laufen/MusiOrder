@@ -165,7 +165,6 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
     | Loaded (_, { Users = [] }) ->
         View.infoNotification "Keine Benutzer vorhanden"
     | Loaded (_, state) ->
-
         Html.div [
             setMenuItems [
                 Bulma.levelItem [
@@ -293,7 +292,8 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                         Placeholder = ""
                                     }
                             }
-                    
+
+                    // TODO prevent submitting form when entering auth key using physical key (sends `Enter` at the end)
                     let authKeyField =
                         let config: Fable.Form.Base.FieldConfig<Field.TextField.Attributes, string, _, _> =
                             {
