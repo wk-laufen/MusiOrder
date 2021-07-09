@@ -81,13 +81,19 @@ let update msg state =
 let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> ReactElement) =
     let (state, dispatch) = React.useElmish(init authKey, update, [| authKey :> obj |])
 
+    React.useEffect(fun () ->
+        match state with
+        | LoadError (_, ExpectedError LoadUsersError.InvalidAuthKey)
+        | LoadError (_, ExpectedError LoadUsersError.NotAuthorized) ->
+            setAuthKeyInvalid ()
+        | _ -> ()
+    )
+
     match state with
     | NotLoaded -> Html.none // Handled by parent component
     | Loading _ -> View.loadIconBig
     | LoadError (_, ExpectedError LoadUsersError.InvalidAuthKey)
-    | LoadError (_, ExpectedError LoadUsersError.NotAuthorized) ->
-        setAuthKeyInvalid ()
-        Html.none // Handled by parent component
+    | LoadError (_, ExpectedError LoadUsersError.NotAuthorized) -> Html.none // Handled by parent component
     | LoadError (authKey, UnexpectedError _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
     | Loaded (_, { Users = [] }) ->
