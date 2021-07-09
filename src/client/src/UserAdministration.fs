@@ -309,7 +309,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                         Placeholder = "Schlüssel zum Lesegerät halten, Nummer händisch eingeben oder leer lassen"
                                     }
                             }
-                        Fable.Form.Base.field (fun _ -> false) (fun x -> Form.Field.Text (Form.TextRaw, x)) config
+                        Fable.Form.Base.field (fun _ -> false) (fun x -> Form.Field.Text (Form.TextPassword, x)) config
 
                     let roleField =
                         Form.radioField
