@@ -77,7 +77,8 @@ let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement
                     Bulma.modalCardTitle [
                         prop.text title
                     ]
-                    Bulma.delete [
+                    Html.a [
+                        prop.className "delete"
                         prop.onClick (ignore >> onHide)
                     ]
                 ]
