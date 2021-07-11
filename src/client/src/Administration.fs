@@ -80,7 +80,7 @@ let Administration activeTab =
             prop.text "Abbrechen"
         ]
 
-    Html.div [
+    React.fragment [
         match state.AuthKey with
         | NoAuthKeyProvided ->
             Bulma.section [
