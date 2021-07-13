@@ -15,7 +15,7 @@ open MusiOrder.Models.OrderAdministration
 
 type LoadedModel = {
     Orders: OrderInfo list
-    DeleteOrderState: Map<string, Deferred<unit>>
+    DeleteOrderState: Map<OrderId, Deferred<unit>>
 }
 
 type Model =
@@ -27,8 +27,8 @@ type Model =
 type Msg =
     | Load of AuthKey
     | LoadResult of Result<OrderInfo list, ApiError<LoadOrderInfoError>>
-    | DeleteOrder of orderId: string
-    | DeleteOrderResult of orderId: string * Result<unit, ApiError<DeleteOrderError>>
+    | DeleteOrder of OrderId
+    | DeleteOrderResult of OrderId * Result<unit, ApiError<DeleteOrderError>>
 
 let init authKey =
     match authKey with

@@ -2,7 +2,6 @@ module DB
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.Data.Sqlite
-open MusiOrder.Models
 open System
 
 let private dbPath =
@@ -40,25 +39,6 @@ let read query parameters readRow = task {
 let readSingle query parameters readRow = task {
     let! list = read query parameters readRow
     return List.tryExactlyOne list
-}
-
-type User = {
-    Id: string
-    FirstName: string
-    LastName: string
-    Role: string
-}
-module User =
-    let isAdmin user =
-        user.Role.Equals("admin", StringComparison.InvariantCultureIgnoreCase)
-
-let getUser (AuthKey authKey) =
-    readSingle "SELECT `id`, `firstName`, `lastName`, `role` FROM `Member` WHERE `keyCode` = @KeyCode" [ ("@KeyCode", authKey) ] (fun reader -> { Id = reader.GetString(0); FirstName = reader.GetString(1); LastName = reader.GetString(2); Role = reader.GetString(3) })
-
-let getUserBalance (userId: string) = task {
-    let! totalOrderPrice = readSingle "SELECT coalesce(sum(`amount` * `pricePerUnit`), 0) as `price` FROM `Order` WHERE userId = @UserId" [ ("@UserId", userId) ] (fun reader -> reader.GetDecimal(0))
-    let! totalBalance = readSingle "SELECT coalesce(sum(`amount`), 0) FROM `MemberPayment` WHERE userId = @UserId" [ ("@UserId", userId) ] (fun reader -> reader.GetDecimal(0))
-    return (Option.defaultValue 0m totalBalance) - (Option.defaultValue 0m totalOrderPrice)
 }
 
 let readIndexed query parameters readRow = task {

@@ -34,20 +34,21 @@ let webApp =
                         subRoute "/user-payment" (
                             choose [
                                 GET >=> route "/users" >=> HttpHandler.UserPaymentAdministration.handleGetUsers
-                                POST >=> routef "/%s" HttpHandler.UserPaymentAdministration.handlePostPayment
+                                POST >=> routef "/%s" (UserId >> HttpHandler.UserPaymentAdministration.handlePostPayment)
                             ]
                         )
                         subRoute "/user" (
                             choose [
                                 GET >=> route "/users" >=> HttpHandler.UserAdministration.handleGetUsers
                                 POST >=> route "/users" >=> HttpHandler.UserAdministration.handlePostUser
-                                PUT >=> routef "/users/%s" HttpHandler.UserAdministration.handlePutUser
+                                PUT >=> routef "/users/%s" (UserId >> HttpHandler.UserAdministration.handlePutUser)
+                                DELETE >=> routef "/users/%s" (UserId >> HttpHandler.UserAdministration.handleDeleteUser)
                             ]
                         )
                         subRoute "/order" (
                             choose [
                                 GET >=> route "/orders" >=> HttpHandler.OrderAdministration.handleGetOrders
-                                DELETE >=> routef "/orders/%s" HttpHandler.OrderAdministration.handleDeleteOrder
+                                DELETE >=> routef "/orders/%s" (OrderId >> HttpHandler.OrderAdministration.handleDeleteOrder)
                             ]
                         )
                     ]

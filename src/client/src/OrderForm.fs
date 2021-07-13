@@ -18,9 +18,9 @@ type OrderState =
     | LoadingUsers of Map<ProductId, int> * AuthKey
     | LoadUsersError of Map<ProductId, int> * AuthKey
     | LoadedUsers of Map<ProductId, int> * AuthKey * UserInfo list
-    | Sending of Map<ProductId, int> * AuthKey
+    | Sending of Map<ProductId, int> * AuthKey * UserId option
     | SendError of Map<ProductId, int> * AuthKey
-    | Sent of AuthKey * Deferred<OrderSummary>
+    | Sent of AuthKey * UserId option * Deferred<OrderSummary>
 
 type Model =
     {
@@ -36,7 +36,7 @@ type Msg =
     | Authenticate
     | LoadUsers of AuthKey
     | LoadUsersResult of Result<UserInfo list, ApiError<LoadUsersError>>
-    | SendOrder of AuthKey
+    | SendOrder of AuthKey * UserId option
     | SendOrderResult of Result<unit, ApiError<AddOrderError list>>
     | LoadOrderSummary
     | LoadOrderSummaryResult of Result<OrderSummary, ApiError<LoadOrderSummaryError>>
@@ -83,7 +83,8 @@ let update msg (state: Model) =
         | _ -> state, Cmd.none
     | LoadUsers authKey ->
         match state.Order with
-        | Authenticating order ->
+        | Authenticating order
+        | LoadUsersError (order, _) ->
             { state with Order = LoadingUsers (order, authKey) },
             Cmd.OfAsync.perform loadUsers authKey LoadUsersResult
         | _ -> state, Cmd.none
@@ -95,7 +96,7 @@ let update msg (state: Model) =
         | _ -> state, Cmd.none
     | LoadUsersResult (Error (ExpectedError LoadUsersError.NotAuthorized)) ->
         match state.Order with
-        | LoadingUsers (order, authKey) -> state, Cmd.ofMsg (SendOrder authKey)
+        | LoadingUsers (order, authKey) -> state, Cmd.ofMsg (SendOrder (authKey, None))
         | _ -> state, Cmd.none
     | LoadUsersResult (Error (ExpectedError LoadUsersError.InvalidAuthKey))
     | LoadUsersResult (Error (UnexpectedError _)) ->
@@ -104,39 +105,39 @@ let update msg (state: Model) =
             { state with Order = LoadUsersError (order, authKey) },
             Cmd.none
         | _ -> state, Cmd.none
-    | SendOrder authKey ->
+    | SendOrder (authKey, userId) ->
         match state.Order with
         | LoadingUsers (order, _)
         | LoadedUsers (order, _, _)
         | SendError (order, _) ->
-            { state with Order = Sending (order, authKey) },
-            Cmd.OfAsync.perform (uncurry sendOrder) (authKey, order) SendOrderResult
+            { state with Order = Sending (order, authKey, userId) },
+            Cmd.OfAsync.perform (sendOrder authKey userId) order SendOrderResult
         | _ -> state, Cmd.none
     | SendOrderResult (Ok _) ->
         match state.Order with
-        | Sending (_, authKey) -> { state with Order = Sent (authKey, Deferred.HasNotStartedYet) }, Cmd.ofMsg LoadOrderSummary
+        | Sending (_, authKey, userId) -> { state with Order = Sent (authKey, userId, Deferred.HasNotStartedYet) }, Cmd.ofMsg LoadOrderSummary
         | _ -> state, Cmd.none
     | SendOrderResult (Error _) ->
         match state.Order with
-        | Sending (order, authKey) -> { state with Order = SendError (order, authKey) }, Cmd.none
+        | Sending (order, authKey, userId) -> { state with Order = SendError (order, authKey) }, Cmd.none
         | _ -> state, Cmd.none
     | LoadOrderSummary ->
         match state.Order with
-        | Sent (authKey, Deferred.HasNotStartedYet)
-        | Sent (authKey, Deferred.Failed _) ->
-            { state with Order = Sent (authKey, Deferred.InProgress) },
-            Cmd.OfAsync.perform loadOrderSummary authKey LoadOrderSummaryResult
+        | Sent (authKey, userId, Deferred.HasNotStartedYet)
+        | Sent (authKey, userId, Deferred.Failed _) ->
+            { state with Order = Sent (authKey, userId, Deferred.InProgress) },
+            Cmd.OfAsync.perform (loadOrderSummary authKey) userId LoadOrderSummaryResult
         | _ -> state, Cmd.none
     | LoadOrderSummaryResult (Ok v) ->
         match state.Order with
-        | Sent (authKey, Deferred.InProgress) ->
-            { state with Order = Sent (authKey, Deferred.Resolved v) },
+        | Sent (authKey, userId, Deferred.InProgress) ->
+            { state with Order = Sent (authKey, userId, Deferred.Resolved v) },
             Cmd.none
         | _ -> state, Cmd.none
-    | LoadOrderSummaryResult (Error e) ->
+    | LoadOrderSummaryResult (Error _) ->
         match state.Order with
-        | Sent (authKey, Deferred.InProgress) ->
-            { state with Order = Sent (authKey, Deferred.Failed (exn "Fehler beim Laden der Bestellübersicht")) },
+        | Sent (authKey, userId, Deferred.InProgress) ->
+            { state with Order = Sent (authKey, userId, Deferred.Failed (exn "Fehler beim Laden der Bestellübersicht")) },
             Cmd.none
         | _ -> state, Cmd.none
     | CloseSendOrder ->
@@ -174,7 +175,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             | LoadingUsers (order, _)
             | LoadUsersError (order, _)
             | LoadedUsers (order, _, _)
-            | Sending (order, _)
+            | Sending (order, _, _)
             | SendError (order, _) -> Some order
             | Sent _ -> None
         let amount = order |> Option.bind (Map.tryFind product.Id)
@@ -314,8 +315,8 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | Drafting _ -> Html.none
         | Authenticating _ -> View.modalAuthForm "Bestellung speichern" (fun () -> dispatch CloseSendOrder)
         | LoadingUsers _ -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
-        | LoadUsersError (order, _) -> errorView
-        | LoadedUsers (order, _, users) ->
+        | LoadUsersError _ -> errorView
+        | LoadedUsers (_, authKey, users) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
                 Bulma.table [
                     table.isFullWidth
@@ -331,9 +332,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                         Html.tbody [
                             for user in users ->
                                 Html.tr [
-                                    match user.AuthKey with
-                                    | Some authKey -> prop.onClick (fun _ -> dispatch (SendOrder authKey))
-                                    | None -> color.hasTextGreyLight
+                                    prop.onClick (fun _ -> dispatch (SendOrder (authKey, Some user.Id)))
 
                                     prop.children [
                                         Html.td [
@@ -357,7 +356,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             ] []
         | Sending _ -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
         | SendError _ -> errorView
-        | Sent (_, loadSummaryState) ->
+        | Sent (_, _, loadSummaryState) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
                 Bulma.container [
                     text.hasTextCentered

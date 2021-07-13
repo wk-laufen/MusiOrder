@@ -29,7 +29,7 @@ let init = Hidden, Cmd.none
 let update msg state =
     match msg with
     | Show -> Authenticating, Cmd.none
-    | Load authKey -> Loading authKey, Cmd.OfAsync.perform loadOrderSummary authKey LoadResult
+    | Load authKey -> Loading authKey, Cmd.OfAsync.perform (loadOrderSummary authKey) None LoadResult
     | LoadResult (Ok orderSummary) -> Loaded orderSummary, Cmd.none
     | LoadResult (Error e) -> LoadError e, Cmd.none
     | Close -> Hidden, Cmd.none

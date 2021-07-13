@@ -53,6 +53,11 @@ module UserId =
     let encode : Encoder<_> = fun (UserId v) -> Encode.string v
     let decoder : Decoder<_> = Decode.string |> Decode.map UserId
 
+type OrderId = OrderId of string
+module OrderId =
+    let encode : Encoder<_> = fun (OrderId v) -> Encode.string v
+    let decoder : Decoder<_> = Decode.string |> Decode.map OrderId
+
 module Order =
     type Product = {
         Id: ProductId
@@ -66,6 +71,7 @@ module Order =
     }
 
     type UserInfo = {
+        Id: UserId
         FirstName: string
         LastName: string
         AuthKey: AuthKey option
@@ -97,12 +103,14 @@ module Order =
 
     type LoadOrderSummaryError =
         | InvalidAuthKey
+        | NotAuthorized
 
     type OrderEntryError =
         | ProductNotFound
 
     type AddOrderError =
         | InvalidAuthKey
+        | NotAuthorized
         | OrderEntryErrors of ProductId * OrderEntryError list
 
 module UserPaymentAdministration =
@@ -158,6 +166,14 @@ module UserAdministration =
                 Data = userData
             }
 
+    type DeleteUserWarning =
+        | AuthKeyPresent
+        | CurrentBalanceNotZero of decimal
+    module DeleteUserWarning =
+        let label = function
+            | AuthKeyPresent -> "Der Benutzer hat noch einen Schlüssel zugeordnet."
+            | CurrentBalanceNotZero v -> sprintf "Der Benutzer hat noch ein Guthaben von %.2f€" v
+
     type LoadExistingUsersError =
         | InvalidAuthKey
         | NotAuthorized
@@ -168,9 +184,17 @@ module UserAdministration =
         | InvalidAuthKey
         | NotAuthorized
 
+    type DeleteUserError =
+        | InvalidAuthKey
+        | NotAuthorized
+
+    type ForceDeleteUserError =
+        | InvalidAuthKey
+        | NotAuthorized
+
 module OrderAdministration =
     type OrderInfo = {
-        Id: string
+        Id: OrderId
         FirstName: string
         LastName: string
         ProductName: string
@@ -192,6 +216,7 @@ module Json =
         Extra.empty
         |> Extra.withCustom ProductId.encode ProductId.decoder
         |> Extra.withCustom UserId.encode UserId.decoder
+        |> Extra.withCustom OrderId.encode OrderId.decoder
         |> Extra.withCustom AuthKey.encode AuthKey.decoder
         |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
         |> Extra.withCustom NotEmptyString.encode NotEmptyString.decoder

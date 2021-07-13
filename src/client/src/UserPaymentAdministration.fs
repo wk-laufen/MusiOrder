@@ -127,7 +127,7 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
                                     | Deferred.InProgress ->
                                         prop.disabled true
                                     | _ -> ()
-                                    prop.textf "%s%g€" (if amount >= 0.m then "+" else "") amount
+                                    prop.textf "%s%.2f€" (if amount >= 0.m then "+" else "") amount
                                     prop.onClick (fun _ -> dispatch (AddPayment (selectedUserId, amount)))
                                 ]
                         ]

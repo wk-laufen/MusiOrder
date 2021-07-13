@@ -52,8 +52,12 @@ module Order =
         return result |> Result.mapError Helper.message
     }
 
-    let loadOrderSummary authKey : Async<Result<OrderSummary, ApiError<LoadOrderSummaryError>>> = async {
-        let url = sprintf "/api/order/summary?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+    let loadOrderSummary authKey userId : Async<Result<OrderSummary, ApiError<LoadOrderSummaryError>>> = async {
+        let userIdParam =
+            match userId with
+            | Some (UserId userId) -> sprintf "&userId=%s" (JS.encodeURIComponent userId)
+            | None -> ""
+        let url = sprintf "/api/order/summary?authKey=%s%s" (AuthKey.toString authKey |> JS.encodeURIComponent) userIdParam
         return! tryGet url |> handleErrors
     }
 
@@ -62,7 +66,7 @@ module Order =
         return! tryGet url |> handleErrors
     }
 
-    let sendOrder authKey order : Async<Result<unit, ApiError<AddOrderError list>>> = async {
+    let sendOrder authKey userId order : Async<Result<unit, ApiError<AddOrderError list>>> = async {
         let body =
             order
             |> Map.toList
@@ -70,7 +74,11 @@ module Order =
                 PositiveInteger.tryCreate amount
                 |> Option.map (fun amount -> { ProductId = productId; Amount = amount })
             )
-        let url = sprintf "/api/order?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let userIdParam =
+            match userId with
+            | Some (UserId userId) -> sprintf "&userId=%s" (JS.encodeURIComponent userId)
+            | None -> ""
+        let url = sprintf "/api/order?authKey=%s%s" (AuthKey.toString authKey |> JS.encodeURIComponent) userIdParam
         return! tryPost url body |> handleErrors
     }
 
@@ -101,8 +109,18 @@ module UserAdministration =
     }
 
     let updateUser authKey (UserId userId) (user: UserData) : Async<Result<unit, ApiError<SaveUserError>>> = async {
-        let url = sprintf "/api/administration/user/users/%s?authKey=%s" userId (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let url = sprintf "/api/administration/user/users/%s?authKey=%s" (JS.encodeURIComponent userId) (AuthKey.toString authKey |> JS.encodeURIComponent)
         return! tryPut url user |> handleErrors
+    }
+
+    let deleteUser authKey (UserId userId) : Async<Result<DeleteUserWarning list, ApiError<DeleteUserError>>> = async {
+        let url = sprintf "/api/administration/user/users/%s?authKey=%s" (JS.encodeURIComponent userId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryDelete url |> handleErrors
+    }
+
+    let forceDeleteUser authKey (UserId userId) : Async<Result<unit, ApiError<ForceDeleteUserError>>> = async {
+        let url = sprintf "/api/administration/user/users/%s?authKey=%s&force=true" (JS.encodeURIComponent userId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryDelete url |> handleErrors
     }
 
 module OrderAdministration =
@@ -113,7 +131,7 @@ module OrderAdministration =
         return! tryGet url |> handleErrors
     }
 
-    let deleteOrder authKey orderId : Async<Result<unit, ApiError<DeleteOrderError>>> = async {
+    let deleteOrder authKey (OrderId orderId) : Async<Result<unit, ApiError<DeleteOrderError>>> = async {
         let url = sprintf "/api/administration/order/orders/%s?authKey=%s" (JS.encodeURIComponent orderId) (AuthKey.toString authKey |> JS.encodeURIComponent)
         return! tryDelete url |> handleErrors
     }

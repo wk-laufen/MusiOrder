@@ -8,6 +8,7 @@ open Fable.Form.Simple
 open Fable.Form.Simple.Bulma
 open Feliz
 open Feliz.Bulma
+open Feliz.Bulma.Operators
 open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
@@ -40,10 +41,17 @@ type EditingUser = {
     Data: Form.View.Model<UserFormData>
 }
 
+type DeleteUserState =
+    | LoadingWarnings
+    | LoadedWarnings of Result<DeleteUserWarning list, ApiError<DeleteUserError>>
+    | Deleting
+    | Deleted of Result<unit, ApiError<ForceDeleteUserError>>
+
 type LoadedModel = {
     Users: ExistingUserData list
     VisibleKeyCodeUserIds: Set<UserId>
     EditingUser: EditingUser option
+    DeleteUserStates: Map<UserId, DeleteUserState>
 }
 
 type Model =
@@ -57,6 +65,10 @@ type Msg =
     | LoadResult of Result<ExistingUserData list, ApiError<LoadExistingUsersError>>
     | ShowAuthKey of UserId
     | EditUser of ExistingUserData
+    | DeleteUser of UserId
+    | DeleteUserResult of UserId * Result<DeleteUserWarning list, ApiError<DeleteUserError>>
+    | ForceDeleteUser of UserId
+    | ForceDeleteUserResult of UserId * Result<unit, ApiError<ForceDeleteUserError>>
     | EditNewUser
     | FormChanged of Form.View.Model<UserFormData>
     | SaveUser of UserData
@@ -77,7 +89,7 @@ let update msg state =
     | LoadResult (Ok users) ->
         match state with
         | Loading authKey ->
-            Loaded (authKey, { Users = users; VisibleKeyCodeUserIds = Set.empty; EditingUser = None }),
+            Loaded (authKey, { Users = users; VisibleKeyCodeUserIds = Set.empty; EditingUser = None; DeleteUserStates = Map.empty }),
             Cmd.none
         | _ -> state, Cmd.none
     | LoadResult (Error e) ->
@@ -94,6 +106,30 @@ let update msg state =
         match state with
         | Loaded (authKey, state) ->
             Loaded (authKey, { state with EditingUser = Some { Id = Some user.Id; Data = Form.View.idle (UserFormData.fromUserData user.Data) } }),
+            Cmd.none
+        | _ -> state, Cmd.none
+    | DeleteUser userId ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with DeleteUserStates = Map.add userId LoadingWarnings state.DeleteUserStates }),
+            Cmd.OfAsync.perform (deleteUser authKey) userId (fun result -> DeleteUserResult (userId, result))
+        | _ -> state, Cmd.none
+    | DeleteUserResult (userId, result) ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with DeleteUserStates = Map.add userId (LoadedWarnings result) state.DeleteUserStates }),
+            Cmd.none
+        | _ -> state, Cmd.none
+    | ForceDeleteUser userId ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with DeleteUserStates = Map.add userId Deleting state.DeleteUserStates }),
+            Cmd.OfAsync.perform (forceDeleteUser authKey) userId (fun result -> ForceDeleteUserResult (userId, result))
+        | _ -> state, Cmd.none
+    | ForceDeleteUserResult (userId, result) ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with DeleteUserStates = Map.add userId (Deleted result) state.DeleteUserStates }),
             Cmd.none
         | _ -> state, Cmd.none
     | EditNewUser ->
@@ -186,16 +222,23 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                     prop.children [
                         Html.thead [
                             Html.tr [
-                                Html.th [ prop.text "Nachname" ]
-                                Html.th [ prop.text "Vorname" ]
-                                Html.th [ prop.text "Schlüsselnummer" ]
-                                Html.th [ prop.text "Rolle" ]
-                                Html.th [ prop.style [ style.width (length.px 150) ] ]
+                                Html.th "Nachname"
+                                Html.th "Vorname"
+                                Html.th "Schlüsselnummer"
+                                Html.th "Rolle"
+                                Html.th []
                             ]
                         ]
                         Html.tbody [
                             for user in state.Users ->
+                                let deleteUserState = Map.tryFind user.Id state.DeleteUserStates
+                                let isDeleted =
+                                    match deleteUserState with
+                                    | Some (Deleted (Ok _)) -> true
+                                    | _ -> false
                                 Html.tr [
+                                    if isDeleted then color.hasTextGreyLight
+
                                     prop.children [
                                         Html.td [
                                             text.isUppercase
@@ -219,6 +262,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                                                 Bulma.levelItem [
                                                                     Bulma.button.a [
                                                                         prop.onClick (fun _ -> dispatch (ShowAuthKey user.Id))
+                                                                        prop.disabled isDeleted
                                                                         
                                                                         prop.children [
                                                                             Bulma.icon [ Fa.i [ Fa.Solid.Eye ] [] ]
@@ -234,20 +278,60 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                             prop.text (UserRole.label user.Data.Role)
                                         ]
                                         Html.td [
-                                            Bulma.level [
-                                                Bulma.levelLeft [
-                                                    Bulma.levelItem [
-                                                        Bulma.button.a [
-                                                            color.isWarning
-                                                            prop.onClick (fun _ -> dispatch (EditUser user))
-                                                            
-                                                            prop.children [
-                                                                Bulma.icon [ Fa.i [ Fa.Solid.Edit ] [] ]
+                                            Bulma.buttons [
+                                                Bulma.button.a [
+                                                    color.isWarning
+                                                    prop.disabled isDeleted
+                                                    prop.onClick (fun _ -> dispatch (EditUser user))
+                                                    
+                                                    prop.children [
+                                                        Bulma.icon [ Fa.i [ Fa.Solid.Edit ] [] ]
+                                                    ]
+                                                ]
+                                                Bulma.button.a [
+                                                    color.isDanger
+                                                    prop.disabled isDeleted
+
+                                                    match deleteUserState with
+                                                    | None -> prop.onClick (fun _ -> dispatch (DeleteUser user.Id))
+                                                    | Some LoadingWarnings -> button.isLoading
+                                                    | Some (LoadedWarnings (Error _)) -> prop.onClick (fun _ -> dispatch (DeleteUser user.Id))
+                                                    | Some (LoadedWarnings (Ok _)) -> prop.onClick (fun _ -> dispatch (ForceDeleteUser user.Id))
+                                                    | Some Deleting -> button.isLoading
+                                                    | Some (Deleted (Error _)) -> prop.onClick (fun _ -> dispatch (ForceDeleteUser user.Id))
+                                                    | Some (Deleted (Ok _)) -> ()
+                                                    
+                                                    prop.children [
+                                                        Bulma.icon [ Fa.i [ Fa.Solid.TrashAlt ] [] ]
+                                                    ]
+                                                ]
+                                            ]
+                                            match deleteUserState with
+                                            | Some (LoadedWarnings (Ok [])) ->
+                                                Bulma.help [
+                                                    color.isSuccess
+                                                    prop.text "Alles gut. Der Benutzer kann jetzt gelöscht werden."
+                                                ]
+                                            | Some (LoadedWarnings (Ok warnings)) ->
+                                                Bulma.content [
+                                                    Html.div [
+                                                        prop.className "help"
+                                                        ++ color.hasTextDanger
+                                                        prop.children [
+                                                            Html.span "Beachte folgendes, bevor du den Benutzer löschst:"
+                                                            Html.ul [
+                                                                for warning in warnings ->
+                                                                    Html.li [ prop.text (DeleteUserWarning.label warning) ]
                                                             ]
                                                         ]
                                                     ]
                                                 ]
-                                            ]
+                                            | Some (Deleted (Error _)) ->
+                                                Bulma.help [
+                                                    color.isDanger
+                                                    prop.text "Fehler beim Löschen des Benutzers."
+                                                ]
+                                            | _ -> ()
                                         ]
                                     ]
                                 ]
