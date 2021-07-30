@@ -48,7 +48,7 @@ RUN dotnet publish ./server -c Release -o out
 ###
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:5.0
+FROM mcr.microsoft.com/dotnet/aspnet:5.0-buster-slim-arm32v7
 WORKDIR /app
 COPY --from=server-build-env /app/out .
 COPY --from=client-build-env /app/client/deploy ./wwwroot
