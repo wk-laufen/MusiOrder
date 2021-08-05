@@ -1,13 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26124.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31515.178
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "client", "client", "{1513C57F-AAA5-40CB-AB5D-1EB1A2373191}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MusiOrder.Client", "client\src\MusiOrder.Client.fsproj", "{5DC85FBA-ED73-4470-91DC-B6B2FFB018C5}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MusiOrder.Client", "client\src\MusiOrder.Client.fsproj", "{5DC85FBA-ED73-4470-91DC-B6B2FFB018C5}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MusiOrder.Server", "server\MusiOrder.Server.fsproj", "{17DA122B-24BC-4BDB-B72B-A66AE11E0588}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "MusiOrder.Server", "server\MusiOrder.Server.fsproj", "{17DA122B-24BC-4BDB-B72B-A66AE11E0588}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,9 +15,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{5DC85FBA-ED73-4470-91DC-B6B2FFB018C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -47,7 +42,10 @@ Global
 		{17DA122B-24BC-4BDB-B72B-A66AE11E0588}.Release|x86.ActiveCfg = Release|Any CPU
 		{17DA122B-24BC-4BDB-B72B-A66AE11E0588}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{5DC85FBA-ED73-4470-91DC-B6B2FFB018C5} = {1513C57F-AAA5-40CB-AB5D-1EB1A2373191}
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E4B80322-596C-40BD-893E-61A061E9BF89}
 	EndGlobalSection
 EndGlobal
