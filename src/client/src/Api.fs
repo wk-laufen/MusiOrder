@@ -98,7 +98,7 @@ module UserPaymentAdministration =
 module UserAdministration =
     open MusiOrder.Models.UserAdministration
 
-    let loadUserData authKey : Async<Result<ExistingUserData list, ApiError<LoadExistingUsersError>>> = async {
+    let loadUserData authKey : Async<Result<ExistingUser list, ApiError<LoadExistingUsersError>>> = async {
         let url = sprintf "/api/administration/user/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
         return! tryGet url |> handleErrors
     }

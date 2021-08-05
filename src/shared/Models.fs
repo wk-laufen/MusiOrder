@@ -155,7 +155,7 @@ module UserAdministration =
         Role: UserRole
     }
 
-    type ExistingUserData = {
+    type ExistingUser = {
         Id: UserId
         Data: UserData
     }

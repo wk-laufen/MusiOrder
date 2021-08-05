@@ -48,7 +48,7 @@ type DeleteUserState =
     | Deleted of Result<unit, ApiError<ForceDeleteUserError>>
 
 type LoadedModel = {
-    Users: ExistingUserData list
+    Users: ExistingUser list
     VisibleKeyCodeUserIds: Set<UserId>
     EditingUser: EditingUser option
     DeleteUserStates: Map<UserId, DeleteUserState>
@@ -62,9 +62,9 @@ type Model =
 
 type Msg =
     | Load of AuthKey
-    | LoadResult of Result<ExistingUserData list, ApiError<LoadExistingUsersError>>
+    | LoadResult of Result<ExistingUser list, ApiError<LoadExistingUsersError>>
     | ShowAuthKey of UserId
-    | EditUser of ExistingUserData
+    | EditUser of ExistingUser
     | DeleteUser of UserId
     | DeleteUserResult of UserId * Result<DeleteUserWarning list, ApiError<DeleteUserError>>
     | ForceDeleteUser of UserId
