@@ -9,8 +9,10 @@ CREATE TABLE `Member` (
     `firstName` TEXT NOT NULL,
     `lastName` TEXT NOT NULL,
     `keyCode` TEXT UNIQUE,
-    `role` TEXT NOT NULL
+    `role` TEXT NOT NULL,
+    `deleteTimestamp` TEXT
 );
+CREATE VIEW `ActiveMember` AS SELECT `id`, `firstName`, `lastName`, `keyCode`, `role` FROM `Member` WHERE `deleteTimestamp` IS NULL;
 
 CREATE TABLE `MemberPayment` (
     `id` TEXT NOT NULL PRIMARY KEY,
