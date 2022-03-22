@@ -123,6 +123,64 @@ module UserAdministration =
         return! tryDelete url |> handleErrors
     }
 
+module ProductAdministration =
+    open MusiOrder.Models.ProductAdministration
+
+    let loadProductData authKey : Async<Result<ExistingProductGroup list, ApiError<LoadExistingProductsError>>> = async {
+        let url = sprintf "/api/administration/product/products?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryGet url |> handleErrors
+    }
+
+    let createProductGroup authKey (productGroup: ProductGroupData) : Async<Result<ProductGroupId, ApiError<SaveProductGroupError>>> = async {
+        let url = sprintf "/api/administration/product/groups?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPost url productGroup |> handleErrors
+    }
+
+    let updateProductGroup authKey (ProductGroupId productGroupId) (productGroup: ProductGroupData) : Async<Result<unit, ApiError<SaveProductGroupError>>> = async {
+        let url = sprintf "/api/administration/product/groups/%s?authKey=%s" (JS.encodeURIComponent productGroupId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPut url productGroup |> handleErrors
+    }
+
+    let deleteProductGroup authKey (ProductGroupId productGroupId) : Async<Result<unit, ApiError<DeleteProductGroupError>>> = async {
+        let url = sprintf "/api/administration/product/groups/%s?authKey=%s" (JS.encodeURIComponent productGroupId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryDelete url |> handleErrors
+    }
+
+    let moveUpProductGroup authKey (ProductGroupId productGroupId) : Async<Result<unit, ApiError<MoveProductGroupError>>> = async {
+        let url = sprintf "/api/administration/product/groups/%s/move-up?authKey=%s" (JS.encodeURIComponent productGroupId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPost url () |> handleErrors
+    }
+
+    let moveDownProductGroup authKey (ProductGroupId productGroupId) : Async<Result<unit, ApiError<MoveProductGroupError>>> = async {
+        let url = sprintf "/api/administration/product/groups/%s/move-down?authKey=%s" (JS.encodeURIComponent productGroupId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPost url () |> handleErrors
+    }
+
+    let createProduct authKey (product: ProductData) : Async<Result<ProductId, ApiError<SaveProductError>>> = async {
+        let url = sprintf "/api/administration/product/products?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPost url product |> handleErrors
+    }
+
+    let updateProduct authKey (ProductId productId) (product: ProductData) : Async<Result<unit, ApiError<SaveProductError>>> = async {
+        let url = sprintf "/api/administration/product/products/%s?authKey=%s" (JS.encodeURIComponent productId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPut url product |> handleErrors
+    }
+
+    let moveUpProduct authKey (ProductId productId) : Async<Result<unit, ApiError<MoveProductError>>> = async {
+        let url = sprintf "/api/administration/product/products/%s/move-up?authKey=%s" (JS.encodeURIComponent productId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPost url () |> handleErrors
+    }
+
+    let moveDownProduct authKey (ProductId productId) : Async<Result<unit, ApiError<MoveProductError>>> = async {
+        let url = sprintf "/api/administration/product/products/%s/move-down?authKey=%s" (JS.encodeURIComponent productId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryPost url () |> handleErrors
+    }
+
+    let deleteProduct authKey (ProductId productId) : Async<Result<unit, ApiError<DeleteProductError>>> = async {
+        let url = sprintf "/api/administration/product/products/%s?authKey=%s" (JS.encodeURIComponent productId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        return! tryDelete url |> handleErrors
+    }
+
 module OrderAdministration =
     open MusiOrder.Models.OrderAdministration
 

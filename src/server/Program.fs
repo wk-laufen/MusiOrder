@@ -45,6 +45,21 @@ let webApp =
                                 DELETE >=> routef "/users/%s" (UserId >> HttpHandler.UserAdministration.handleDeleteUser)
                             ]
                         )
+                        subRoute "/product" (
+                            choose [
+                                GET >=> route "/products" >=> HttpHandler.ProductAdministration.handleGetProducts
+                                POST >=> route "/groups" >=> HttpHandler.ProductAdministration.handlePostProductGroup
+                                PUT >=> routef "/groups/%s" (ProductGroupId >> HttpHandler.ProductAdministration.handlePutProductGroup)
+                                POST >=> routef "/groups/%s/move-up" (ProductGroupId >> HttpHandler.ProductAdministration.handleMoveUpProductGroup)
+                                POST >=> routef "/groups/%s/move-down" (ProductGroupId >> HttpHandler.ProductAdministration.handleMoveDownProductGroup)
+                                DELETE >=> routef "/groups/%s" (ProductGroupId >> HttpHandler.ProductAdministration.handleDeleteProductGroup)
+                                POST >=> routef "/groups/%s/products" (ProductGroupId >> HttpHandler.ProductAdministration.handlePostProduct)
+                                PUT >=> routef "/products/%s" (ProductId >> HttpHandler.ProductAdministration.handlePutProduct)
+                                POST >=> routef "/products/%s/move-up" (ProductId >> HttpHandler.ProductAdministration.handleMoveUpProduct)
+                                POST >=> routef "/products/%s/move-down" (ProductId >> HttpHandler.ProductAdministration.handleMoveDownProduct)
+                                DELETE >=> routef "/products/%s" (ProductId >> HttpHandler.ProductAdministration.handleDeleteProduct)
+                            ]
+                        )
                         subRoute "/order" (
                             choose [
                                 GET >=> route "/orders" >=> HttpHandler.OrderAdministration.handleGetOrders

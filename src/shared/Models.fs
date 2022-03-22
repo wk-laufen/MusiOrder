@@ -22,6 +22,25 @@ module PositiveInteger =
             | None -> Decode.fail "Must be positive"
         )
 
+type NonNegativeDecimal = private NonNegativeDecimal of decimal
+
+module NonNegativeDecimal =
+    let tryCreate = function
+        | v when v > 0m -> Some (NonNegativeDecimal v)
+        | _ -> None
+    let tryParse (v: string) =
+        match System.Decimal.TryParse(v) with
+        | (true, v) -> tryCreate v
+        | (false, _) -> None
+    let value (NonNegativeDecimal v) = v
+    let encode : Encoder<_> = fun (NonNegativeDecimal v) -> Encode.decimal v
+    let decoder : Decoder<_> =
+        Decode.decimal
+        |> Decode.andThen (tryCreate >> function
+            | Some v -> Decode.succeed v
+            | None -> Decode.fail "Must be non-negative"
+        )
+
 type NotEmptyString =
     private NotEmptyString of string
     with member x.Value = let (NotEmptyString v) = x in v
@@ -42,6 +61,11 @@ module AuthKey =
     let encode : Encoder<_> = fun (AuthKey v) -> Encode.string v
     let decoder : Decoder<_> = Decode.string |> Decode.map AuthKey
     let toString (AuthKey authKey) = authKey
+
+type ProductGroupId = ProductGroupId of string
+module ProductGroupId =
+    let encode : Encoder<_> = fun (ProductGroupId v) -> Encode.string v
+    let decoder : Decoder<_> = Decode.string |> Decode.map ProductGroupId
 
 type ProductId = ProductId of string
 module ProductId =
@@ -192,6 +216,69 @@ module UserAdministration =
         | InvalidAuthKey
         | NotAuthorized
 
+module ProductAdministration =
+    type ProductState = Enabled | Disabled
+    module ProductState =
+        let tryParse = function
+            | "enabled" -> Some Enabled
+            | "disabled" -> Some Disabled
+            | _ -> None
+        let toString = function
+            | Enabled -> "enabled"
+            | Disabled -> "disabled"
+        let label = function
+            | Enabled -> "Aktiv"
+            | Disabled -> "Inaktiv"
+
+    type ProductData = {
+        Name: NotEmptyString
+        Price: NonNegativeDecimal
+        State: ProductState
+    }
+
+    type ExistingProduct = {
+        Id: ProductId
+        Data: ProductData
+    }
+
+    type ProductGroupData = {
+        Name: string
+    }
+
+    type ExistingProductGroup = {
+        Id: ProductGroupId
+        Data: ProductGroupData
+        Products: ExistingProduct list
+    }
+
+    type LoadExistingProductsError =
+        | InvalidAuthKey
+        | NotAuthorized
+
+    type SaveProductGroupError =
+        | InvalidAuthKey
+        | NotAuthorized
+
+    type MoveProductGroupError =
+        | InvalidAuthKey
+        | NotAuthorized
+
+    type DeleteProductGroupError =
+        | InvalidAuthKey
+        | NotAuthorized
+
+    type SaveProductError =
+        | InvalidAuthKey
+        | NotAuthorized
+
+    type MoveProductError =
+        | InvalidAuthKey
+        | NotAuthorized
+
+    type DeleteProductError =
+        | InvalidAuthKey
+        | NotAuthorized
+
 module OrderAdministration =
     type OrderInfo = {
         Id: OrderId
@@ -215,9 +302,11 @@ module Json =
     let coders =
         Extra.empty
         |> Extra.withCustom ProductId.encode ProductId.decoder
+        |> Extra.withCustom ProductGroupId.encode ProductGroupId.decoder
         |> Extra.withCustom UserId.encode UserId.decoder
         |> Extra.withCustom OrderId.encode OrderId.decoder
         |> Extra.withCustom AuthKey.encode AuthKey.decoder
         |> Extra.withCustom PositiveInteger.encode PositiveInteger.decoder
         |> Extra.withCustom NotEmptyString.encode NotEmptyString.decoder
+        |> Extra.withCustom NonNegativeDecimal.encode NonNegativeDecimal.decoder
         |> Extra.withDecimal

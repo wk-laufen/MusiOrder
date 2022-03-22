@@ -12,9 +12,12 @@ type Helper =
     static member Box (v: decimal) = box v
     static member Box (AuthKey v) = box v
     static member Box (UserId v) = box v
+    static member Box (ProductId v) = box v
+    static member Box (ProductGroupId v) = box v
     static member Box (OrderId v) = box v
     static member Box (v: PositiveInteger) = box (PositiveInteger.value v)
     static member Box (v: NotEmptyString) = box v.Value
+    static member Box (v: NonNegativeDecimal) = box (NonNegativeDecimal.value v)
     static member Box (v: DBNull) = box v
 
 type User = {
@@ -254,6 +257,184 @@ module UserAdministration =
     let deleteUser (userId: UserId) = task {
         return! DB.write "UPDATE `Member` SET `keyCode` = NULL, `deleteTimestamp` = @DeleteTimestamp WHERE `id` = @Id" [ ("@Id", Helper.Box userId); ("@DeleteTimestamp", Helper.Box DateTimeOffset.Now) ]
     }
+
+module ProductAdministration =
+    open MusiOrder.Models.ProductAdministration
+
+    let getProducts () = task {
+        let! groups =
+            DB.read
+                "SELECT `id`, `name` FROM `ArticleGroup` ORDER BY `grade`"
+                []
+                (fun reader ->
+                    {
+                        Id = ProductGroupId (reader.GetString(0))
+                        Data = {
+                            Name = reader.GetString(1)
+                        }
+                        Products = []
+                    }
+                )
+        let! products =
+            DB.read
+                "SELECT `id`, `groupId`, `name`, `price`, `state` FROM `Article` ORDER BY `grade`"
+                []
+                (fun reader ->
+                    let productId = ProductId (reader.GetString(0))
+                    let product = {
+                        Id = productId
+                        Data = {
+                            Name = reader.GetString(2) |> NotEmptyString.tryCreate |> Option.defaultWith (fun () -> failwithf "DB error: Name of product (%O) is empty" productId)
+                            Price = reader.GetDecimal(3) |> NonNegativeDecimal.tryCreate |> Option.defaultWith (fun () -> failwithf "DB error: Price of product (%O) is invalid" productId)
+                            State =
+                                let state = reader.GetString(4)
+                                ProductState.tryParse state |> Option.defaultWith (fun () -> failwithf "DB error: Unknown product state (\"%s\")" state)
+                        }
+                    }
+                    let productGroupId = ProductGroupId (reader.GetString(1))
+                    (productGroupId, product)
+                )
+        return
+            groups
+            |> List.choose (fun group ->
+                let products =
+                    products
+                    |> List.filter (fun (groupId, product) -> groupId = group.Id)
+                    |> List.map snd
+                match products with
+                | [] -> None
+                | x -> Some { group with Products = x }
+            )
+    }
+
+    let createProductGroup data = task {
+        let newProductGroupId = sprintf "%O" (Guid.NewGuid()) |> ProductGroupId
+        do!
+            DB.write
+                "INSERT INTO `ArticleGroup` (`id`, `grade`, `name`) VALUES (@Id, (SELECT COALESCE(MAX(`grade`), 1) FROM `ArticleGroup`), @Name)"
+                [
+                    "@Id", Helper.Box newProductGroupId
+                    "@Name", Helper.Box data.Name
+                ]
+        return newProductGroupId
+    }
+
+    let updateProductGroup (productGroupId: ProductGroupId) data =
+        DB.write
+            "UPDATE `ArticleGroup` SET `name` = @Name Where `id` = @Id"
+            [
+                "@Id", Helper.Box productGroupId
+                "@Name", Helper.Box data.Name
+            ]
+
+    let moveUpProductGroup (productGroupId: ProductGroupId) =
+        DB.write """
+            WITH `a` AS (
+              SELECT `id`, `grade` FROM `ArticleGroup` AS `g` WHERE `id` = @Id
+            ), `b` AS (
+              SELECT `id`, `grade` FROM `a`
+              UNION
+              SELECT `id`, `grade` FROM `ArticleGroup` WHERE `grade` IN (SELECT `grade` - 1 FROM `a`)
+            ), `c` AS (
+              SELECT `b1`.`id`, `b1`.`grade` `oldGrade`, `b2`.`grade` `newGrade` FROM `b` AS `b1` CROSS JOIN `b` AS `b2` WHERE `b1`.`grade` <> `b2`.`grade`
+            )
+            UPDATE `ArticleGroup`
+            SET `grade` = (SELECT `newGrade` FROM `c` WHERE `c`.`id` = `ArticleGroup`.`id`)
+            WHERE `id` IN (SELECT `id` FROM `c`)
+            """
+            [
+                "@Id", Helper.Box productGroupId
+            ]
+
+    let moveDownProductGroup (productGroupId: ProductGroupId) =
+        DB.write """
+            WITH `a` AS (
+              SELECT `id`, `grade` FROM `ArticleGroup` AS `g` WHERE `id` = @Id
+            ), `b` AS (
+              SELECT `id`, `grade` FROM `a`
+              UNION
+              SELECT `id`, `grade` FROM `ArticleGroup` WHERE `grade` IN (SELECT `grade` + 1 FROM `a`)
+            ), `c` AS (
+              SELECT `b1`.`id`, `b1`.`grade` `oldGrade`, `b2`.`grade` `newGrade` FROM `b` AS `b1` CROSS JOIN `b` AS `b2` WHERE `b1`.`grade` <> `b2`.`grade`
+            )
+            UPDATE `ArticleGroup`
+            SET `grade` = (SELECT `newGrade` FROM `c` WHERE `c`.`id` = `ArticleGroup`.`id`)
+            WHERE `id` IN (SELECT `id` FROM `c`)
+            """
+            [
+                "@Id", Helper.Box productGroupId
+            ]
+
+    let deleteProductGroup (productGroupId: ProductGroupId) =
+        DB.write "DELETE FROM `ArticleGroup` WHERE `id` = @Id" [ "@Id", Helper.Box productGroupId ]
+
+    let createProduct (productGroupId: ProductGroupId) (data: ProductData) = task {
+        let newProductId = sprintf "%O" (Guid.NewGuid()) |> ProductGroupId
+        do!
+            DB.write """
+                INSERT INTO `Article` (`id`, `groupId`, `state`, `grade`, `name`, `price`)
+                VALUES (@Id, @GroupId, @State, (SELECT COALESCE(MAX(`grade`), 1) FROM `Article` WHERE `groupId` = @GroupId), @Name, @Price)
+                """
+                [
+                    "@Id", Helper.Box newProductId
+                    "@GroupId", Helper.Box productGroupId
+                    "@State", Helper.Box (ProductState.toString data.State)
+                    "@Name", Helper.Box data.Name
+                    "@Price", Helper.Box data.Price
+                ]
+        return newProductId
+    }
+
+    let updateProduct (productId: ProductId) data =
+        DB.write
+            "UPDATE `Article` SET `state` = @State, `name` = @Name, `price` = @Price Where `id` = @Id"
+            [
+                "@Id", Helper.Box productId
+                "@State", Helper.Box (ProductState.toString data.State)
+                "@Name", Helper.Box data.Name
+                "@Price", Helper.Box data.Price
+            ]
+
+    let moveUpProduct (productId: ProductId) =
+        DB.write """
+            WITH `a` AS (
+              SELECT `id`, `groupId`, `grade` FROM `Article` AS `g` WHERE `id` = @Id
+            ), `b` AS (
+              SELECT `id`, `grade` FROM `a`
+              UNION
+              SELECT `id`, `grade` FROM `Article` WHERE `grade` IN (SELECT `grade` - 1 FROM `a` WHERE `Article`.`groupId` = `a`.`groupId`)
+            ), `c` AS (
+              SELECT `b1`.`id`, `b1`.`grade` `oldGrade`, `b2`.`grade` `newGrade` FROM `b` AS `b1` CROSS JOIN `b` AS `b2` WHERE `b1`.`grade` <> `b2`.`grade`
+            )
+            UPDATE `Article`
+            SET `grade` = (SELECT `newGrade` FROM `c` WHERE `c`.`id` = `Article`.`id`)
+            WHERE `id` IN (SELECT `id` FROM `c`)
+            """
+            [
+                "@Id", Helper.Box productId
+            ]
+
+    let moveDownProduct (productId: ProductId) =
+        DB.write """
+            WITH `a` AS (
+              SELECT `id`, `groupId`, `grade` FROM `Article` AS `g` WHERE `id` = @Id
+            ), `b` AS (
+              SELECT `id`, `grade` FROM `a`
+              UNION
+              SELECT `id`, `grade` FROM `Article` WHERE `grade` IN (SELECT `grade` + 1 FROM `a` WHERE `Article`.`groupId` = `a`.`groupId`)
+            ), `c` AS (
+              SELECT `b1`.`id`, `b1`.`grade` `oldGrade`, `b2`.`grade` `newGrade` FROM `b` AS `b1` CROSS JOIN `b` AS `b2` WHERE `b1`.`grade` <> `b2`.`grade`
+            )
+            UPDATE `Article`
+            SET `grade` = (SELECT `newGrade` FROM `c` WHERE `c`.`id` = `Article`.`id`)
+            WHERE `id` IN (SELECT `id` FROM `c`)
+            """
+            [
+                "@Id", Helper.Box productId
+            ]
+
+    let deleteProduct (productId: ProductId) =
+        DB.write "DELETE FROM `Article` WHERE `id` = @Id" [ "@Id", Helper.Box productId ]
 
 module OrderAdministration =
     open MusiOrder.Models.OrderAdministration
