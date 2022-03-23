@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:5.0 AS client-build-env
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS client-build-env
 
 # Install Node.js and yarn
 RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
@@ -32,7 +32,7 @@ RUN dotnet fable ./src --run yarn --cwd ./src build
 
 ###
 
-FROM mcr.microsoft.com/dotnet/sdk:5.0 AS server-build-env
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS server-build-env
 
 WORKDIR /app
 
@@ -48,7 +48,7 @@ RUN dotnet publish ./server -c Release -o out
 ###
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:5.0-buster-slim-arm32v7
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-bullseye-slim-arm32v7
 WORKDIR /app
 COPY --from=server-build-env /app/out .
 COPY --from=client-build-env /app/client/deploy ./wwwroot
