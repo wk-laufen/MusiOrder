@@ -1,1 +1,1 @@
-dotnet run -p .\utils\CreateSampleDB
+dotnet run --project .\utils\CreateSampleDB
