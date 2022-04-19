@@ -43,7 +43,7 @@ RUN dotnet restore ./server
 # Copy everything else and build
 COPY ./src/server ./server
 COPY ./src/shared ./shared
-RUN dotnet publish ./server -c Release -o out -r linux-arm
+RUN dotnet publish ./server -c Release -o out -r linux-arm --no-self-contained
 
 ###
 
