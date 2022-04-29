@@ -8,6 +8,7 @@ apt-get install --no-install-recommends -y xserver-xorg x11-xserver-utils xinit 
 
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
+usermod -aG docker $USER
 rm get-docker.sh
 
 echo "xset -dpms # Turn off display power management system
