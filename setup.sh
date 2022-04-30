@@ -4,14 +4,14 @@
 
 # Run `sudo raspi-config` and setup Wifi as well as console autologin
 
-apt-get install --no-install-recommends -y xserver-xorg x11-xserver-utils xinit openbox chromium-browser sqlite3
+sudo apt install --no-install-recommends -y xserver-xorg x11-xserver-utils xinit openbox chromium-browser sqlite3
 
 curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-usermod -aG docker pi
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
 rm get-docker.sh
 
-echo "xset -dpms # Turn off display power management system
+sudo echo "xset -dpms # Turn off display power management system
 xset s noblank # Turn off screen blanking
 xset s off # Turn off screen saver
 
@@ -23,11 +23,11 @@ sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/; s/\"exit_type\":\"[
 chromium-browser --noerrdialogs --disable-infobars --kiosk \$KIOSK_URL
 " >> /etc/xdg/openbox/autostart
 
-echo "export KIOSK_URL=http://localhost" >> /etc/xdg/openbox/environment
+sudo echo "export KIOSK_URL=http://localhost" >> /etc/xdg/openbox/environment
 
 echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && startx -- -nocursor" >> ~/.bash_profile
 
-echo "hdmi_force_hotplug=1
+sudo echo "hdmi_force_hotplug=1
 max_usb_current=1
 hdmi_drive=1
 hdmi_group=2
