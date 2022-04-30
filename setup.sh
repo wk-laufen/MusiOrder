@@ -11,7 +11,7 @@ sudo sh get-docker.sh
 sudo usermod -aG docker $USER
 rm get-docker.sh
 
-sudo echo "xset -dpms # Turn off display power management system
+echo "xset -dpms # Turn off display power management system
 xset s noblank # Turn off screen blanking
 xset s off # Turn off screen saver
 
@@ -21,13 +21,13 @@ sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/; s/\"exit_type\":\"[
 
 # Run Chromium in kiosk mode
 chromium-browser --noerrdialogs --disable-infobars --kiosk \$KIOSK_URL
-" >> /etc/xdg/openbox/autostart
+" | sudo tee -a /etc/xdg/openbox/autostart
 
-sudo echo "export KIOSK_URL=http://localhost" >> /etc/xdg/openbox/environment
+echo "export KIOSK_URL=http://localhost" | sudo tee -a /etc/xdg/openbox/environment
 
 echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && startx -- -nocursor" >> ~/.bash_profile
 
-sudo echo "hdmi_force_hotplug=1
+echo "hdmi_force_hotplug=1
 max_usb_current=1
 hdmi_drive=1
 hdmi_group=2
@@ -35,4 +35,4 @@ hdmi_mode=1
 hdmi_mode=87
 hdmi_cvt 800 480 60 6 0 0 0
 dtoverlay=ads7846,cs=1,penirq=25,penirq_pull=2,speed=50000,keep_vref_on=0,swapxy=0,pmax=255,xohms=150,xmin=200,xmax=3900,ymin=200,ymax=3900
-display_rotate=0" >> /boot/config.txt
+display_rotate=0" | sudo tee -a /boot/config.txt
