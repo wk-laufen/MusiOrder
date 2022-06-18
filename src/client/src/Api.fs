@@ -156,8 +156,8 @@ module ProductAdministration =
         return! tryPost url () |> handleErrors
     }
 
-    let createProduct authKey (product: ProductData) : Async<Result<ProductId, ApiError<SaveProductError>>> = async {
-        let url = sprintf "/api/administration/product/products?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+    let createProduct authKey (ProductGroupId productGroupId,  product: ProductData) : Async<Result<ProductId, ApiError<SaveProductError>>> = async {
+        let url = sprintf "/api/administration/product/groups/%s/products?authKey=%s" productGroupId (AuthKey.toString authKey |> JS.encodeURIComponent)
         return! tryPost url product |> handleErrors
     }
 

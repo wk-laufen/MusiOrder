@@ -8,26 +8,47 @@ open Fable.Form.Simple
 open Fable.Form.Simple.Bulma
 open Feliz
 open Feliz.Bulma
-open Feliz.Bulma.Operators
 open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
 open MusiOrder.Models.ProductAdministration
 
+module Form =
+    open Fable.Form.Base
+
+    let disable flag (form : Form<'Values, 'Output, 'Field>) : Form<'Values, 'Output, 'Field> =
+        Form (
+            fun values ->
+                let filled =
+                    fill form values
+                {
+                    Fields =
+                        filled.Fields
+                        |> List.map (fun filledField ->
+                            { filledField with IsDisabled = flag}
+                        )
+                    Result = filled.Result
+                    IsEmpty = filled.IsEmpty
+                }
+        )
+
 type ProductFormData = {
+    ProductGroupId: string
     Name: string
     Price: string
     State: string
 }
 module ProductFormData =
-    let fromProductData (v: ProductData) =
+    let fromProductData (ProductGroupId productGroupId) (v: ProductData) =
         {
+            ProductGroupId = productGroupId
             Name = v.Name.Value
             Price = NonNegativeDecimal.value v.Price |> sprintf "%.2f"
             State = ProductState.toString v.State
         }
     let empty =
         {
+            ProductGroupId = ""
             Name = ""
             Price = ""
             State = ProductState.toString Enabled
@@ -84,7 +105,7 @@ type Msg =
     | MoveUpProductGroupResult of ProductGroupId * Result<unit, ApiError<MoveProductGroupError>>
     | MoveDownProductGroup of ProductGroupId
     | MoveDownProductGroupResult of ProductGroupId * Result<unit, ApiError<MoveProductGroupError>>
-    | EditProduct of ExistingProduct
+    | EditProduct of ProductGroupId * ExistingProduct
     | MoveUpProduct of ProductId
     | MoveUpProductResult of ProductId * Result<unit, ApiError<MoveProductError>>
     | MoveDownProduct of ProductId
@@ -93,7 +114,7 @@ type Msg =
     | DeleteProductResult of ProductId * Result<unit, ApiError<DeleteProductError>>
     | EditNewProduct
     | FormChanged of Form.View.Model<ProductFormData>
-    | SaveProduct of ProductData
+    | SaveProduct of ProductGroupId * ProductData
     | SaveProductResult of Result<ProductId, ApiError<SaveProductError>>
     | CancelEditProduct
 
@@ -142,10 +163,10 @@ let update msg state =
             Loaded (authKey, { state with MovingDownProductGroup = Some (groupId, MovedProductGroup result) }),
             Cmd.ofMsg (Load authKey)
         | _ -> state, Cmd.none
-    | EditProduct product ->
+    | EditProduct (productGroupId, product) ->
         match state with
         | Loaded (authKey, state) ->
-            Loaded (authKey, { state with EditingProduct = Some { Id = Some product.Id; Data = Form.View.idle (ProductFormData.fromProductData product.Data) } }),
+            Loaded (authKey, { state with EditingProduct = Some { Id = Some product.Id; Data = Form.View.idle (ProductFormData.fromProductData productGroupId product.Data) } }),
             Cmd.none
         | _ -> state, Cmd.none
     | MoveUpProduct productId ->
@@ -196,14 +217,14 @@ let update msg state =
             Loaded (authKey, { state with EditingProduct = Some { editingProduct with Data = formData } }),
             Cmd.none
         | _ -> state, Cmd.none
-    | SaveProduct product ->
+    | SaveProduct (productGroupId, product) ->
         match state with
         | Loaded (authKey, ({ EditingProduct = Some editingProduct } as state)) ->
             let state = Loaded (authKey, { state with EditingProduct = Some { editingProduct with Data = { editingProduct.Data with State = Form.View.State.Loading } } })
             let cmd =
                 match editingProduct.Id with
                 | Some productId -> Cmd.OfAsync.perform (updateProduct authKey productId) product (Result.map (fun () -> productId) >> SaveProductResult)
-                | None -> Cmd.OfAsync.perform (createProduct authKey) product SaveProductResult
+                | None -> Cmd.OfAsync.perform (createProduct authKey) (productGroupId, product) SaveProductResult
             state, cmd
         | _ -> state, Cmd.none
     | SaveProductResult (Ok productId) ->
@@ -219,7 +240,7 @@ let update msg state =
                 match e with
                 | ExpectedError SaveProductError.InvalidAuthKey
                 | ExpectedError SaveProductError.NotAuthorized
-                | UnexpectedError _ -> "Fehler beim Speichern des Benutzers."
+                | UnexpectedError _ -> "Fehler beim Speichern des Artikels."
             Loaded (authKey, { state with EditingProduct = Some { editingProduct with Data = { editingProduct.Data with State = Form.View.State.Error errorMessage } } }),
             Cmd.none
         | _ -> state, Cmd.none
@@ -370,7 +391,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                                     Bulma.button.a [
                                                         color.isWarning
                                                         prop.disabled isDeleted
-                                                        prop.onClick (fun _ -> dispatch (EditProduct product))
+                                                        prop.onClick (fun _ -> dispatch (EditProduct (group.Id, product)))
                                                         
                                                         prop.children [
                                                             Bulma.icon [ Fa.i [ Fa.Solid.Edit ] [] ]
@@ -409,6 +430,24 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
             match state.EditingProduct with
             | Some editingProduct ->
                 let form : Form.Form<ProductFormData, Msg> =
+                    let productGroupField =
+                        Form.selectField
+                            {
+                                Parser = ProductGroupId >> Ok
+                                Value = fun values -> values.ProductGroupId
+                                Update = fun newValue values -> { values with ProductGroupId = newValue }
+                                Error = fun _ -> None
+                                Attributes =
+                                    {
+                                        Label = "Artikelgruppe"
+                                        Placeholder = "Wähle eine Artikelgruppe"
+                                        Options =
+                                            state.Products
+                                            |> List.map (fun productGroup -> (let (ProductGroupId v) = productGroup.Id in v, productGroup.Data.Name))
+                                    }
+                            }
+                        |> Form.disable (Option.isSome editingProduct.Id)
+
                     let nameField =
                         Form.textField
                             {
@@ -464,10 +503,11 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                     }
                             }
 
-                    let onSubmit = fun name price state ->
-                        SaveProduct { Name = name; Price = price; State = state }
+                    let onSubmit = fun productGroupId name price state ->
+                        SaveProduct (productGroupId, { Name = name; Price = price; State = state })
 
                     Form.succeed onSubmit
+                    |> Form.append productGroupField
                     |> Form.append nameField
                     |> Form.append priceField
                     |> Form.append stateField
