@@ -373,7 +373,7 @@ module ProductAdministration =
         do!
             DB.write """
                 INSERT INTO `Article` (`id`, `groupId`, `state`, `grade`, `name`, `price`)
-                VALUES (@Id, @GroupId, @State, (SELECT COALESCE(MAX(`grade`), 1) FROM `Article` WHERE `groupId` = @GroupId), @Name, @Price)
+                VALUES (@Id, @GroupId, @State, (SELECT COALESCE(MAX(`grade`) + 1, 1) FROM `Article` WHERE `groupId` = @GroupId), @Name, @Price)
                 """
                 [
                     "@Id", Helper.Box newProductId
