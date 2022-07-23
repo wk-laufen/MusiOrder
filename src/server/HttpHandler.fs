@@ -3,9 +3,8 @@ namespace MusiOrder.Server.HttpHandler
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
 open MusiOrder.Core
-open Microsoft.Data.Sqlite
 open MusiOrder.Models
-open System
+open System.IO
 
 module Order =
     open MusiOrder.Core.Order
@@ -275,4 +274,16 @@ module OrderAdministration =
             return! Successful.OK () next ctx
         | Some _ -> return! RequestErrors.BAD_REQUEST DeleteOrderError.NotAuthorized next ctx
         | None -> return! RequestErrors.BAD_REQUEST DeleteOrderError.InvalidAuthKey next ctx
+    }
+
+module DataExport =
+    open MusiOrder.Models.DataExport
+
+    let handleExportDatabase : HttpHandler = fun next ctx -> task {
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        | Some user when User.isAdmin user ->
+            use stream = File.OpenRead DB.dbPath
+            return! Successful.ok (streamData false stream None None) next ctx
+        | Some _ -> return! RequestErrors.BAD_REQUEST ExportDatabaseError.NotAuthorized next ctx
+        | None -> return! RequestErrors.BAD_REQUEST ExportDatabaseError.InvalidAuthKey next ctx
     }

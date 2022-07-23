@@ -2,9 +2,8 @@ module DB
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.Data.Sqlite
-open System
 
-let private dbPath =
+let dbPath =
     match System.Environment.GetEnvironmentVariable "DB_PATH" |> Option.ofObj with
     | Some dbPath -> dbPath
     | None -> failwith "Environment variable \"DB_PATH\" not set."

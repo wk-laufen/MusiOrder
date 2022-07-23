@@ -12,6 +12,14 @@ sudo sh get-docker.sh
 sudo usermod -aG docker $USER
 rm get-docker.sh
 
+CHROMIUM_CONFIG_FILE="$HOME/.config/chromium/Default/Preferences"
+if [ -f "$CHROMIUM_CONFIG_FILE" ]; then
+    cat "$CHROMIUM_CONFIG_FILE" | jq '.download.prompt_for_download = true | .download.default_directory = "/usb/"' | tee "$CHROMIUM_CONFIG_FILE" > /dev/null
+else
+    mkdir -p "$(dirname $CHROMIUM_CONFIG_FILE)"
+    echo '{"download": { "prompt_for_download": true, "default_directory": "/usb" } }' > "$CHROMIUM_CONFIG_FILE"
+fi
+
 echo "xset -dpms # Turn off display power management system
 xset s noblank # Turn off screen blanking
 xset s off # Turn off screen saver
@@ -37,3 +45,11 @@ hdmi_mode=87
 hdmi_cvt 800 480 60 6 0 0 0
 dtoverlay=ads7846,cs=1,penirq=25,penirq_pull=2,speed=50000,keep_vref_on=0,swapxy=0,pmax=255,xohms=150,xmin=200,xmax=3900,ymin=200,ymax=3900
 display_rotate=0" | sudo tee -a /boot/config.txt > /dev/null
+
+# Auto-mount USB drives
+sudo mkdir /usb && sudo chown pi:pi /usb
+git clone https://github.com/antonilol/simple-usb-automount
+pushd ./simple-usb-automount
+sudo ./install
+sed 's/mntopts="/&uid=pi,gid=pi,/' /usr/local/bin/simple-usb-automount | sudo tee /usr/local/bin/simple-usb-automount > /dev/null
+popd

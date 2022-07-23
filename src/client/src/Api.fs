@@ -1,6 +1,7 @@
 module Api
 
 open Fable.Core
+open Fetch
 open MusiOrder.Models
 open Thoth.Fetch
 open Thoth.Json
@@ -33,14 +34,17 @@ type ApiError<'a> =
     | ExpectedError of 'a
     | UnexpectedError of string
 
+let inline tryDecodeError (response: Response) = async {
+    let! e = response.text() |> Async.AwaitPromise
+    match Decode.Auto.fromString(e, caseStrategy = CamelCase, extra = Json.coders) with
+    | Ok e -> return Error (ExpectedError e)
+    | Error e -> return Error (UnexpectedError e)
+}
+
 let inline handleErrors request = async {
     match! request with
     | Ok result -> return Ok result
-    | Error (FetchFailed response) ->
-        let! e = response.text() |> Async.AwaitPromise
-        match Decode.Auto.fromString(e, caseStrategy = CamelCase, extra = Json.coders) with
-        | Ok e -> return Error (ExpectedError e)
-        | Error e -> return Error (UnexpectedError e)
+    | Error (FetchFailed response) -> return! tryDecodeError response
     | Error e -> return Error (UnexpectedError (Helper.message e))
 }
 
@@ -192,4 +196,17 @@ module OrderAdministration =
     let deleteOrder authKey (OrderId orderId) : Async<Result<unit, ApiError<DeleteOrderError>>> = async {
         let url = sprintf "/api/administration/order/orders/%s?authKey=%s" (JS.encodeURIComponent orderId) (AuthKey.toString authKey |> JS.encodeURIComponent)
         return! tryDelete url |> handleErrors
+    }
+
+module DataExport =
+    open MusiOrder.Models.DataExport
+
+    let exportDatabase authKey : Async<Result<Browser.Types.Blob, ApiError<ExportDatabaseError>>> = async {
+        let url = sprintf "/api/administration/data-export/export-db?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let! response = fetchUnsafe url [ Method HttpMethod.GET ] |> Async.AwaitPromise
+        if response.Ok then
+            let! data = response.blob() |> Async.AwaitPromise
+            return Ok data
+        else
+            return! tryDecodeError response
     }
