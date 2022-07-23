@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-# Install minimal Raspberry Pi OS with desktop
-
-# Run `sudo raspi-config` and setup Wifi as well as console autologin
+# 1. Run Raspberry Pi Imager to install Raspberry Pi OS Lite
+#   * Set host name, enable SSH, set username/password, configure WIFI, set locale settings
+# 2. Run `sudo raspi-config` to setup console autologin
 
 sudo apt update
-sudo apt install --no-install-recommends -y xserver-xorg x11-xserver-utils xinit openbox chromium-browser sqlite3
+sudo apt install --no-install-recommends -y xserver-xorg x11-xserver-utils xinit openbox git chromium-browser sqlite3 jq
 
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
@@ -22,9 +22,9 @@ sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/; s/\"exit_type\":\"[
 
 # Run Chromium in kiosk mode
 chromium-browser --noerrdialogs --disable-infobars --kiosk \$KIOSK_URL
-" | sudo tee -a /etc/xdg/openbox/autostart
+" | sudo tee -a /etc/xdg/openbox/autostart > /dev/null
 
-echo "export KIOSK_URL=http://localhost" | sudo tee -a /etc/xdg/openbox/environment
+echo "export KIOSK_URL=http://localhost" | sudo tee -a /etc/xdg/openbox/environment > /dev/null
 
 echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && startx -- -nocursor" >> ~/.bash_profile
 
@@ -36,4 +36,4 @@ hdmi_mode=1
 hdmi_mode=87
 hdmi_cvt 800 480 60 6 0 0 0
 dtoverlay=ads7846,cs=1,penirq=25,penirq_pull=2,speed=50000,keep_vref_on=0,swapxy=0,pmax=255,xohms=150,xmin=200,xmax=3900,ymin=200,ymax=3900
-display_rotate=0" | sudo tee -a /boot/config.txt
+display_rotate=0" | sudo tee -a /boot/config.txt > /dev/null
