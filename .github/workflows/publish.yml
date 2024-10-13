@@ -66,4 +66,4 @@ jobs:
           context: ./nfc-reader
           push: true
           tags: ghcr.io/wk-laufen/musiorder-nfc-reader:${{ github.sha }}
-          platforms: linux/arm,linux/arm64,linux/amd64
+          platforms: linux/arm64
