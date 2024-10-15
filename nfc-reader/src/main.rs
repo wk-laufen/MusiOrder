@@ -1,5 +1,6 @@
 use pcsc::{Context, Protocols, ReaderState, Scope, ShareMode, State, MAX_BUFFER_SIZE};
 use rocket::{fairing::AdHoc, http::Header};
+use std::time::Duration;
 
 #[macro_use] extern crate rocket;
 
@@ -20,7 +21,7 @@ fn get_nfc_card_id() -> Result<String, NfcReaderError> {
     let reader_name = names.first().ok_or(NfcReaderError { message: format!("No reader found") })?;
     let mut reader_states = vec![ReaderState::new(reader_name.clone(), State::UNAWARE)];
     loop {
-        ctx.get_status_change(None, &mut reader_states).map_err(|e| NfcReaderError { message: format!("Context::get_status_change failed: {e}") })?;
+        ctx.get_status_change(Duration::from_secs(60), &mut reader_states).map_err(|e| NfcReaderError { message: format!("Context::get_status_change failed: {e}") })?;
         println!("Reader state: {:?}", reader_states[0].event_state());
         if reader_states[0].event_state().contains(State::PRESENT) {
             break
