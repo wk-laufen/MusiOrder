@@ -37,14 +37,10 @@ let nav bgColor (title: string) =
                 prop.children [
                     Bulma.navbarItem.div [
                         Bulma.title.h1 [
-                            prop.text title
-                        ]
-                    ]
-                    Bulma.navbarItem.div [
-                        Bulma.icon [
-                            prop.onClick (fun _ -> window.location.href <- "/")
-                            prop.children [
-                                Fa.i [ Fa.Solid.Beer; Fa.Size Fa.Fa2x ] []
+                            Html.span [ prop.text title ]
+                            Html.span [
+                                prop.onClick (fun _ -> window.location.href <- "/")
+                                prop.text "🍻"
                             ]
                         ]
                     ]
