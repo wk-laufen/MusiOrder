@@ -1,3 +1,3 @@
 $env:ASPNETCORE_ENVIRONMENT = "Development"
-$env:DB_PATH = "$pwd\data\musiorder.db"
+$env:DB_PATH = "$pwd\data\data.db"
 dotnet watch --project .\src\server run --urls "http://+:5000"
