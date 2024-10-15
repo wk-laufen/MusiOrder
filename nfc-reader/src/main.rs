@@ -1,5 +1,5 @@
 use pcsc::{Context, Protocols, ReaderState, Scope, ShareMode, State, MAX_BUFFER_SIZE};
-use rocket::response::Responder;
+use rocket::{fairing::AdHoc, http::Header};
 
 #[macro_use] extern crate rocket;
 
@@ -37,5 +37,9 @@ fn get_nfc_card_id() -> Result<String, NfcReaderError> {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![get_nfc_card_id])
+    rocket::build()
+        .attach(AdHoc::on_response("Enable CORS", |_req, res| Box::pin(async move {
+            res.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        })))
+        .mount("/", routes![get_nfc_card_id])
 }
