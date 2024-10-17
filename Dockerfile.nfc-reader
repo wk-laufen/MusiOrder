@@ -1,0 +1,20 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
+
+WORKDIR /app
+
+# Copy fsproj and restore as distinct layers
+COPY ./src/nfc-reader/*.fsproj ./nfc-reader/
+RUN dotnet restore ./nfc-reader
+
+# Copy everything else and build
+COPY ./src/nfc-reader ./nfc-reader
+RUN dotnet publish ./nfc-reader -c Release -o out
+
+###
+
+# Build runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
+COPY --from=server-build-env /app/out .
+COPY --from=client-build-env /app/client/deploy ./wwwroot
+ENTRYPOINT ["dotnet", "MusiOrder.Server.App.dll"]

@@ -25,7 +25,7 @@ let private useKeyboardAuthentication setAuthKey =
 
 let private useRemoteAuthentication setAuthKey =
     let abortController = Fetch.newAbortController()
-    Fetch.fetch "http://localhost:8000/nfc-card-id" [ Signal abortController.signal ]
+    Fetch.fetch "http://localhost:8080/nfc-reader/card-id" [ Signal abortController.signal ]
     |> Promise.bind (fun v -> if v.Ok then v.text() else Promise.reject $"Server responded with status %d{v.Status} %s{v.StatusText}.")
     |> Promise.catch (fun _e -> null)
     |> Promise.iter (fun v -> setAuthKey (AuthKey v))
