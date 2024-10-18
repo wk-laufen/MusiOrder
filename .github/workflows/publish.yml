@@ -40,6 +40,7 @@ jobs:
           file: Dockerfile.server
           push: true
           tags: ghcr.io/wk-laufen/musiorder:${{ github.sha }}
+          platforms: linux/arm/v7,linux/arm64,linux/amd64
 
   build-nfc-reader:
     runs-on: ubuntu-latest
