@@ -1,0 +1,15 @@
+services:
+  app:
+    image: ghcr.io/wk-laufen/musiorder:${TAG}
+    ports:
+      - 80:80
+    environment:
+      - DB_PATH=/app/data/musiorder.db
+    volumes:
+      - ./data/musiorder.db:/app/data/musiorder.db
+  nfc-reader:
+    image: ghcr.io/wk-laufen/musiorder-nfc-reader:${TAG}
+    ports:
+      - 8080:8080
+    volumes:
+      - /run/pcscd/pcscd.comm:/run/pcscd/pcscd.comm
