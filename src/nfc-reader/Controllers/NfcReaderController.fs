@@ -3,6 +3,7 @@
 open Microsoft.AspNetCore.Mvc
 open Microsoft.Extensions.Logging
 open PCSC
+open PCSC.Exceptions
 open PCSC.Extensions
 open System
 open System.Threading
@@ -42,20 +43,25 @@ type NfcReaderController (logger : ILogger<NfcReaderController>) =
                 logger.LogInformation("Request cancelled")
                 this.NoContent() :> IActionResult
             | Some () ->
-                use reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any)
-                let mutable receiveBuffer = Array.zeroCreate<byte> 256
-                let receivedBytes = reader.Transmit([| 0xFFuy; 0xCAuy; 0x00uy; 0x00uy; 0x00uy |], receiveBuffer)
-                if receivedBytes >= 2 then
-                    let result = receiveBuffer.[receivedBytes - 2..receivedBytes - 1]
-                    if result = [| 0x90uy; 0x00uy |] then
-                        let cardId = receiveBuffer |> Array.take (receivedBytes - 2) |> Convert.ToHexString
-                        logger.LogInformation("Received card id {CardId}", cardId)
-                        this.Ok(cardId)
-                    elif result = [| 0x63uy; 0x00uy |] then
-                        failwith "Transmit error: The operation has failed."
-                    elif result = [| 0x6Auy; 0x81uy |] then
-                        failwith "Transmit error: Function not supported."
+                try
+                    use reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any)
+                    let mutable receiveBuffer = Array.zeroCreate<byte> 256
+                    let receivedBytes = reader.Transmit([| 0xFFuy; 0xCAuy; 0x00uy; 0x00uy; 0x00uy |], receiveBuffer)
+                    if receivedBytes >= 2 then
+                        let result = receiveBuffer.[receivedBytes - 2..receivedBytes - 1]
+                        if result = [| 0x90uy; 0x00uy |] then
+                            let cardId = receiveBuffer |> Array.take (receivedBytes - 2) |> Convert.ToHexString
+                            logger.LogInformation("Received card id {CardId}", cardId)
+                            this.Ok(cardId)
+                        elif result = [| 0x63uy; 0x00uy |] then
+                            failwith "Transmit error: The operation has failed."
+                        elif result = [| 0x6Auy; 0x81uy |] then
+                            failwith "Transmit error: Function not supported."
+                        else
+                            failwith "Transmit error: Unknown error."
                     else
-                        failwith "Transmit error: Unknown error."
-                else
-                    failwith $"Transmit error: Received %d{receivedBytes} bytes."
+                        failwith $"Transmit error: Received %d{receivedBytes} bytes."
+                with
+                | :? RemovedCardException ->
+                    logger.LogInformation("Removed card")
+                    this.BadRequest({| Error = "RemovedCard" |})

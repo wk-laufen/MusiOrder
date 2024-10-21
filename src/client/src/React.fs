@@ -25,10 +25,16 @@ let private useKeyboardAuthentication setAuthKey =
 
 let private useRemoteAuthentication setAuthKey =
     let abortController = Fetch.newAbortController()
-    Fetch.fetch "http://localhost:8080/nfc-reader/card-id" [ Signal abortController.signal ]
-    |> Promise.bind (fun v -> if v.Ok then v.text() else Promise.reject $"Server responded with status %d{v.Status} %s{v.StatusText}.")
-    |> Promise.catch (fun _e -> null)
-    |> Promise.iter (fun v -> setAuthKey (AuthKey v))
+    Fetch.fetchUnsafe "http://localhost:8080/nfc-reader/card-id" [ Signal abortController.signal ]
+    |> Promise.bind (fun v ->
+        if v.Ok then v.text() |> Promise.map Some
+        elif v.Status >= 400 && v.Status < 500 then Promise.lift (Some "")
+        else Promise.reject $"Server responded with status %d{v.Status} %s{v.StatusText}.")
+    |> Promise.catch (fun _e -> None)
+    |> Promise.iter (function
+        | Some authKey -> setAuthKey (AuthKey authKey)
+        | None -> ()
+    )
     React.createDisposable (fun () -> abortController.abort())
 
 let useAuthentication isActive setAuthKey =
