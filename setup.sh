@@ -55,3 +55,11 @@ echo "== Setup NFC reader =="
 sudo apt update && sudo apt install -y pcscd pcsc-tools
 echo -e 'install nfc /bin/false\ninstall pn533 /bin/false' | sudo tee /etc/modprobe.d/blacklist.conf
 sudo reboot now
+
+echo "== Install Segoe UI =="
+git clone https://github.com/mrbvrz/segoe-ui-linux
+pushd segoe-ui-linux
+chmod +x install.sh
+sudo ./install.sh
+popd
+sudo reboot now
