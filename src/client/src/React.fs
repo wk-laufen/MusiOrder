@@ -28,9 +28,12 @@ let private useRemoteAuthentication setAuthKey =
     Fetch.fetchUnsafe "http://localhost:8080/nfc-reader/card-id" [ Signal abortController.signal ]
     |> Promise.bind (fun v ->
         if v.Ok then v.text() |> Promise.map Some
-        elif v.Status >= 400 && v.Status < 500 then Promise.lift (Some "")
-        else Promise.reject $"Server responded with status %d{v.Status} %s{v.StatusText}.")
-    |> Promise.catch (fun _e -> None)
+        else Promise.lift (Some "")
+    )
+    |> Promise.catch (fun _e ->
+        if abortController.signal.aborted then None
+        else Some ""
+    )
     |> Promise.iter (function
         | Some authKey -> setAuthKey (AuthKey authKey)
         | None -> ()
