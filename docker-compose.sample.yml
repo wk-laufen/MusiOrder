@@ -1,6 +1,7 @@
 services:
   app:
     image: ghcr.io/wk-laufen/musiorder:${TAG}
+    restart: unless-stopped
     ports:
       - 80:80
     environment:
@@ -9,6 +10,7 @@ services:
       - ./data/musiorder.db:/app/data/musiorder.db
   nfc-reader:
     image: ghcr.io/wk-laufen/musiorder-nfc-reader:${TAG}
+    restart: unless-stopped
     ports:
       - 8080:8080
     volumes:
