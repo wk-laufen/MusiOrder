@@ -2,7 +2,7 @@
 
 # 1. Run Raspberry Pi Imager to install Raspberry Pi OS Lite
 #   * Set host name, enable SSH, set username/password, configure WIFI, set locale settings
-# 2. Run `sudo raspi-config` to setup console autologin
+# 2. Run `sudo raspi-config` to setup console autologin and enable wayland
 
 SERVER_URL="http://localhost"
 
@@ -23,33 +23,33 @@ sudo apt-get update
 
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-echo "== Setup kiosk mode with Chromium =="
-sudo apt update && sudo apt install --no-install-recommends -y xserver-xorg x11-xserver-utils xinit openbox chromium-browser
-echo "xset -dpms # Turn off display power management system
-xset s noblank # Turn off screen blanking
-xset s off # Turn off screen saver
+echo "== Setup kiosk mode =="
+sudo apt update && sudo apt install --no-install-recommends -y wayfire seatd xdg-user-dirs chromium-browser
+echo 'wayland=on' | sudo tee -a '/boot/firmware/cmdline.txt' > /dev/null
+# Install hide-cursor plugin
+wget https://github.com/seffs/wayfire-plugins-extra-raspbian/releases/download/v0.7.5/wayfire-plugins-extra-raspbian-armv7.tar.xz
+mkdir ~/wayfire-plugins-extra-raspbian-armv7
+tar xf wayfire-plugins-extra-raspbian-armv7.tar.xz -C wayfire-plugins-extra-raspbian-armv7
+sudo cp ~/wayfire-plugins-extra-raspbian-armv7/usr/lib/arm-linux-gnueabihf/libhide-cursor.so /usr/lib/arm-linux-gnueabihf/wayfire/
+sudo cp ~/wayfire-plugins-extra-raspbian-armv7/usr/share/wayfire/metadata/hide-cursor.xml /usr/share/wayfire/metadata/
 
+# Create wayfire config
+mkdir -p ~/.config
+echo "#"'!'"/bin/bash
 # Remove exit errors from the config files that could trigger a warning
 sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/' ~/.config/chromium/'Local State'
 sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/; s/\"exit_type\":\"[^\"]\+\"/\"exit_type\":\"Normal\"/' ~/.config/chromium/Default/Preferences
 
-# Run Chromium in kiosk mode
-chromium-browser --noerrdialogs --disable-infobars --kiosk \$KIOSK_URL
-" | sudo tee -a /etc/xdg/openbox/autostart > /dev/null
+chromium-browser --noerrdialogs --disable-infobars --kiosk $SERVER_URL" > ~/.config/open-musiorder.sh
+chmod +x ~/.config/open-musiorder.sh
+echo "[core]
+# plugins = autostart hide-cursor # hide-cursor doesn't work
+plugins = autostart
 
-echo "export KIOSK_URL=$SERVER_URL" | sudo tee -a /etc/xdg/openbox/environment > /dev/null
+[autostart]
+musiorder = /home/pi/.config/open-musiorder.sh" > ~/.config/wayfire.ini
 
-echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && startx -- -nocursor" >> ~/.bash_profile
-
-echo "hdmi_force_hotplug=1
-max_usb_current=1
-hdmi_drive=1
-hdmi_group=2
-hdmi_mode=1
-hdmi_mode=87
-hdmi_cvt 800 480 60 6 0 0 0
-dtoverlay=ads7846,cs=1,penirq=25,penirq_pull=2,speed=50000,keep_vref_on=0,swapxy=0,pmax=255,xohms=150,xmin=200,xmax=3900,ymin=200,ymax=3900
-display_rotate=0" | sudo tee -a /boot/config.txt > /dev/null
+echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && wayfire -c ~/.config/wayfire.ini" >> ~/.bash_profile
 
 echo "== Setup NFC reader =="
 sudo apt update && sudo apt install -y pcscd pcsc-tools
