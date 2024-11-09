@@ -31,11 +31,7 @@ type Msg =
     | DeleteOrderResult of OrderId * Result<unit, ApiError<DeleteOrderError>>
 
 let init authKey =
-    match authKey with
-    | Some authKey ->
-        NotLoaded, Cmd.ofMsg (Load authKey)
-    | None ->
-        NotLoaded, Cmd.none
+    NotLoaded, Cmd.ofMsg (Load authKey)
 
 let update msg state =
     match msg with

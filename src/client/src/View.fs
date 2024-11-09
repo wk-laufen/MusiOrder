@@ -106,6 +106,16 @@ let authForm =
 let modalAuthForm title onHide =
     modal title onHide [ authForm ] []
 
+let authError error onRetry =
+    match error with
+    | React.ReaderNotAvailable -> 
+        errorNotificationWithRetry "Lesegerät nicht erkannt." onRetry
+    | React.UnknownError ->
+        errorNotificationWithRetry "Unbekannter Fehler." onRetry
+
+let modalAuthError title error onRetry onHide =
+    modal title onHide [ authError error onRetry ] []
+
 let balanceColor balance =
     if balance >= 5.m then color.isSuccess
     elif balance >= 0.m then color.isWarning

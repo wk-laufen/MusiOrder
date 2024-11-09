@@ -15,6 +15,7 @@ open MusiOrder.Models.Order
 type OrderState =
     | Drafting of Map<ProductId, int>
     | Authenticating of Map<ProductId, int>
+    | AuthenticationError of Map<ProductId, int> * React.AuthenticationError
     | LoadingUsers of Map<ProductId, int> * AuthKey
     | LoadUsersError of Map<ProductId, int> * AuthKey
     | LoadedUsers of Map<ProductId, int> * AuthKey * UserInfo list
@@ -34,7 +35,7 @@ type Msg =
     | ChangeOrderAmount of ProductId * delta: int
     | ResetOrder
     | Authenticate
-    | LoadUsers of AuthKey
+    | SetAuthKey of Result<AuthKey, React.AuthenticationError>
     | LoadUsersResult of Result<UserInfo list, ApiError<LoadUsersError>>
     | SendOrder of AuthKey * UserId option
     | SendOrderResult of Result<unit, ApiError<AddOrderError list>>
@@ -80,13 +81,21 @@ let update msg (state: Model) =
     | Authenticate ->
         match state.Order with
         | Drafting order -> { state with Order = Authenticating order }, Cmd.none
+        | AuthenticationError (order, _) -> { state with Order = Authenticating order }, Cmd.none
         | _ -> state, Cmd.none
-    | LoadUsers authKey ->
+    | SetAuthKey (Ok authKey) ->
         match state.Order with
         | Authenticating order
         | LoadUsersError (order, _) ->
             { state with Order = LoadingUsers (order, authKey) },
             Cmd.OfAsync.perform loadUsers authKey LoadUsersResult
+        | _ -> state, Cmd.none
+    | SetAuthKey (Error error) ->
+        match state.Order with
+        | Authenticating order
+        | LoadUsersError (order, _) ->
+            { state with Order = AuthenticationError (order, error) },
+            Cmd.none
         | _ -> state, Cmd.none
     | LoadUsersResult (Ok users) ->
         match state.Order with
@@ -144,6 +153,7 @@ let update msg (state: Model) =
         match state.Order with
         | Drafting _ -> state, Cmd.none
         | Authenticating order -> { state with Order = Drafting order }, Cmd.none
+        | AuthenticationError (order, _) -> { state with Order = Drafting order }, Cmd.none
         | LoadingUsers (order, _) -> { state with Order = Drafting order }, Cmd.none
         | LoadUsersError (order, _) -> { state with Order = Drafting order }, Cmd.none
         | LoadedUsers (order, _, _) -> { state with Order = Drafting order }, Cmd.none
@@ -159,19 +169,21 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         match state.Order with
         | Drafting _ -> false
         | Authenticating _ -> true
+        | AuthenticationError _ -> false
         | LoadingUsers _ -> false
         | LoadUsersError _ -> true
         | LoadedUsers _ -> false
         | Sending _ -> false
         | SendError _ -> true
         | Sent _ -> false
-    React.useAuthentication acceptsAuthKey (LoadUsers >> dispatch)
+    React.useAuthentication acceptsAuthKey (SetAuthKey >> dispatch)
 
     let productView (product: Product) =
         let order =
             match state.Order with
             | Drafting order
             | Authenticating order
+            | AuthenticationError (order, _)
             | LoadingUsers (order, _)
             | LoadUsersError (order, _)
             | LoadedUsers (order, _, _)
@@ -314,6 +326,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         match state.Order with
         | Drafting _ -> Html.none
         | Authenticating _ -> View.modalAuthForm "Bestellung speichern" (fun () -> dispatch CloseSendOrder)
+        | AuthenticationError (_, error) -> View.modalAuthError "Bestellungen anzeigen" error (fun () -> dispatch Authenticate) (fun () -> dispatch CloseSendOrder)
         | LoadingUsers _ -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
         | LoadUsersError _ -> errorView
         | LoadedUsers (_, authKey, users) ->

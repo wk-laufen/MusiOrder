@@ -35,7 +35,7 @@ let allTabs = [ UserPayment; Orders; Users; Products ]
 
 type AuthKeyState =
     | NoAuthKeyProvided
-    | AuthKeyProvided of AuthKey
+    | AuthKeyProvided of Result<AuthKey, React.AuthenticationError>
     | InvalidAuthKeyProvided
 
 type Model = {
@@ -116,7 +116,11 @@ let Administration activeTab =
                     abortButton
                 ]
             ]
-        | AuthKeyProvided _ ->
+        | AuthKeyProvided (Error error) ->
+            Bulma.section [
+                View.authError error (fun () -> dispatch Show)
+            ]
+        | AuthKeyProvided (Ok authKey) ->
             Bulma.section [
                 prop.className "main-content"
                 prop.children [
@@ -134,16 +138,11 @@ let Administration activeTab =
                                 ]
                         ]
                     ]
-                    let authKeyOpt =
-                        match authKey with
-                        | NoAuthKeyProvided
-                        | InvalidAuthKeyProvided -> None
-                        | AuthKeyProvided authKey -> Some authKey
                     match activeTab with
-                    | UserPayment -> UserPaymentAdministration.UserPaymentAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
-                    | Orders -> OrderAdministration.OrderAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
-                    | Users -> UserAdministration.UserAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
-                    | Products -> ProductAdministration.ProductAdministration authKeyOpt (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | UserPayment -> UserPaymentAdministration.UserPaymentAdministration authKey (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | Orders -> OrderAdministration.OrderAdministration authKey (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | Users -> UserAdministration.UserAdministration authKey (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | Products -> ProductAdministration.ProductAdministration authKey (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                 ]
             ]
             Bulma.section [

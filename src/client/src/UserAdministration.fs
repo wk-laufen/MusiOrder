@@ -76,11 +76,7 @@ type Msg =
     | CancelEditUser
 
 let init authKey =
-    match authKey with
-    | Some authKey ->
-        NotLoaded, Cmd.ofMsg (Load authKey)
-    | None ->
-        NotLoaded, Cmd.none
+    NotLoaded, Cmd.ofMsg (Load authKey)
 
 let update msg state =
     match msg with

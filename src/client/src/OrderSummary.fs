@@ -14,13 +14,14 @@ open MusiOrder.Models.Order
 type Model =
     | Hidden
     | Authenticating
+    | AuthenticationError of React.AuthenticationError
     | Loading of AuthKey
     | LoadError of ApiError<LoadOrderSummaryError>
     | Loaded of OrderSummary
 
 type Msg =
     | Show
-    | Load of AuthKey
+    | SetAuthKey of Result<AuthKey, React.AuthenticationError>
     | LoadResult of Result<OrderSummary, ApiError<LoadOrderSummaryError>>
     | Close
 
@@ -29,7 +30,8 @@ let init = Hidden, Cmd.none
 let update msg state =
     match msg with
     | Show -> Authenticating, Cmd.none
-    | Load authKey -> Loading authKey, Cmd.OfAsync.perform (loadOrderSummary authKey) None LoadResult
+    | SetAuthKey (Ok authKey) -> Loading authKey, Cmd.OfAsync.perform (loadOrderSummary authKey) None LoadResult
+    | SetAuthKey (Error error) -> AuthenticationError error, Cmd.none
     | LoadResult (Ok orderSummary) -> Loaded orderSummary, Cmd.none
     | LoadResult (Error e) -> LoadError e, Cmd.none
     | Close -> Hidden, Cmd.none
@@ -41,13 +43,17 @@ let OrderSummary () =
         match state with
         | Authenticating
         | LoadError _ -> true
-        | _ -> false
-    React.useAuthentication acceptsAuthKey (Load >> dispatch)
+        | Hidden
+        | AuthenticationError _
+        | Loaded _
+        | Loading _ -> false
+    React.useAuthentication acceptsAuthKey (SetAuthKey >> dispatch)
 
     let authForm =
         match state with
         | Hidden -> Html.none
         | Authenticating -> View.modalAuthForm "Bestellungen anzeigen" (fun () -> dispatch Close)
+        | AuthenticationError error -> View.modalAuthError "Bestellungen anzeigen" error (fun () -> dispatch Show) (fun () -> dispatch Close)
         | Loading _ -> View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [ View.loadIconBig ] []
         | LoadError _ ->
             View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [

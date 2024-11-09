@@ -5,11 +5,15 @@ open Feliz
 open Fetch.Types
 open MusiOrder.Models
 
+type AuthenticationError =
+    | ReaderNotAvailable
+    | UnknownError
+
 let private useKeyboardAuthentication setAuthKey =
     let mutable key = ""
     let mutable timeoutId = 0.
     let rec finishAuthKey () =
-        setAuthKey (AuthKey key)
+        setAuthKey (Ok (AuthKey key))
         key <- ""
     and listener (e: Browser.Types.Event) =
         e.preventDefault()
@@ -27,15 +31,15 @@ let private useRemoteAuthentication setAuthKey =
     let abortController = Fetch.newAbortController()
     Fetch.fetchUnsafe "http://localhost:8080/nfc-reader/card-id" [ Signal abortController.signal ]
     |> Promise.bind (fun v ->
-        if v.Ok then v.text() |> Promise.map Some
-        else Promise.lift (Some "")
+        if v.Ok then v.text() |> Promise.map (AuthKey >> Ok >> Some)
+        else Promise.lift (Some (Error ReaderNotAvailable)) // TODO not all errors are reader errors
     )
     |> Promise.catch (fun _e ->
         if abortController.signal.aborted then None
-        else Some ""
+        else (Some (Error UnknownError))
     )
     |> Promise.iter (function
-        | Some authKey -> setAuthKey (AuthKey authKey)
+        | Some result -> setAuthKey result
         | None -> ()
     )
     React.createDisposable (fun () -> abortController.abort())
