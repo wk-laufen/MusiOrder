@@ -5,6 +5,7 @@
 # 2. Run `sudo raspi-config` to setup console autologin and enable wayland
 
 SERVER_URL="http://localhost"
+DOCKER_IMAGE_TAG="93faf2f6ccc3dd0b56c81bd6d2cc5a439bd8ae59"
 
 echo "== Install docker ==" # see https://docs.docker.com/engine/install/raspberry-pi-os/#install-using-the-repository
 # Add Docker's official GPG key:
@@ -63,3 +64,18 @@ chmod +x install.sh
 sudo ./install.sh
 popd
 sudo reboot now
+
+echo "== Create docker configuration =="
+mkdir -p ~/musiorder
+pushd ~/musiorder
+echo "TAG=$DOCKER_IMAGE_TAG" > .env
+echo "services:
+  nfc-reader:
+    image: ghcr.io/wk-laufen/musiorder-nfc-reader:\${TAG}
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+    volumes:
+      - /run/pcscd/pcscd.comm:/run/pcscd/pcscd.comm" > compose.yml
+sudo docker compose up -d
+popd
