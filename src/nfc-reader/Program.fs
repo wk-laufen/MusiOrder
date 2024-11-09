@@ -3,6 +3,7 @@ namespace MusiOrder.NfcReader
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
+open MusiOrder.NfcReader.Controllers
 
 module Program =
     let exitCode = 0
@@ -14,6 +15,7 @@ module Program =
 
         builder.Services.AddCors(fun v -> v.AddDefaultPolicy(fun policy -> policy.WithOrigins([|"*"|]) |> ignore)) |> ignore
         builder.Services.AddControllers() |> ignore
+        builder.Services.AddTransient<ICardReader, PcscCardReader>() |> ignore
 
         let app = builder.Build()
 
