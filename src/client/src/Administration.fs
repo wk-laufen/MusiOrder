@@ -107,7 +107,7 @@ let Administration activeTab =
                         Bulma.title.p [
                             color.hasTextDanger
                             prop.children [
-                                Html.text "Schlüssel ist nicht authorisiert."
+                                Html.text "Schlüssel ist nicht autorisiert."
                                 Html.br []
                                 Html.text "Versuche es nochmal mit einem Administrator-Schlüssel."
                             ]
