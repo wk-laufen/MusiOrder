@@ -6,8 +6,9 @@ open Fetch.Types
 open MusiOrder.Models
 
 type AuthenticationError =
+    | CardNotRecognized
     | ReaderNotAvailable
-    | UnknownError
+    | FetchCardIdFailed
 
 let private useKeyboardAuthentication setAuthKey =
     let mutable key = ""
@@ -32,11 +33,12 @@ let private useRemoteAuthentication setAuthKey =
     Fetch.fetchUnsafe "http://localhost:8080/nfc-reader/card-id" [ Signal abortController.signal ]
     |> Promise.bind (fun v ->
         if v.Ok then v.text() |> Promise.map (AuthKey >> Ok >> Some)
-        else Promise.lift (Some (Error ReaderNotAvailable)) // TODO not all errors are reader errors
+        elif v.Status >= 400 && v.Status < 500 then Promise.lift (Some (Ok (AuthKey "")))
+        else Promise.lift (Some (Error ReaderNotAvailable))
     )
     |> Promise.catch (fun _e ->
         if abortController.signal.aborted then None
-        else (Some (Error UnknownError))
+        else Some (Error FetchCardIdFailed)
     )
     |> Promise.iter (function
         | Some result -> setAuthKey result

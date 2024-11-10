@@ -66,19 +66,19 @@ type ConsoleCardReader() =
     interface ICardReader with
         member _.GetReaders () = [| "console" |]
         member _.ReadCardId readerName ct =
-            printfn "1 -> 04A6AC62941B90, 2 -> 04A6AC62941B91, 3 -> None, 4 -> Error: "
+            printfn "1 -> 1234, 2 -> 1235, 3 -> None, 4 -> Error: "
             let rec fn () =
                 if Console.KeyAvailable then
                     let keyInfo = Console.ReadKey()
-                    if keyInfo.Key = ConsoleKey.D1 then Some "04A6AC62941B90"
-                    elif keyInfo.Key = ConsoleKey.D2 then Some "04A6AC62941B91"
+                    if keyInfo.Key = ConsoleKey.D1 then Some "1234"
+                    elif keyInfo.Key = ConsoleKey.D2 then Some "1235"
                     elif keyInfo.Key = ConsoleKey.D3 then None
                     elif keyInfo.Key = ConsoleKey.D4 then failwith $"Can't read from %s{readerName}"
                     else fn ()
                 else
                     Thread.Sleep(100)
-                    if ct.IsCancellationRequested then None
-                    else fn ()
+                    ct.ThrowIfCancellationRequested()
+                    fn ()
             fn ()
 
 [<ApiController>]
@@ -88,11 +88,13 @@ type NfcReaderController (cardReader: ICardReader, logger : ILogger<NfcReaderCon
 
     [<HttpGet("card-id")>]
     member this.GetCardId(ct: CancellationToken) =
-        let readerNames = cardReader.GetReaders()
-        logger.LogInformation("Found {CountOfReaders} readers: {ReaderNames}", readerNames.Length, String.Join("\n", readerNames))
-        match readerNames |> Array.tryHead with
-        | None -> failwith "No readers found"
-        | Some readerName ->
-            match cardReader.ReadCardId readerName ct with
-            | None -> this.NoContent() :> IActionResult
-            | Some cardId -> this.Ok(cardId)
+        try
+            let readerNames = cardReader.GetReaders()
+            logger.LogInformation("Found {CountOfReaders} readers: {ReaderNames}", readerNames.Length, String.Join("\n", readerNames))
+            match readerNames |> Array.tryHead with
+            | None -> failwith "No readers found"
+            | Some readerName ->
+                match cardReader.ReadCardId readerName ct with
+                | None -> this.BadRequest() :> IActionResult
+                | Some cardId -> this.Ok(cardId)
+        with :? OperationCanceledException -> this.NoContent()

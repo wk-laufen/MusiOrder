@@ -108,10 +108,12 @@ let modalAuthForm title onHide =
 
 let authError error onRetry =
     match error with
+    | React.CardNotRecognized -> 
+        errorNotificationWithRetry "Schlüssel nicht erkannt." onRetry
     | React.ReaderNotAvailable -> 
         errorNotificationWithRetry "Lesegerät nicht erkannt." onRetry
-    | React.UnknownError ->
-        errorNotificationWithRetry "Unbekannter Fehler." onRetry
+    | React.FetchCardIdFailed ->
+        errorNotificationWithRetry "NFC-Reader-Service nicht verfügbar." onRetry
 
 let modalAuthError title error onRetry onHide =
     modal title onHide [ authError error onRetry ] []
