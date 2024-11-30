@@ -66,27 +66,30 @@ let loadIconBig =
     ]
 
 let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement list) =
-    Bulma.modal [
-        helpers.isActive
-        prop.children [
-            Bulma.modalBackground [
-                prop.onClick (ignore >> onHide)
-            ]
-            Bulma.modalCard [
-                Bulma.modalCardHead [
-                    Bulma.modalCardTitle [
-                        prop.text title
-                    ]
-                    Html.a [
-                        prop.className "delete"
-                        prop.onClick (ignore >> onHide)
-                    ]
+    ReactDOM.createPortal (
+        Bulma.modal [
+            helpers.isActive
+            prop.children [
+                Bulma.modalBackground [
+                    prop.onClick (ignore >> onHide)
                 ]
-                Bulma.modalCardBody body
-                Bulma.modalCardFoot footer
+                Bulma.modalCard [
+                    Bulma.modalCardHead [
+                        Bulma.modalCardTitle [
+                            prop.text title
+                        ]
+                        Html.a [
+                            prop.className "delete"
+                            prop.onClick (ignore >> onHide)
+                        ]
+                    ]
+                    Bulma.modalCardBody body
+                    Bulma.modalCardFoot footer
+                ]
             ]
-        ]
-    ]
+        ],
+        Browser.Dom.document.body
+    )
 
 let authForm =
     Bulma.container [
