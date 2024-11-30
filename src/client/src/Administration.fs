@@ -118,7 +118,11 @@ let Administration activeTab =
             ]
         | AuthKeyProvided (Error error) ->
             Bulma.section [
-                View.authError error (fun () -> dispatch Show)
+                text.hasTextCentered
+                prop.children [
+                    View.authError error (fun () -> dispatch Show)
+                    abortButton
+                ]
             ]
         | AuthKeyProvided (Ok authKey) ->
             Bulma.section [
