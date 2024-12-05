@@ -22,12 +22,12 @@ type LoadedModel = {
 
 type Model =
     | NotLoaded
-    | Loading of AuthKey
-    | LoadError of AuthKey * ApiError<LoadUsersError>
-    | Loaded of AuthKey * LoadedModel
+    | Loading of AuthKey option
+    | LoadError of AuthKey option * ApiError<LoadUsersError>
+    | Loaded of AuthKey option * LoadedModel
 
 type Msg =
-    | Load of AuthKey
+    | Load of AuthKey option
     | LoadResult of Result<UserInfo list, ApiError<LoadUsersError>>
     | SelectUser of UserId
     | AddPayment of UserId * amount: decimal

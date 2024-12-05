@@ -23,12 +23,14 @@ module Order =
     }
 
     let handlePostOrder : HttpHandler = fun next ctx -> task {
-        let! authUser = ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey)
+        let authKey = ctx.TryGetQueryStringValue "authKey"
+        let! authUser = authKey |> Option.bindTask (AuthKey >> User.getByAuthKey)
         let orderUserId = ctx.TryGetQueryStringValue "userId" |> Option.map UserId
         match authUser, orderUserId with
         | Some authUser, Some userId when User.isAdmin authUser -> return! saveOrder userId next ctx
         | Some authUser, None -> return! saveOrder authUser.Id next ctx
         | Some _, Some _ -> return! RequestErrors.BAD_REQUEST [ AddOrderError.NotAuthorized ] next ctx
+        | None, _ when Option.isNone authKey -> return! RequestErrors.BAD_REQUEST [ AddOrderError.NotAuthorized ] next ctx
         | None, _ -> return! RequestErrors.BAD_REQUEST [ AddOrderError.InvalidAuthKey ] next ctx
     }
 
@@ -45,21 +47,26 @@ module Order =
     }
 
     let handleGetOrderSummary : HttpHandler = fun next ctx -> task {
-        let! authUser = ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey)
+        let authKey = ctx.TryGetQueryStringValue "authKey"
+        let! authUser = authKey |> Option.bindTask (AuthKey >> User.getByAuthKey)
         let! orderUser = ctx.TryGetQueryStringValue "userId" |> Option.bindTask (UserId >> User.getById)
         match authUser, orderUser with
         | Some authUser, Some user when User.isAdmin authUser -> return! loadOrderSummary user next ctx
         | Some authUser, None -> return! loadOrderSummary authUser next ctx
         | Some _, Some _ -> return! RequestErrors.BAD_REQUEST LoadOrderSummaryError.NotAuthorized next ctx
+        | None, _ when Option.isNone authKey -> return! RequestErrors.BAD_REQUEST LoadOrderSummaryError.NotAuthorized next ctx
         | None, _ -> return! RequestErrors.BAD_REQUEST LoadOrderSummaryError.InvalidAuthKey next ctx
     }
 
     let handleGetUsers : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        let authKey = ctx.TryGetQueryStringValue "authKey"
+        let! authUser = authKey |> Option.bindTask (AuthKey >> User.getByAuthKey)
+        match authUser with
         | Some user when User.isAdmin user ->
             let! result = getUserInfo ()
             return! Successful.OK result next ctx
         | Some _ -> return! RequestErrors.BAD_REQUEST LoadUsersError.NotAuthorized next ctx
+        | None when Option.isNone authKey -> return! RequestErrors.BAD_REQUEST LoadUsersError.NotAuthorized next ctx
         | None -> return! RequestErrors.BAD_REQUEST LoadUsersError.InvalidAuthKey next ctx
     }
 

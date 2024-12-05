@@ -143,10 +143,10 @@ let Administration activeTab =
                         ]
                     ]
                     match activeTab with
-                    | UserPayment -> UserPaymentAdministration.UserPaymentAdministration authKey (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
-                    | Orders -> OrderAdministration.OrderAdministration authKey (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
-                    | Users -> UserAdministration.UserAdministration authKey (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
-                    | Products -> ProductAdministration.ProductAdministration authKey (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | UserPayment -> UserPaymentAdministration.UserPaymentAdministration (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | Orders -> OrderAdministration.OrderAdministration (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | Users -> UserAdministration.UserAdministration (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | Products -> ProductAdministration.ProductAdministration (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                 ]
             ]
             Bulma.section [

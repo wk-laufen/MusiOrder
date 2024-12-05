@@ -56,12 +56,12 @@ type LoadedModel = {
 
 type Model =
     | NotLoaded
-    | Loading of AuthKey
-    | LoadError of AuthKey * ApiError<LoadExistingUsersError>
-    | Loaded of AuthKey * LoadedModel
+    | Loading of AuthKey option
+    | LoadError of AuthKey option * ApiError<LoadExistingUsersError>
+    | Loaded of AuthKey option * LoadedModel
 
 type Msg =
-    | Load of AuthKey
+    | Load of AuthKey option
     | LoadResult of Result<ExistingUser list, ApiError<LoadExistingUsersError>>
     | ShowAuthKey of UserId
     | EditUser of ExistingUser

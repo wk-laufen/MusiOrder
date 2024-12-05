@@ -94,12 +94,12 @@ module LoadedModel =
 
 type Model =
     | NotLoaded
-    | Loading of AuthKey
-    | LoadError of AuthKey * ApiError<LoadExistingProductsError>
-    | Loaded of AuthKey * LoadedModel
+    | Loading of AuthKey option
+    | LoadError of AuthKey option * ApiError<LoadExistingProductsError>
+    | Loaded of AuthKey option * LoadedModel
 
 type Msg =
-    | Load of AuthKey
+    | Load of AuthKey option
     | LoadResult of Result<ExistingProductGroup list, ApiError<LoadExistingProductsError>>
     | MoveUpProductGroup of ProductGroupId
     | MoveUpProductGroupResult of ProductGroupId * Result<unit, ApiError<MoveProductGroupError>>

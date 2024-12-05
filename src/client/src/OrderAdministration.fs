@@ -20,12 +20,12 @@ type LoadedModel = {
 
 type Model =
     | NotLoaded
-    | Loading of AuthKey
-    | LoadError of AuthKey * ApiError<LoadOrderInfoError>
-    | Loaded of AuthKey * LoadedModel
+    | Loading of AuthKey option
+    | LoadError of AuthKey option * ApiError<LoadOrderInfoError>
+    | Loaded of AuthKey option * LoadedModel
 
 type Msg =
-    | Load of AuthKey
+    | Load of AuthKey option
     | LoadResult of Result<OrderInfo list, ApiError<LoadOrderInfoError>>
     | DeleteOrder of OrderId
     | DeleteOrderResult of OrderId * Result<unit, ApiError<DeleteOrderError>>

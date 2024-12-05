@@ -15,7 +15,7 @@ type Model =
     | Hidden
     | Authenticating
     | AuthenticationError of React.AuthenticationError
-    | Loading of AuthKey
+    | Loading of AuthKey option
     | LoadError of ApiError<LoadOrderSummaryError>
     | Loaded of OrderSummary
 
@@ -29,10 +29,11 @@ let init = Hidden, Cmd.none
 
 let update msg state =
     match msg with
-    | Show -> Authenticating, Cmd.none
-    | SetAuthKey (Ok authKey) -> Loading authKey, Cmd.OfAsync.perform (loadOrderSummary authKey) None LoadResult
+    | Show -> Loading None, Cmd.OfAsync.perform (loadOrderSummary None) None LoadResult
+    | SetAuthKey (Ok authKey) -> Loading (Some authKey), Cmd.OfAsync.perform (loadOrderSummary (Some authKey)) None LoadResult
     | SetAuthKey (Error error) -> AuthenticationError error, Cmd.none
     | LoadResult (Ok orderSummary) -> Loaded orderSummary, Cmd.none
+    | LoadResult (Error (ExpectedError LoadOrderSummaryError.NotAuthorized)) -> Authenticating, Cmd.none
     | LoadResult (Error e) -> LoadError e, Cmd.none
     | Close -> Hidden, Cmd.none
 

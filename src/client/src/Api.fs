@@ -48,6 +48,20 @@ let inline handleErrors request = async {
     | Error e -> return Error (UnexpectedError (Helper.message e))
 }
 
+let private queryParam name = Option.map (fun v -> (name, v))
+let private authKeyQueryParam authKey =
+    authKey
+    |> Option.map AuthKey.toString
+    |> queryParam "authKey"
+
+let private queryString =
+    List.choose id
+    >> List.map (fun (key, value) -> $"%s{key}=%s{JS.encodeURIComponent value}")
+    >> String.concat "&"
+    >> function
+    | "" -> ""
+    | v -> $"?%s{v}"
+
 module Order =
     open MusiOrder.Models.Order
 
@@ -57,16 +71,19 @@ module Order =
     }
 
     let loadOrderSummary authKey userId : Async<Result<OrderSummary, ApiError<LoadOrderSummaryError>>> = async {
-        let userIdParam =
-            match userId with
-            | Some (UserId userId) -> sprintf "&userId=%s" (JS.encodeURIComponent userId)
-            | None -> ""
-        let url = sprintf "/api/order/summary?authKey=%s%s" (AuthKey.toString authKey |> JS.encodeURIComponent) userIdParam
+        let query = queryString [
+            userId |> Option.map (fun (UserId userId) -> userId) |> queryParam "userId"
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/order/summary%s{query}"
         return! tryGet url |> handleErrors
     }
 
     let loadUsers authKey : Async<Result<UserInfo list, ApiError<LoadUsersError>>> = async {
-        let url = sprintf "/api/order/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/order/users%s{query}"
         return! tryGet url |> handleErrors
     }
 
@@ -78,11 +95,11 @@ module Order =
                 PositiveInteger.tryCreate amount
                 |> Option.map (fun amount -> { ProductId = productId; Amount = amount })
             )
-        let userIdParam =
-            match userId with
-            | Some (UserId userId) -> sprintf "&userId=%s" (JS.encodeURIComponent userId)
-            | None -> ""
-        let url = sprintf "/api/order?authKey=%s%s" (AuthKey.toString authKey |> JS.encodeURIComponent) userIdParam
+        let query = queryString [
+            userId |> Option.map (fun (UserId userId) -> userId) |> queryParam "userId"
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/order%s{query}"
         return! tryPost url body |> handleErrors
     }
 
@@ -90,12 +107,18 @@ module UserPaymentAdministration =
     open MusiOrder.Models.UserPaymentAdministration
 
     let loadUsers authKey : Async<Result<UserInfo list, ApiError<LoadUsersError>>> = async {
-        let url = sprintf "/api/administration/user-payment/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/user-payment/users%s{query}"
         return! tryGet url |> handleErrors
     }
 
     let addPayment authKey (UserId userId) (payment: Payment) : Async<Result<decimal, ApiError<AddPaymentError>>> = async {
-        let url = sprintf "/api/administration/user-payment/%s?authKey=%s" (JS.encodeURIComponent userId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/user-payment/%s{JS.encodeURIComponent userId}%s{query}"
         return! tryPost url payment |> handleErrors
     }
 
@@ -103,27 +126,43 @@ module UserAdministration =
     open MusiOrder.Models.UserAdministration
 
     let loadUserData authKey : Async<Result<ExistingUser list, ApiError<LoadExistingUsersError>>> = async {
-        let url = sprintf "/api/administration/user/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/user/users%s{query}"
         return! tryGet url |> handleErrors
     }
 
     let createUser authKey (user: UserData) : Async<Result<UserId, ApiError<SaveUserError>>> = async {
-        let url = sprintf "/api/administration/user/users?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/user/users%s{query}"
         return! tryPost url user |> handleErrors
     }
 
     let updateUser authKey (UserId userId) (user: UserData) : Async<Result<unit, ApiError<SaveUserError>>> = async {
-        let url = sprintf "/api/administration/user/users/%s?authKey=%s" (JS.encodeURIComponent userId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/user/users/%s{JS.encodeURIComponent userId}%s{query}"
         return! tryPut url user |> handleErrors
     }
 
     let deleteUser authKey (UserId userId) : Async<Result<DeleteUserWarning list, ApiError<DeleteUserError>>> = async {
-        let url = sprintf "/api/administration/user/users/%s?authKey=%s" (JS.encodeURIComponent userId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/user/users/%s{JS.encodeURIComponent userId}%s{query}"
         return! tryDelete url |> handleErrors
     }
 
     let forceDeleteUser authKey (UserId userId) : Async<Result<unit, ApiError<ForceDeleteUserError>>> = async {
-        let url = sprintf "/api/administration/user/users/%s?authKey=%s&force=true" (JS.encodeURIComponent userId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            Some ("force", "true")
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/user/users/%s{JS.encodeURIComponent userId}%s{query}"
         return! tryDelete url |> handleErrors
     }
 
@@ -131,57 +170,90 @@ module ProductAdministration =
     open MusiOrder.Models.ProductAdministration
 
     let loadProductData authKey : Async<Result<ExistingProductGroup list, ApiError<LoadExistingProductsError>>> = async {
-        let url = sprintf "/api/administration/product/products?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/products%s{query}"
         return! tryGet url |> handleErrors
     }
 
     let createProductGroup authKey (productGroup: ProductGroupData) : Async<Result<ProductGroupId, ApiError<SaveProductGroupError>>> = async {
-        let url = sprintf "/api/administration/product/groups?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/groups%s{query}"
         return! tryPost url productGroup |> handleErrors
     }
 
     let updateProductGroup authKey (ProductGroupId productGroupId) (productGroup: ProductGroupData) : Async<Result<unit, ApiError<SaveProductGroupError>>> = async {
-        let url = sprintf "/api/administration/product/groups/%s?authKey=%s" (JS.encodeURIComponent productGroupId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/groups/%s{JS.encodeURIComponent productGroupId}%s{query}"
         return! tryPut url productGroup |> handleErrors
     }
 
     let deleteProductGroup authKey (ProductGroupId productGroupId) : Async<Result<unit, ApiError<DeleteProductGroupError>>> = async {
-        let url = sprintf "/api/administration/product/groups/%s?authKey=%s" (JS.encodeURIComponent productGroupId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/groups/%s{JS.encodeURIComponent productGroupId}%s{query}"
         return! tryDelete url |> handleErrors
     }
 
     let moveUpProductGroup authKey (ProductGroupId productGroupId) : Async<Result<unit, ApiError<MoveProductGroupError>>> = async {
-        let url = sprintf "/api/administration/product/groups/%s/move-up?authKey=%s" (JS.encodeURIComponent productGroupId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/groups/%s{JS.encodeURIComponent productGroupId}/move-up%s{query}"
         return! tryPost url () |> handleErrors
     }
 
     let moveDownProductGroup authKey (ProductGroupId productGroupId) : Async<Result<unit, ApiError<MoveProductGroupError>>> = async {
-        let url = sprintf "/api/administration/product/groups/%s/move-down?authKey=%s" (JS.encodeURIComponent productGroupId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/groups/%s{JS.encodeURIComponent productGroupId}/move-down%s{query}"
         return! tryPost url () |> handleErrors
     }
 
     let createProduct authKey (ProductGroupId productGroupId,  product: ProductData) : Async<Result<ProductId, ApiError<SaveProductError>>> = async {
-        let url = sprintf "/api/administration/product/groups/%s/products?authKey=%s" productGroupId (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/groups/%s{JS.encodeURIComponent productGroupId}/products%s{query}"
         return! tryPost url product |> handleErrors
     }
 
     let updateProduct authKey (ProductId productId) (product: ProductData) : Async<Result<unit, ApiError<SaveProductError>>> = async {
-        let url = sprintf "/api/administration/product/products/%s?authKey=%s" (JS.encodeURIComponent productId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/products/%s{JS.encodeURIComponent productId}%s{query}"
         return! tryPut url product |> handleErrors
     }
 
     let moveUpProduct authKey (ProductId productId) : Async<Result<unit, ApiError<MoveProductError>>> = async {
-        let url = sprintf "/api/administration/product/products/%s/move-up?authKey=%s" (JS.encodeURIComponent productId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/products/%s{JS.encodeURIComponent productId}/move-up%s{query}"
         return! tryPost url () |> handleErrors
     }
 
     let moveDownProduct authKey (ProductId productId) : Async<Result<unit, ApiError<MoveProductError>>> = async {
-        let url = sprintf "/api/administration/product/products/%s/move-down?authKey=%s" (JS.encodeURIComponent productId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/products/%s{JS.encodeURIComponent productId}/move-down%s{query}"
         return! tryPost url () |> handleErrors
     }
 
     let deleteProduct authKey (ProductId productId) : Async<Result<unit, ApiError<DeleteProductError>>> = async {
-        let url = sprintf "/api/administration/product/products/%s?authKey=%s" (JS.encodeURIComponent productId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/product/products/%s{JS.encodeURIComponent productId}%s{query}"
         return! tryDelete url |> handleErrors
     }
 
@@ -189,11 +261,17 @@ module OrderAdministration =
     open MusiOrder.Models.OrderAdministration
 
     let loadOrderInfo authKey : Async<Result<OrderInfo list, ApiError<LoadOrderInfoError>>> = async {
-        let url = sprintf "/api/administration/order/orders?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/order/orders%s{query}"
         return! tryGet url |> handleErrors
     }
 
     let deleteOrder authKey (OrderId orderId) : Async<Result<unit, ApiError<DeleteOrderError>>> = async {
-        let url = sprintf "/api/administration/order/orders/%s?authKey=%s" (JS.encodeURIComponent orderId) (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/order/orders/%s{JS.encodeURIComponent orderId}%s{query}"
         return! tryDelete url |> handleErrors
     }

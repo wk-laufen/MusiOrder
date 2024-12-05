@@ -16,12 +16,12 @@ type OrderState =
     | Drafting of Map<ProductId, int>
     | Authenticating of Map<ProductId, int>
     | AuthenticationError of Map<ProductId, int> * React.AuthenticationError
-    | LoadingUsers of Map<ProductId, int> * AuthKey
-    | LoadUsersError of Map<ProductId, int> * AuthKey
-    | LoadedUsers of Map<ProductId, int> * AuthKey * UserInfo list
-    | Sending of Map<ProductId, int> * AuthKey * UserId option
-    | SendError of Map<ProductId, int> * AuthKey
-    | Sent of AuthKey * UserId option * Deferred<OrderSummary>
+    | LoadingUsers of Map<ProductId, int> * AuthKey option
+    | LoadUsersError of Map<ProductId, int> * AuthKey option
+    | LoadedUsers of Map<ProductId, int> * AuthKey option * UserInfo list
+    | Sending of Map<ProductId, int> * AuthKey option * UserId option
+    | SendError of Map<ProductId, int> * AuthKey option
+    | Sent of AuthKey option * UserId option * Deferred<OrderSummary>
 
 type Model =
     {
@@ -36,8 +36,9 @@ type Msg =
     | ResetOrder
     | Authenticate
     | SetAuthKey of Result<AuthKey, React.AuthenticationError>
+    | LoadUsers of AuthKey option
     | LoadUsersResult of Result<UserInfo list, ApiError<LoadUsersError>>
-    | SendOrder of AuthKey * UserId option
+    | SendOrder of AuthKey option * UserId option
     | SendOrderResult of Result<unit, ApiError<AddOrderError list>>
     | LoadOrderSummary
     | LoadOrderSummaryResult of Result<OrderSummary, ApiError<LoadOrderSummaryError>>
@@ -80,22 +81,26 @@ let update msg (state: Model) =
         | _ -> state, Cmd.none
     | Authenticate ->
         match state.Order with
-        | Drafting order -> { state with Order = Authenticating order }, Cmd.none
-        | AuthenticationError (order, _) -> { state with Order = Authenticating order }, Cmd.none
+        | Drafting order
+        | AuthenticationError (order, _)
+        | Sending (order, _, _) -> { state with Order = Authenticating order }, Cmd.none
         | _ -> state, Cmd.none
     | SetAuthKey (Ok authKey) ->
-        match state.Order with
-        | Authenticating order
-        | LoadUsersError (order, _) ->
-            { state with Order = LoadingUsers (order, authKey) },
-            Cmd.OfAsync.perform loadUsers authKey LoadUsersResult
-        | _ -> state, Cmd.none
+        state, Cmd.ofMsg (LoadUsers (Some authKey))
     | SetAuthKey (Error error) ->
         match state.Order with
         | Authenticating order
         | LoadUsersError (order, _) ->
             { state with Order = AuthenticationError (order, error) },
             Cmd.none
+        | _ -> state, Cmd.none
+    | LoadUsers authKey ->
+        match state.Order with
+        | Drafting order
+        | Authenticating order
+        | LoadUsersError (order, _) ->
+            { state with Order = LoadingUsers (order, authKey) },
+            Cmd.OfAsync.perform loadUsers authKey LoadUsersResult
         | _ -> state, Cmd.none
     | LoadUsersResult (Ok users) ->
         match state.Order with
@@ -116,6 +121,7 @@ let update msg (state: Model) =
         | _ -> state, Cmd.none
     | SendOrder (authKey, userId) ->
         match state.Order with
+        | Drafting order
         | LoadingUsers (order, _)
         | LoadedUsers (order, _, _)
         | SendError (order, _) ->
@@ -126,6 +132,8 @@ let update msg (state: Model) =
         match state.Order with
         | Sending (_, authKey, userId) -> { state with Order = Sent (authKey, userId, Deferred.HasNotStartedYet) }, Cmd.ofMsg LoadOrderSummary
         | _ -> state, Cmd.none
+    | SendOrderResult (Error (ExpectedError [AddOrderError.NotAuthorized])) ->
+        state, Cmd.ofMsg Authenticate
     | SendOrderResult (Error _) ->
         match state.Order with
         | Sending (order, authKey, userId) -> { state with Order = SendError (order, authKey) }, Cmd.none
@@ -292,7 +300,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             match state.Order with
             | Drafting order ->
                 prop.disabled (Map.isEmpty order)
-                prop.onClick (fun _ -> dispatch Authenticate)
+                prop.onClick (fun _ -> dispatch (SendOrder (None, None)))
             | _ -> ()
             prop.children [
                 Bulma.icon [ Fa.i [ Fa.Solid.EuroSign ] [] ]
