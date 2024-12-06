@@ -6,9 +6,7 @@ open Fetch.Types
 open MusiOrder.Models
 
 type AuthenticationError =
-    | CardNotRecognized
     | ReaderNotAvailable
-    | FetchCardIdFailed
 
 let private useKeyboardAuthentication setAuthKey =
     let mutable key = ""
@@ -36,10 +34,7 @@ let private useRemoteAuthentication setAuthKey =
         elif v.Status >= 400 && v.Status < 500 then Promise.lift (Some (Ok (AuthKey "")))
         else Promise.lift (Some (Error ReaderNotAvailable))
     )
-    |> Promise.catch (fun _e ->
-        if abortController.signal.aborted then None
-        else Some (Error FetchCardIdFailed)
-    )
+    |> Promise.catch (fun _e -> None) // request cancelled or server not running -> ignore
     |> Promise.iter (function
         | Some result -> setAuthKey result
         | None -> ()
