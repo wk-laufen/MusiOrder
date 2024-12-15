@@ -19,6 +19,7 @@
     <Compile Include="Utils.fs" />
     <Compile Include="DB.fs" />
     <Compile Include="Core.fs" />
+    <Compile Include="AuthHandler.fs" />
     <Compile Include="HttpHandler.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

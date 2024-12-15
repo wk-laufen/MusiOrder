@@ -135,6 +135,7 @@ module Order =
     type AddOrderError =
         | InvalidAuthKey
         | NotAuthorized
+        | NoOrderUser
         | OrderEntryErrors of ProductId * OrderEntryError list
 
 module UserPaymentAdministration =

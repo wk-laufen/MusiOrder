@@ -12,6 +12,7 @@ open Giraffe.Serialization
 open MusiOrder.Models
 open Thoth.Json.Net
 open Thoth.Json.Giraffe
+open AuthHandler
 
 // ---------------------------------
 // Web app
@@ -111,6 +112,7 @@ let configureServices (services : IServiceCollection) =
     |> ignore
 
     services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = Json.coders)) |> ignore
+    services.AddTransient<IAuthHandler, AuthenticatedUsersAuthHandler>() |> ignore
 
 let configureLogging (ctx: HostBuilderContext) (builder : ILoggingBuilder) =
     builder

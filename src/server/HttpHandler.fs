@@ -1,14 +1,15 @@
 namespace MusiOrder.Server.HttpHandler
 
+open Microsoft.Extensions.DependencyInjection
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
 open MusiOrder.Core
 open MusiOrder.Models
-open System.IO
 
 module Order =
     open MusiOrder.Core.Order
     open MusiOrder.Models.Order
+    open AuthHandler
 
     let handleGetProducts : HttpHandler = fun next ctx -> task {
         let! data = getProductGroups ()
@@ -23,15 +24,15 @@ module Order =
     }
 
     let handlePostOrder : HttpHandler = fun next ctx -> task {
+        let authHandler = ctx.RequestServices.GetRequiredService<IAuthHandler>()
         let authKey = ctx.TryGetQueryStringValue "authKey"
         let! authUser = authKey |> Option.bindTask (AuthKey >> User.getByAuthKey)
         let orderUserId = ctx.TryGetQueryStringValue "userId" |> Option.map UserId
-        match authUser, orderUserId with
-        | Some authUser, Some userId when User.isAdmin authUser -> return! saveOrder userId next ctx
-        | Some authUser, None -> return! saveOrder authUser.Id next ctx
-        | Some _, Some _ -> return! RequestErrors.BAD_REQUEST [ AddOrderError.NotAuthorized ] next ctx
-        | None, _ when Option.isNone authKey -> return! RequestErrors.BAD_REQUEST [ AddOrderError.NotAuthorized ] next ctx
-        | None, _ -> return! RequestErrors.BAD_REQUEST [ AddOrderError.InvalidAuthKey ] next ctx
+        match authHandler.CommitOrder authUser orderUserId with
+        | AllowCommitOrder userId -> return! saveOrder userId next ctx
+        | DenyCommitOrderNotAuthorized when Option.isNone authKey -> return! RequestErrors.BAD_REQUEST [ AddOrderError.NotAuthorized ] next ctx
+        | DenyCommitOrderNotAuthorized -> return! RequestErrors.BAD_REQUEST [ AddOrderError.InvalidAuthKey ] next ctx
+        | DenyCommitOrderNoOrderUser -> return! RequestErrors.BAD_REQUEST [ AddOrderError.NoOrderUser ] next ctx
     }
 
     let loadOrderSummary (user: User) : HttpHandler = fun next ctx -> task {
