@@ -128,6 +128,7 @@ module Order =
     type LoadOrderSummaryError =
         | InvalidAuthKey
         | NotAuthorized
+        | NoOrderSummaryUser
 
     type OrderEntryError =
         | ProductNotFound

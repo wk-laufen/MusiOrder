@@ -113,6 +113,16 @@ let configureServices (services : IServiceCollection) =
 
     services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = Json.coders)) |> ignore
     services.AddTransient<IAuthHandler, AuthenticatedUsersAuthHandler>() |> ignore
+    // services.AddTransient<IAuthHandler, NoAuthenticationAuthHandler>() |> ignore
+    // services.AddTransient<IAuthHandler>(fun _ ->
+    //     SingleUserAuthHandler({
+    //         Id = UserId "e4470d38-4726-47c4-b7ee-3025992dbf85"
+    //         FirstName = "WK"
+    //         LastName = "Laufen"
+    //         AuthKey = None
+    //         Role = "user"
+    //     })
+    // ) |> ignore
 
 let configureLogging (ctx: HostBuilderContext) (builder : ILoggingBuilder) =
     builder

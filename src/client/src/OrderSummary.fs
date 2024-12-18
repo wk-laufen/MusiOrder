@@ -15,26 +15,54 @@ type Model =
     | Hidden
     | Authenticating
     | AuthenticationError of React.AuthenticationError
-    | Loading of AuthKey option
-    | LoadError of ApiError<LoadOrderSummaryError>
-    | Loaded of OrderSummary
+    | LoadingUsers of AuthKey option
+    | LoadUsersError of AuthKey option
+    | LoadedUsers of AuthKey option * UserInfo list
+    | LoadingOrderSummary of AuthKey option
+    | LoadOrderSummaryError of ApiError<LoadOrderSummaryError>
+    | LoadedOrderSummary of OrderSummary
 
 type Msg =
     | Show
     | SetAuthKey of Result<AuthKey, React.AuthenticationError>
-    | LoadResult of Result<OrderSummary, ApiError<LoadOrderSummaryError>>
+    | LoadUsers of AuthKey option
+    | LoadUsersResult of Result<UserInfo list, ApiError<LoadUsersError>>
+    | LoadOrderSummary of AuthKey option * UserId option
+    | LoadOrderSummaryResult of Result<OrderSummary, ApiError<LoadOrderSummaryError>>
     | Close
 
 let init = Hidden, Cmd.none
 
 let update msg state =
     match msg with
-    | Show -> Loading None, Cmd.OfAsync.perform (loadOrderSummary None) None LoadResult
-    | SetAuthKey (Ok authKey) -> Loading (Some authKey), Cmd.OfAsync.perform (loadOrderSummary (Some authKey)) None LoadResult
+    | Show -> state, Cmd.ofMsg (LoadOrderSummary (None, None))
+    | SetAuthKey (Ok authKey) -> state, Cmd.ofMsg (LoadOrderSummary (Some authKey, None))
     | SetAuthKey (Error error) -> AuthenticationError error, Cmd.none
-    | LoadResult (Ok orderSummary) -> Loaded orderSummary, Cmd.none
-    | LoadResult (Error (ExpectedError LoadOrderSummaryError.NotAuthorized)) -> Authenticating, Cmd.none
-    | LoadResult (Error e) -> LoadError e, Cmd.none
+    | LoadUsers authKey -> LoadingUsers authKey, Cmd.OfAsync.perform loadUsers authKey LoadUsersResult
+    | LoadUsersResult (Ok users) ->
+        match state with
+        | LoadingUsers authKey -> LoadedUsers (authKey, users), Cmd.none
+        | _ -> state, Cmd.none
+    | LoadUsersResult (Error (ExpectedError LoadUsersError.NotAuthorized)) ->
+        match state with
+        | LoadingUsers authKey -> state, Cmd.ofMsg (LoadOrderSummary (authKey, None))
+        | _ -> state, Cmd.none
+    | LoadUsersResult (Error (ExpectedError LoadUsersError.InvalidAuthKey))
+    | LoadUsersResult (Error (UnexpectedError _)) ->
+        match state with
+        | LoadingUsers authKey -> LoadUsersError authKey, Cmd.none
+        | _ -> state, Cmd.none
+    | LoadOrderSummary (authKey, userId) ->
+        LoadingOrderSummary authKey, Cmd.OfAsync.perform (loadOrderSummary authKey) userId LoadOrderSummaryResult
+    | LoadOrderSummaryResult (Ok orderSummary) -> LoadedOrderSummary orderSummary, Cmd.none
+    | LoadOrderSummaryResult (Error (ExpectedError LoadOrderSummaryError.NotAuthorized)) -> Authenticating, Cmd.none
+    | LoadOrderSummaryResult (Error (ExpectedError LoadOrderSummaryError.NoOrderSummaryUser)) ->
+        let authKey =
+            match state with
+            | LoadingOrderSummary authKey -> authKey
+            | _ -> None
+        state, Cmd.ofMsg (LoadUsers authKey)
+    | LoadOrderSummaryResult (Error e) -> LoadOrderSummaryError e, Cmd.none
     | Close -> Hidden, Cmd.none
 
 [<ReactComponent>]
@@ -43,11 +71,14 @@ let OrderSummary () =
     let acceptsAuthKey =
         match state with
         | Authenticating
-        | LoadError _ -> true
+        | LoadOrderSummaryError _ -> true
         | Hidden
         | AuthenticationError _
-        | Loaded _
-        | Loading _ -> false
+        | LoadingUsers _
+        | LoadedUsers _
+        | LoadUsersError _
+        | LoadedOrderSummary _
+        | LoadingOrderSummary _ -> false
     React.useAuthentication acceptsAuthKey (SetAuthKey >> dispatch)
 
     let authForm =
@@ -55,8 +86,48 @@ let OrderSummary () =
         | Hidden -> Html.none
         | Authenticating -> View.modalAuthForm "Bestellungen anzeigen" (fun () -> dispatch Close)
         | AuthenticationError error -> View.modalAuthError "Bestellungen anzeigen" error (fun () -> dispatch Show) (fun () -> dispatch Close)
-        | Loading _ -> View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [ View.loadIconBig ] []
-        | LoadError _ ->
+        | LoadingUsers _
+        | LoadingOrderSummary _ -> View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [ View.loadIconBig ] []
+        | LoadedUsers (authKey, users) ->
+            View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [
+                Bulma.table [
+                    table.isFullWidth
+                    prop.children [
+                        Html.thead [
+                            Html.tr [
+                                Html.th [ prop.text "Nachname" ]
+                                Html.th [ prop.text "Vorname" ]
+                                Html.th [ prop.text "Aktuelles Guthaben" ]
+                                Html.th []
+                            ]
+                        ]
+                        Html.tbody [
+                            for user in users ->
+                                Html.tr [
+                                    prop.onClick (fun _ -> dispatch (LoadOrderSummary (authKey, Some user.Id)))
+
+                                    prop.children [
+                                        Html.td [
+                                            text.hasTextLeft
+                                            ++ text.isUppercase
+                                            prop.text user.LastName
+                                        ]
+                                        Html.td [
+                                            text.hasTextLeft
+                                            prop.text user.FirstName
+                                        ]
+                                        Html.td [
+                                            View.balanceColor user.Balance
+                                            prop.textf "%.2f€" user.Balance
+                                        ]
+                                    ]
+                                ]
+                        ]
+                    ]
+                ]
+            ] []
+        | LoadUsersError _
+        | LoadOrderSummaryError _ ->
             View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [
                 Bulma.container [
                     text.hasTextCentered
@@ -75,7 +146,7 @@ let OrderSummary () =
                     ]
                 ]
             ] []
-        | Loaded orderSummary ->
+        | LoadedOrderSummary orderSummary ->
             View.modal (sprintf "Bestellungen von %s" orderSummary.ClientFullName) (fun () -> dispatch Close) [
                 Bulma.container [
                     text.hasTextCentered

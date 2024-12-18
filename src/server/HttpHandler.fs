@@ -48,27 +48,27 @@ module Order =
     }
 
     let handleGetOrderSummary : HttpHandler = fun next ctx -> task {
+        let authHandler = ctx.RequestServices.GetRequiredService<IAuthHandler>()
         let authKey = ctx.TryGetQueryStringValue "authKey"
         let! authUser = authKey |> Option.bindTask (AuthKey >> User.getByAuthKey)
         let! orderUser = ctx.TryGetQueryStringValue "userId" |> Option.bindTask (UserId >> User.getById)
-        match authUser, orderUser with
-        | Some authUser, Some user when User.isAdmin authUser -> return! loadOrderSummary user next ctx
-        | Some authUser, None -> return! loadOrderSummary authUser next ctx
-        | Some _, Some _ -> return! RequestErrors.BAD_REQUEST LoadOrderSummaryError.NotAuthorized next ctx
-        | None, _ when Option.isNone authKey -> return! RequestErrors.BAD_REQUEST LoadOrderSummaryError.NotAuthorized next ctx
-        | None, _ -> return! RequestErrors.BAD_REQUEST LoadOrderSummaryError.InvalidAuthKey next ctx
+        match authHandler.GetOrderSummary authUser orderUser with
+        | GetOrderSummaryAllowed user -> return! loadOrderSummary user next ctx
+        | GetOrderSummaryNotAuthorized when Option.isNone authKey -> return! RequestErrors.BAD_REQUEST LoadOrderSummaryError.NotAuthorized next ctx
+        | GetOrderSummaryNotAuthorized -> return! RequestErrors.BAD_REQUEST LoadOrderSummaryError.InvalidAuthKey next ctx
+        | GetOrderSummaryNoUser -> return! RequestErrors.BAD_REQUEST LoadOrderSummaryError.NoOrderSummaryUser next ctx
     }
 
     let handleGetUsers : HttpHandler = fun next ctx -> task {
+        let authHandler = ctx.RequestServices.GetRequiredService<IAuthHandler>()
         let authKey = ctx.TryGetQueryStringValue "authKey"
         let! authUser = authKey |> Option.bindTask (AuthKey >> User.getByAuthKey)
-        match authUser with
-        | Some user when User.isAdmin user ->
+        match authHandler.GetUsers authUser with
+        | GetUsersAllowed ->
             let! result = getUserInfo ()
             return! Successful.OK result next ctx
-        | Some _ -> return! RequestErrors.BAD_REQUEST LoadUsersError.NotAuthorized next ctx
-        | None when Option.isNone authKey -> return! RequestErrors.BAD_REQUEST LoadUsersError.NotAuthorized next ctx
-        | None -> return! RequestErrors.BAD_REQUEST LoadUsersError.InvalidAuthKey next ctx
+        | GetUsersNotAuthorized when Option.isNone authKey -> return! RequestErrors.BAD_REQUEST LoadUsersError.NotAuthorized next ctx
+        | GetUsersNotAuthorized -> return! RequestErrors.BAD_REQUEST LoadUsersError.InvalidAuthKey next ctx
     }
 
 module UserPaymentAdministration =

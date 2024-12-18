@@ -98,7 +98,8 @@ let update msg (state: Model) =
         match state.Order with
         | Drafting order
         | Authenticating order
-        | LoadUsersError (order, _) ->
+        | LoadUsersError (order, _)
+        | Sending (order, _, _) ->
             { state with Order = LoadingUsers (order, authKey) },
             Cmd.OfAsync.perform loadUsers authKey LoadUsersResult
         | _ -> state, Cmd.none
@@ -134,6 +135,12 @@ let update msg (state: Model) =
         | _ -> state, Cmd.none
     | SendOrderResult (Error (ExpectedError [AddOrderError.NotAuthorized])) ->
         state, Cmd.ofMsg Authenticate
+    | SendOrderResult (Error (ExpectedError [AddOrderError.NoOrderUser])) ->
+        let authKey =
+            match state.Order with
+            | Sending (order, authKey, userId) -> authKey
+            | _ -> None
+        state, Cmd.ofMsg (LoadUsers authKey)
     | SendOrderResult (Error _) ->
         match state.Order with
         | Sending (order, authKey, userId) -> { state with Order = SendError (order, authKey) }, Cmd.none
