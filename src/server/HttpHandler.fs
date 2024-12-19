@@ -35,12 +35,12 @@ module Order =
         | DenyCommitOrderNoOrderUser -> return! RequestErrors.BAD_REQUEST [ AddOrderError.NoOrderUser ] next ctx
     }
 
-    let loadOrderSummary (user: User) : HttpHandler = fun next ctx -> task {
+    let loadOrderSummary (user: OrderSummaryUser) : HttpHandler = fun next ctx -> task {
         let! balance = User.getBalance user.Id
         let! latestOrders = getLatestOrdersFromUser user.Id
         let result =
             {
-                ClientFullName = sprintf "%s %s" user.FirstName user.LastName
+                ClientFullName = user.Name
                 Balance = balance
                 LatestOrders = latestOrders
             }

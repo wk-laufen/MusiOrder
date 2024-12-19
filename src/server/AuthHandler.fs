@@ -3,8 +3,32 @@ namespace AuthHandler
 open MusiOrder.Core
 open MusiOrder.Models
 
+type SingleUserConfig() =
+    member val Id = "" with get, set
+    member val Name = "" with get, set
+
+type AuthHandlerOptions() =
+    member val Name = "" with get, set
+    member val User = SingleUserConfig() with get, set
+
+type OrderSummaryUser = {
+    Id: UserId
+    Name: string
+}
+module OrderSummaryUser =
+    let fromConfig (user: SingleUserConfig) =
+        {
+            Id = UserId user.Id
+            Name = user.Name
+        }
+    let fromUser (user: User) =
+        {
+            Id = user.Id
+            Name = $"%s{user.FirstName} %s{user.LastName}"
+        }
+
 type GetOrderSummaryResult =
-    | GetOrderSummaryAllowed of User
+    | GetOrderSummaryAllowed of OrderSummaryUser
     | GetOrderSummaryNotAuthorized
     | GetOrderSummaryNoUser
 
@@ -24,10 +48,10 @@ type IAuthHandler =
 
 type AuthenticatedUsersAuthHandler() =
     interface IAuthHandler with
-        member _.GetOrderSummary authUser summaryUserId =
-            match authUser, summaryUserId with
-            | Some authUser, Some userId when User.isAdmin authUser -> GetOrderSummaryAllowed userId
-            | Some authUser, None -> GetOrderSummaryAllowed authUser
+        member _.GetOrderSummary authUser summaryUser =
+            match authUser, summaryUser with
+            | Some authUser, Some user when User.isAdmin authUser -> GetOrderSummaryAllowed (OrderSummaryUser.fromUser user)
+            | Some authUser, None -> GetOrderSummaryAllowed (OrderSummaryUser.fromUser authUser)
             | _ -> GetOrderSummaryNotAuthorized
 
         member _.GetUsers authUser =
@@ -45,10 +69,10 @@ type AuthenticatedUsersAuthHandler() =
 
 type NoAuthenticationAuthHandler() =
     interface IAuthHandler with
-        member _.GetOrderSummary authUser summaryUserId =
-            match authUser, summaryUserId with
-            | _, Some userId -> GetOrderSummaryAllowed userId
-            | Some authUser, _ -> GetOrderSummaryAllowed authUser
+        member _.GetOrderSummary authUser summaryUser =
+            match authUser, summaryUser with
+            | _, Some user -> GetOrderSummaryAllowed (OrderSummaryUser.fromUser user)
+            | Some authUser, _ -> GetOrderSummaryAllowed (OrderSummaryUser.fromUser authUser)
             | _ -> GetOrderSummaryNoUser
 
         member _.GetUsers authUser = GetUsersAllowed
@@ -58,7 +82,7 @@ type NoAuthenticationAuthHandler() =
             | _, Some orderUserId -> AllowCommitOrder orderUserId
             | _, None -> DenyCommitOrderNoOrderUser
 
-type SingleUserAuthHandler(user: User) =
+type SingleUserAuthHandler(user: OrderSummaryUser) =
     interface IAuthHandler with
         member _.GetOrderSummary authUser summaryUserId = GetOrderSummaryAllowed user
         member _.GetUsers authUser = GetUsersAllowed

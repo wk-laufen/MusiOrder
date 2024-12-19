@@ -4,6 +4,7 @@ open System
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Cors.Infrastructure
 open Microsoft.AspNetCore.Hosting
+open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
@@ -105,24 +106,21 @@ let configureApp (ctx: WebHostBuilderContext) (app : IApplicationBuilder) =
         .UseCors(configureCors)
         .UseGiraffe(webApp)
 
-let configureServices (services : IServiceCollection) =
+let configureServices (ctx: HostBuilderContext) (services : IServiceCollection) =
     services
         .AddCors()
         .AddGiraffe()
     |> ignore
 
     services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = Json.coders)) |> ignore
-    services.AddTransient<IAuthHandler, AuthenticatedUsersAuthHandler>() |> ignore
-    // services.AddTransient<IAuthHandler, NoAuthenticationAuthHandler>() |> ignore
-    // services.AddTransient<IAuthHandler>(fun _ ->
-    //     SingleUserAuthHandler({
-    //         Id = UserId "e4470d38-4726-47c4-b7ee-3025992dbf85"
-    //         FirstName = "WK"
-    //         LastName = "Laufen"
-    //         AuthKey = None
-    //         Role = "user"
-    //     })
-    // ) |> ignore
+
+    let authHandlerOptions = ctx.Configuration.GetRequiredSection("AuthHandler").Get<AuthHandlerOptions>()
+    if authHandlerOptions.Name.Equals("AuthenticatedUsers", StringComparison.InvariantCultureIgnoreCase) then
+        services.AddTransient<IAuthHandler, AuthenticatedUsersAuthHandler>() |> ignore
+    elif authHandlerOptions.Name.Equals("NoAuthentication", StringComparison.InvariantCultureIgnoreCase) then
+        services.AddTransient<IAuthHandler, NoAuthenticationAuthHandler>() |> ignore
+    elif authHandlerOptions.Name.Equals("SingleUser", StringComparison.InvariantCultureIgnoreCase) then
+        services.AddTransient<IAuthHandler>(fun _ -> SingleUserAuthHandler(OrderSummaryUser.fromConfig authHandlerOptions.User)) |> ignore
 
 let configureLogging (ctx: HostBuilderContext) (builder : ILoggingBuilder) =
     builder
