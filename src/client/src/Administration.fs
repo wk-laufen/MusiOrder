@@ -20,18 +20,21 @@ type Tab =
     | Orders
     | Users
     | Products
+    | DataExport
 module Tab =
     let title = function
         | UserPayment -> "Guthaben"
         | Orders -> "Bestellungen"
         | Users -> "Benutzer"
         | Products -> "Artikel"
+        | DataExport -> "Datenexport"
     let toRoute = function
         | UserPayment -> "guthaben"
         | Orders -> "bestellungen"
         | Users -> "benutzer"
         | Products -> "artikel"
-let allTabs = [ UserPayment; Orders; Users; Products ]
+        | DataExport -> "data-export"
+let allTabs = [ UserPayment; Orders; Users; Products; DataExport ]
 
 type AuthKeyState =
     | NoAuthKeyProvided
@@ -147,6 +150,7 @@ let Administration activeTab =
                     | Orders -> OrderAdministration.OrderAdministration (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                     | Users -> UserAdministration.UserAdministration (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                     | Products -> ProductAdministration.ProductAdministration (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | DataExport -> DataExport.DataExport (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                 ]
             ]
             Bulma.section [

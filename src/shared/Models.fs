@@ -300,6 +300,11 @@ module OrderAdministration =
         | InvalidAuthKey
         | NotAuthorized
 
+module DataExport =
+    type ExportDatabaseError =
+        | InvalidAuthKey
+        | NotAuthorized
+
 module Json =
     let coders =
         Extra.empty

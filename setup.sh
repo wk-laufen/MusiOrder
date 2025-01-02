@@ -25,7 +25,7 @@ sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 echo "== Setup kiosk mode =="
-sudo apt update && sudo apt install --no-install-recommends -y wayfire seatd xdg-user-dirs chromium-browser
+sudo apt update && sudo apt install --no-install-recommends -y wayfire seatd xdg-user-dirs chromium-browser sqlite3 jq
 echo 'wayland=on' | sudo tee -a '/boot/firmware/cmdline.txt' > /dev/null
 # Install hide-cursor plugin
 wget https://github.com/seffs/wayfire-plugins-extra-raspbian/releases/download/v0.7.5/wayfire-plugins-extra-raspbian-armv7.tar.xz
@@ -51,6 +51,22 @@ plugins = autostart
 musiorder = /home/pi/.config/open-musiorder.sh" > ~/.config/wayfire.ini
 
 echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && wayfire -c ~/.config/wayfire.ini" >> ~/.bash_profile
+
+echo "== Auto-mount USB drives =="
+sudo mkdir /usb && sudo chown pi:pi /usb
+git clone https://github.com/antonilol/simple-usb-automount
+pushd ./simple-usb-automount
+sudo ./install
+sed 's/mntopts="/&uid=pi,gid=pi,/' /usr/local/bin/simple-usb-automount | sudo tee /usr/local/bin/simple-usb-automount > /dev/null
+popd
+
+CHROMIUM_CONFIG_FILE="~/.config/chromium/Default/Preferences"
+if [ -f "$CHROMIUM_CONFIG_FILE" ]; then
+    cat "$CHROMIUM_CONFIG_FILE" | jq '.download.prompt_for_download = true | .download.default_directory = "/usb"' | tee "$CHROMIUM_CONFIG_FILE" > /dev/null
+else
+    mkdir -p "$(dirname $CHROMIUM_CONFIG_FILE)"
+    echo '{"download": { "prompt_for_download": true, "default_directory": "/usb" } }' > "$CHROMIUM_CONFIG_FILE"
+fi
 
 echo "== Setup NFC reader =="
 sudo apt update && sudo apt install -y pcscd pcsc-tools

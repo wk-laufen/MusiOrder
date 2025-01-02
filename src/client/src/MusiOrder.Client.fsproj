@@ -16,6 +16,7 @@
         <Compile Include="OrderAdministration.fs" />
         <Compile Include="UserAdministration.fs" />
         <Compile Include="ProductAdministration.fs" />
+        <Compile Include="DataExport.fs" />
         <Compile Include="Administration.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
