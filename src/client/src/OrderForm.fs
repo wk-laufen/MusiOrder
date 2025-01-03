@@ -263,16 +263,19 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         ]
 
     let productGroupView group =
-        Bulma.box [
-            Html.h3 [
-                prop.className "text-4xl font-semibold my-4"
-                prop.text group.Name
-            ]
-            match group.Products with
-            | [] -> View.infoNotification "Keine Artikel vorhanden"
-            | products -> Html.div [
-                prop.className "flex flex-col gap-2"
-                prop.children (List.map productView products)
+        Html.div [
+            prop.className "p-4 shadow-lg rounded-lg"
+            prop.children [
+                Html.h3 [
+                    prop.className "text-4xl font-semibold my-4"
+                    prop.text group.Name
+                ]
+                match group.Products with
+                | [] -> View.infoNotification "Keine Artikel vorhanden"
+                | products -> Html.div [
+                    prop.className "flex flex-col gap-2"
+                    prop.children (List.map productView products)
+                ]
             ]
         ]
 
@@ -440,10 +443,13 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             Bulma.section [
                 prop.className "main-content"
                 prop.children [
-                    Bulma.container [
-                        match productGroups with
-                        | [] -> View.infoNotification "Keine Artikel vorhanden"
-                        | productGroups -> yield! List.map productGroupView productGroups
+                    Html.div [
+                        prop.className "container flex flex-col gap-2"
+                        prop.children [
+                            match productGroups with
+                            | [] -> View.infoNotification "Keine Artikel vorhanden"
+                            | productGroups -> yield! List.map productGroupView productGroups
+                        ]
                     ]
                 ]
             ]
