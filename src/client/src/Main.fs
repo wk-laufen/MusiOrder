@@ -51,11 +51,17 @@ let nav bgColor (title: string) =
     ]
 
 let adminPageButton =
-    Bulma.button.a [
+    Html.a [
+        prop.className "btn"
         prop.href (Router.format("administration"))
         prop.children [
-            Bulma.icon [ Fa.i [ Fa.Solid.Cogs ] [] ]
-            Html.span [ prop.text "Administration" ]
+            Html.span [
+                prop.className "inline-flex items-center gap-2"
+                prop.children [
+                    Fa.i [ Fa.Solid.Cogs ] []
+                    Html.span [ prop.text "Administration" ]
+                ]
+            ]
         ]
     ]
 

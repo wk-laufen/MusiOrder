@@ -1,3 +1,40 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.btn {
+  @apply inline-block text-center cursor-pointer bg-transparent font-semibold py-2 px-4 border rounded-lg;
+}
+.btn:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+.btn:hover:not(:disabled) {
+  @apply shadow;
+}
+.btn-green:not(.btn-solid) {
+  @apply text-musi-green border-musi-green;
+}
+.btn-green.btn-solid {
+  @apply text-white bg-musi-green;
+}
+.btn-green:hover {
+  @apply shadow-musi-green;
+}
+.btn-blue:not(.btn-solid) {
+  @apply text-musi-blue border-musi-blue;
+}
+.btn-blue.btn-solid {
+  @apply text-white bg-musi-blue;
+}
+.btn-blue:hover {
+  @apply shadow-musi-blue;
+}
+.btn-red:not(.btn-solid) {
+  @apply text-musi-red border-musi-red;
+}
+.btn-red.btn-solid {
+  @apply text-white bg-musi-red;
+}
+.btn-red:hover {
+  @apply shadow-musi-red;
+}

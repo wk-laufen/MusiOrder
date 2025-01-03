@@ -155,12 +155,17 @@ let OrderSummary () =
             ] []
 
     React.fragment [
-        Bulma.button.button [
-            color.isInfo
+        Html.button [
+            prop.className "btn btn-solid btn-blue text-2xl py-4"
             prop.onClick (fun _ -> dispatch Show)
             prop.children [
-                Bulma.icon [ Fa.i [ Fa.Solid.FileAlt ] [] ]
-                Html.span [ prop.text "Meine Bestellungen" ]
+                Html.span [
+                    prop.className "inline-flex gap-2 items-center"
+                    prop.children [
+                        Fa.i [ Fa.Solid.FileAlt ] []
+                        Html.span [ prop.text "Meine Bestellungen" ]
+                    ]
+                ]
             ]
         ]
         authForm

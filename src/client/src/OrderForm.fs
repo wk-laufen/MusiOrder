@@ -289,32 +289,45 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             | products -> yield! List.map productView products
         ]
 
-    let userButtons = Bulma.buttons [
-        Bulma.button.button [
-            color.isDanger
-            match state.Order with
-            | Drafting order ->
-                prop.disabled (Map.isEmpty order)
-                prop.onClick (fun _ -> dispatch ResetOrder)
-            | _ -> ()
-            prop.children [
-                Bulma.icon [ Fa.i [ Fa.Solid.UndoAlt ] [] ]
-                Html.span [ prop.text "Zurücksetzen" ]
+    let userButtons = Html.div [
+        prop.className "flex gap-2"
+        prop.children [
+            Html.button [
+                prop.className "btn btn-solid btn-red text-2xl py-4"
+                match state.Order with
+                | Drafting order ->
+                    prop.disabled (Map.isEmpty order)
+                    prop.onClick (fun _ -> dispatch ResetOrder)
+                | _ -> ()
+                prop.children [
+                    Html.span [
+                        prop.className "inline-flex gap-2 items-center"
+                        prop.children [
+                            Fa.i [ Fa.Solid.UndoAlt ] []
+                            Html.span [ prop.text "Zurücksetzen" ]
+                        ]
+                    ]
+                ]
             ]
-        ]
-        Bulma.button.button [
-            color.isSuccess
-            match state.Order with
-            | Drafting order ->
-                prop.disabled (Map.isEmpty order)
-                prop.onClick (fun _ -> dispatch (SendOrder (None, None)))
-            | _ -> ()
-            prop.children [
-                Bulma.icon [ Fa.i [ Fa.Solid.EuroSign ] [] ]
-                Html.span [ prop.text "Bestellen" ]
+            Html.button [
+                prop.className "btn btn-solid btn-green text-2xl py-4"
+                match state.Order with
+                | Drafting order ->
+                    prop.disabled (Map.isEmpty order)
+                    prop.onClick (fun _ -> dispatch (SendOrder (None, None)))
+                | _ -> ()
+                prop.children [
+                    Html.span [
+                        prop.className "inline-flex gap-2 items-center"
+                        prop.children [
+                            Fa.i [ Fa.Solid.EuroSign ] []
+                            Html.span [ prop.text "Bestellen" ]
+                        ]
+                    ]
+                ]
             ]
+            yield! userButtons
         ]
-        yield! userButtons
     ]
 
     let errorView =
