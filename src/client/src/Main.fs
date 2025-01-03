@@ -12,6 +12,7 @@ open global.JS
 open MusiOrder.Models
 
 importAll "../styles/main.scss"
+importAll "../styles/main.css"
 
 type Model = {
     CurrentUrl: string list
