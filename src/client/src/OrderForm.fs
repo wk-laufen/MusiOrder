@@ -206,74 +206,55 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             | SendError (order, _) -> Some order
             | Sent _ -> None
         let amount = order |> Option.bind (Map.tryFind product.Id)
-        Bulma.level [
-            prop.className "product"
+        Html.div [
+            prop.className "flex justify-between gap-2"
             prop.children [
-                Bulma.levelLeft [
-                    prop.style [
-                        style.flexShrink 1
-                    ]
+                Html.div [
+                    prop.className "shrink flex items-center"
                     prop.children [
-                        Bulma.levelItem [
-                            prop.className "product-name"
-                            prop.style [
-                                style.flexShrink 1
-                            ]
-                            prop.children [
-                                Bulma.title.p [
-                                    title.is5
-                                    prop.text product.Name
-                                ]
-                            ]
+                        Html.span [
+                            prop.className "text-3xl"
+                            prop.text product.Name
                         ]
                     ]
                 ]
-                Bulma.levelRight [
+                Html.div [
+                    prop.className "flex items-center gap-2"
                     prop.children [
-                        Bulma.levelItem [
-                            match amount with
-                            | Some amount ->
-                                Bulma.title.p [
-                                    title.is5
-                                    color.hasTextSuccess
-                                    prop.textf "%.2f€" (decimal amount * product.Price)
-                                ]
-                            | None ->
-                                Bulma.title.p [
-                                    title.is5
-                                    prop.textf "%.2f€" (decimal product.Price)
-                                ]
+                        Html.span [
+                            prop.classes [
+                                "text-2xl"
+                                if Option.isSome amount then "text-musi-green font-semibold"
+                            ]
+                            let price =
+                                match amount with
+                                | Some amount -> decimal amount * product.Price
+                                | None -> product.Price 
+                            prop.text $"%.2f{price}€"
                         ]
 
-                        Bulma.levelItem [
-                            Bulma.button.button [
-                                color.isDanger
-                                prop.disabled (Option.defaultValue 0 amount <= 0)
-                                prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, -1)))
-                                prop.children [
-                                    Bulma.icon [
-                                        Fa.i [ Fa.Solid.Minus; Fa.Size Fa.Fa2x ] []
-                                    ]
-                                ]
+                        Html.button [
+                            prop.className "btn btn-solid btn-red text-3xl"
+                            prop.disabled (Option.defaultValue 0 amount <= 0)
+                            prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, -1)))
+                            prop.children [
+                                Fa.i [ Fa.Solid.Minus ] []
                             ]
                         ]
 
-                        Bulma.levelItem [
-                            Bulma.title.p [
-                                title.is5
-                                prop.text (amount |> Option.map string |> Option.defaultValue "")
+                        match amount with
+                        | Some amount ->
+                            Html.span [
+                                prop.className "text-2xl"
+                                prop.text $"%d{amount}"
                             ]
-                        ]
+                        | None -> ()
 
-                        Bulma.levelItem [
-                            Bulma.button.button [
-                                color.isSuccess
-                                prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, 1)))
-                                prop.children [
-                                    Bulma.icon [
-                                        Fa.i [ Fa.Solid.Plus; Fa.Size Fa.Fa2x ] []
-                                    ]
-                                ]
+                        Html.button [
+                            prop.className "btn btn-solid btn-green text-3xl"
+                            prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, 1)))
+                            prop.children [
+                                Fa.i [ Fa.Solid.Plus ] []
                             ]
                         ]
                     ]
@@ -283,10 +264,16 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
 
     let productGroupView group =
         Bulma.box [
-            Bulma.title.h3 [ prop.text group.Name ]
+            Html.h3 [
+                prop.className "text-4xl font-semibold my-4"
+                prop.text group.Name
+            ]
             match group.Products with
             | [] -> View.infoNotification "Keine Artikel vorhanden"
-            | products -> yield! List.map productView products
+            | products -> Html.div [
+                prop.className "flex flex-col gap-2"
+                prop.children (List.map productView products)
+            ]
         ]
 
     let userButtons = Html.div [
