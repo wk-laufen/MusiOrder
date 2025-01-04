@@ -3,8 +3,6 @@ module View
 open Fable.Core.JsInterop
 open Fable.FontAwesome
 open Feliz
-open Feliz.Bulma
-open Feliz.Bulma.Operators
 open global.JS
 
 let retryButton onClick =
@@ -44,9 +42,7 @@ let infoNotification (message: string) (elements: ReactElement list) =
 
 let loadIconBig =
     Html.div [
-        text.hasTextCentered
-        ++ color.hasTextPrimary
-        ++ spacing.py2
+        prop.className "text-center text-musi-gold py-2"
         prop.children [
             Fa.i [ Fa.Solid.Spinner; Fa.Pulse; Fa.Size Fa.Fa8x ] []
         ]
@@ -54,24 +50,34 @@ let loadIconBig =
 
 let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement list) =
     ReactDOM.createPortal (
-        Bulma.modal [
-            helpers.isActive
+        Html.div [
+            prop.className "fixed inset-0 grid h-screen w-screen place-items-center bg-slate-800 bg-opacity-60 backdrop-blur-sm animate-fadeIn"
+            prop.onClick (ignore >> onHide)
             prop.children [
-                Bulma.modalBackground [
-                    prop.onClick (ignore >> onHide)
-                ]
-                Bulma.modalCard [
-                    Bulma.modalCardHead [
-                        Bulma.modalCardTitle [
+                Html.div [
+                    prop.className "w-[640px] flex flex-col"
+                    prop.onClick (fun e -> e.stopPropagation())
+                    prop.children [
+                        Html.div [
+                            prop.className "grow-0 bg-slate-200 rounded-t-lg px-8 py-4 text-2xl"
                             prop.text title
                         ]
-                        Html.a [
-                            prop.className "delete"
-                            prop.onClick (ignore >> onHide)
+                        Html.div [
+                            prop.className "grow-1 p-8 bg-white"
+                            prop.children body
+                        ]
+                        Html.div [
+                            prop.className "grow-0 flex justify-end gap-2 bg-slate-200 text-white rounded-b-lg px-4 py-2"
+                            prop.children [
+                                yield! footer
+                                Html.button [
+                                    prop.className "btn btn-white"
+                                    prop.onClick (ignore >> onHide)
+                                    prop.text "Schließen"
+                                ]
+                            ]
                         ]
                     ]
-                    Bulma.modalCardBody body
-                    Bulma.modalCardFoot footer
                 ]
             ]
         ],
@@ -79,15 +85,12 @@ let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement
     )
 
 let authForm =
-    Bulma.container [
-        text.hasTextCentered
-        ++ color.hasTextPrimary
-        ++ spacing.px2
+    Html.div [
+        prop.className "flex flex-col gap-2 items-center text-musi-gold"
         prop.children [
             Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
-            Bulma.title.p [
-                color.hasTextPrimary
-                spacing.mt4
+            Html.span [
+                prop.className "text-center text-3xl"
                 prop.text "Authentifiziere dich mit deinem Musischlüssel"
             ]
         ]
@@ -103,11 +106,6 @@ let authError error onRetry =
 
 let modalAuthError title error onRetry onHide =
     modal title onHide [ authError error onRetry ] []
-
-let bulmaBalanceColor balance =
-    if balance >= 5.m then color.isSuccess
-    elif balance >= 0.m then color.isWarning
-    else color.isDanger
 
 let balanceColor balance =
     if balance >= 5.m then "text-musi-green"

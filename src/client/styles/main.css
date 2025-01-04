@@ -13,13 +13,19 @@ a:hover {
   @apply text-inherit;  /* because of Bulma */
 }
 .btn {
-  @apply inline-block text-center cursor-pointer bg-transparent font-semibold py-2 px-4 border rounded-lg;
+  @apply inline-block text-center cursor-pointer font-semibold py-2 px-4 border rounded-lg;
 }
 .btn:disabled {
   @apply opacity-50 cursor-not-allowed;
 }
 .btn:hover:not(:disabled) {
   @apply shadow;
+}
+.btn-white {
+  @apply bg-white text-black;
+}
+.btn-white:hover {
+  @apply shadow-white;
 }
 .btn-green:not(.btn-solid) {
   @apply text-musi-green border-musi-green;
