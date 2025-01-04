@@ -335,26 +335,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | LoadUsersError _ -> errorView
         | LoadedUsers (_, authKey, users) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
-                Html.div [
-                    prop.className "flex flex-wrap gap-2"
-                    prop.children [
-                        for user in users do
-                            Html.div [
-                                prop.className "flex flex-col grow shadow rounded p-2 cursor-pointer"
-                                prop.onClick (fun _ -> dispatch (SendOrder (authKey, Some user.Id)))
-                                prop.children [
-                                    Html.span [
-                                        prop.className "text-center"
-                                        prop.text $"%s{user.LastName.ToUpper()} %s{user.FirstName}"
-                                    ]
-                                    Html.span [
-                                        prop.className $"text-center text-sm %s{View.balanceColor user.Balance}"
-                                        prop.text $"%.2f{user.Balance}€"
-                                    ]
-                                ]
-                            ]
-                    ]
-                ]
+                View.Order.userCards users (fun user -> dispatch (SendOrder (authKey, Some user.Id)))
             ] []
         | Sending _ -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
         | SendError _ -> errorView

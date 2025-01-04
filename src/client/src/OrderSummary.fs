@@ -90,41 +90,7 @@ let OrderSummary () =
         | LoadingOrderSummary _ -> View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [ View.loadIconBig ] []
         | LoadedUsers (authKey, users) ->
             View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [
-                Bulma.table [
-                    table.isFullWidth
-                    prop.children [
-                        Html.thead [
-                            Html.tr [
-                                Html.th [ prop.text "Nachname" ]
-                                Html.th [ prop.text "Vorname" ]
-                                Html.th [ prop.text "Aktuelles Guthaben" ]
-                                Html.th []
-                            ]
-                        ]
-                        Html.tbody [
-                            for user in users ->
-                                Html.tr [
-                                    prop.onClick (fun _ -> dispatch (LoadOrderSummary (authKey, Some user.Id)))
-
-                                    prop.children [
-                                        Html.td [
-                                            text.hasTextLeft
-                                            ++ text.isUppercase
-                                            prop.text user.LastName
-                                        ]
-                                        Html.td [
-                                            text.hasTextLeft
-                                            prop.text user.FirstName
-                                        ]
-                                        Html.td [
-                                            View.bulmaBalanceColor user.Balance
-                                            prop.textf "%.2f€" user.Balance
-                                        ]
-                                    ]
-                                ]
-                        ]
-                    ]
-                ]
+                View.Order.userCards users (fun user -> dispatch (LoadOrderSummary (authKey, Some user.Id)))
             ] []
         | LoadUsersError _
         | LoadOrderSummaryError _ ->
