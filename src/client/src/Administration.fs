@@ -129,7 +129,7 @@ let Administration activeTab =
             ]
         | AuthKeyProvided (Ok authKey) ->
             Bulma.section [
-                prop.className "main-content"
+                prop.className "overflow-y-auto grow p-8"
                 prop.children [
                     Bulma.tabs [
                         Html.ul [
