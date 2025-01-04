@@ -8,18 +8,10 @@ $fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
 @import "~@fortawesome/fontawesome-free/scss/solid";
 @import "~@fortawesome/fontawesome-free/scss/brands";
 
-html {
-    overflow-y: auto;
-}
 table td {
     vertical-align: middle !important;
 }
 input[type="checkbox"],
 input[type="radio"] {
     margin-right: 0.5em;
-}
-.main {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
 }
