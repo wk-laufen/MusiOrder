@@ -7,51 +7,38 @@ open Feliz.Bulma
 open Feliz.Bulma.Operators
 open global.JS
 
-let retryButton onRetry =
-    Bulma.button.button [
-        color.isSuccess
-        prop.onClick (ignore >> onRetry)
+let retryButton onClick =
+    Html.button [
+        prop.className "!flex items-center gap-2 btn btn-solid btn-green"
+        prop.onClick (ignore >> onClick)
         prop.children [
-            Bulma.icon [ Fa.i [ Fa.Solid.SyncAlt ] [] ]
+            Fa.i [ Fa.Solid.SyncAlt ] []
             Html.span [ prop.text "Wiederholen" ]
         ]
     ]
 
 let errorNotificationWithRetry (message: string) onRetry =
-    Bulma.notification [
-        color.isDanger
+    Html.div [
+        prop.className "flex items-center gap-4 bg-musi-red rounded text-white px-8 py-4"
         prop.children [
-            Bulma.level [
-                Bulma.levelLeft [
-                    Bulma.levelItem [
-                        Bulma.icon [
-                            Fa.i [ Fa.Solid.ExclamationTriangle; Fa.Size Fa.Fa2x ] []
-                        ]
-                    ]
-                    Bulma.levelItem [
-                        Bulma.title.p [
-                            title.is4
-                            prop.text message
-                        ]
-                    ]
-                    Bulma.levelItem [
-                        retryButton onRetry
-                    ]
-                ]
+            Fa.i [ Fa.Solid.ExclamationTriangle; Fa.Size Fa.Fa2x ] []
+            Html.span [
+                prop.className "text-2xl"
+                prop.text message
             ]
+            retryButton onRetry
         ]
     ]
 
-let infoNotification (message: string) =
-    Bulma.notification [
-        color.isInfo
+let infoNotification (message: string) (elements: ReactElement list) =
+    Html.div [
+        prop.className "flex items-center gap-4 bg-musi-blue rounded px-8 py-4 text-white"
         prop.children [
-            Bulma.levelItem [
-                Bulma.title.p [
-                    title.is4
-                    prop.text message
-                ]
+            Html.span [
+                prop.className "text-2xl"
+                prop.text message
             ]
+            yield! elements
         ]
     ]
 

@@ -91,7 +91,7 @@ let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement li
     | LoadError (authKey, UnexpectedError _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
     | Loaded (_, { Orders = [] }) ->
-        View.infoNotification "Keine Bestellungen vorhanden"
+        View.infoNotification "Keine Bestellungen vorhanden." []
     | Loaded (_, state) ->
         Bulma.container [
             Bulma.table [

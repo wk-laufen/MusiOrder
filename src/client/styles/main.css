@@ -3,12 +3,15 @@
 @tailwind utilities;
 
 html {
-  @apply overflow-auto
+  @apply overflow-auto /* because of Bulma */
 }
 html, body, #app {
   @apply h-full;
 }
 
+a:hover {
+  @apply text-inherit;  /* because of Bulma */
+}
 .btn {
   @apply inline-block text-center cursor-pointer bg-transparent font-semibold py-2 px-4 border rounded-lg;
 }

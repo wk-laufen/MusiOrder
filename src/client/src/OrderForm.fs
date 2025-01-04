@@ -253,22 +253,22 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             ]
         ]
 
-    let productGroupView group =
-        Html.div [
-            prop.className "p-4 shadow-lg rounded-lg"
-            prop.children [
-                Html.h3 [
-                    prop.className "text-4xl font-semibold my-4"
-                    prop.text group.Name
-                ]
-                match group.Products with
-                | [] -> View.infoNotification "Keine Artikel vorhanden"
-                | products -> Html.div [
-                    prop.className "flex flex-col gap-2"
-                    prop.children (List.map productView products)
+    let productGroupView (group: ProductGroup) =
+        if List.isEmpty group.Products then Html.none
+        else
+            Html.div [
+                prop.className "p-4 shadow-lg rounded-lg"
+                prop.children [
+                    Html.h3 [
+                        prop.className "text-4xl font-semibold my-4"
+                        prop.text group.Name
+                    ]
+                    Html.div [
+                        prop.className "flex flex-col gap-2"
+                        prop.children (List.map productView group.Products)
+                    ]
                 ]
             ]
-        ]
 
     let userButtons = [
         yield! userButtons
@@ -397,7 +397,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | Deferred.Resolved [] ->
             Html.div [
                 prop.className "p-8"
-                prop.children [ View.errorNotificationWithRetry "No products available." (fun () -> dispatch LoadProducts) ]
+                prop.children [ View.infoNotification "Keine Artikel vorhanden." adminButtons ]
             ]
         | Deferred.Resolved productGroups ->
             Html.div [
@@ -405,11 +405,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                 prop.children [
                     Html.div [
                         prop.className "container flex flex-col gap-2"
-                        prop.children [
-                            match productGroups with
-                            | [] -> View.infoNotification "Keine Artikel vorhanden"
-                            | productGroups -> yield! List.map productGroupView productGroups
-                        ]
+                        prop.children (productGroups |> List.map productGroupView)
                     ]
                 ]
             ]

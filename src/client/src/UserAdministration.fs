@@ -195,7 +195,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
     | LoadError (authKey, UnexpectedError _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
     | Loaded (_, { Users = [] }) ->
-        View.infoNotification "Keine Benutzer vorhanden"
+        View.infoNotification "Keine Benutzer vorhanden." []
     | Loaded (_, state) ->
         React.fragment [
             setMenuItems [

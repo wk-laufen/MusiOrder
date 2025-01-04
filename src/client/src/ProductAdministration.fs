@@ -265,7 +265,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
     | LoadError (authKey, UnexpectedError _) ->
         View.errorNotificationWithRetry "Fehler beim Laden der Daten." (fun () -> dispatch (Load authKey))
     | Loaded (_, { Products = [] }) ->
-        View.infoNotification "Keine Artikel vorhanden"
+        View.infoNotification "Keine Artikel vorhanden." []
     | Loaded (_, state) ->
         React.fragment [
             setMenuItems [
