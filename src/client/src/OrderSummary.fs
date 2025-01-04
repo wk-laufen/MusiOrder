@@ -5,8 +5,6 @@ open Api.Order
 open Elmish
 open Fable.FontAwesome
 open Feliz
-open Feliz.Bulma
-open Feliz.Bulma.Operators
 open Feliz.UseElmish
 open MusiOrder.Models
 open MusiOrder.Models.Order
@@ -95,14 +93,12 @@ let OrderSummary () =
         | LoadUsersError _
         | LoadOrderSummaryError _ ->
             View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [
-                Bulma.container [
-                    text.hasTextCentered
-                    ++ color.hasTextDanger
-                    ++ spacing.px2
+                Html.div [
+                    prop.className "container flex flex-col items-center gap-2 text-musi-red"
                     prop.children [
                         Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
-                        Bulma.title.p [
-                            color.hasTextDanger
+                        Html.span [
+                            prop.className "text-center text-3xl"
                             prop.children [
                                 Html.text "Fehler beim Anzeigen der Bestellungen."
                                 Html.br []
