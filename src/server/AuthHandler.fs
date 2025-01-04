@@ -51,6 +51,7 @@ type AuthenticatedUsersAuthHandler() =
         member _.GetOrderSummary authUser summaryUser =
             match authUser, summaryUser with
             | Some authUser, Some user when User.isAdmin authUser -> GetOrderSummaryAllowed (OrderSummaryUser.fromUser user)
+            | Some authUser, None when User.isAdmin authUser -> GetOrderSummaryNoUser
             | Some authUser, None -> GetOrderSummaryAllowed (OrderSummaryUser.fromUser authUser)
             | _ -> GetOrderSummaryNotAuthorized
 
