@@ -37,11 +37,15 @@ let nav bgColor (title: string) =
                 ]
                 prop.children [
                     Bulma.navbarItem.div [
-                        Bulma.title.h1 [
-                            Html.span [ prop.text title ]
-                            Html.span [
-                                prop.onClick (fun _ -> window.location.href <- "/")
-                                prop.text "🍻"
+                        Html.h1 [
+                            prop.className "text-5xl"
+                            prop.children [
+                                Html.span [ prop.text title ]
+                                Html.a [
+                                    prop.className "cursor-pointer"
+                                    prop.href "/"
+                                    prop.text "🍻"
+                                ]
                             ]
                         ]
                     ]

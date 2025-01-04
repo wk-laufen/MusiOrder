@@ -153,7 +153,7 @@ let OrderSummary () =
 
     React.fragment [
         Html.button [
-            prop.className "btn btn-solid btn-blue text-2xl py-4"
+            prop.className "btn btn-solid btn-blue text-xl py-4"
             prop.onClick (fun _ -> dispatch Show)
             prop.children [
                 Html.span [

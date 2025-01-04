@@ -271,8 +271,9 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         ]
 
     let userButtons = [
+        yield! userButtons
         Html.button [
-            prop.className "btn btn-solid btn-red text-2xl py-4"
+            prop.className "btn btn-solid btn-red text-xl py-4"
             match state.Order with
             | Drafting order ->
                 prop.disabled (Map.isEmpty order)
@@ -289,7 +290,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             ]
         ]
         Html.button [
-            prop.className "btn btn-solid btn-green text-2xl py-4"
+            prop.className "btn btn-solid btn-green text-xl py-4"
             match state.Order with
             | Drafting order ->
                 prop.disabled (Map.isEmpty order)
@@ -305,7 +306,6 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                 ]
             ]
         ]
-        yield! userButtons
     ]
 
     let errorView =
@@ -433,18 +433,23 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                 ]
             ]
             Html.div [
-                prop.className "grow-0 container p-8"
+                prop.className "grow-0 p-8"
                 prop.children [
                     Html.div [
-                        prop.className "flex justify-between"
+                        prop.className "container"
                         prop.children [
                             Html.div [
-                                prop.className "flex items-end gap-2"
-                                prop.children userButtons
-                            ]
-                            Html.div [
-                                prop.className "flex items-end gap-2"
-                                prop.children adminButtons
+                                prop.className "flex justify-between"
+                                prop.children [
+                                    Html.div [
+                                        prop.className "grid grid-cols-3 items-end gap-2"
+                                        prop.children userButtons
+                                    ]
+                                    Html.div [
+                                        prop.className "flex items-end gap-2"
+                                        prop.children adminButtons
+                                    ]
+                                ]
                             ]
                         ]
                     ]
