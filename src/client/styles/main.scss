@@ -23,11 +23,3 @@ input[type="radio"] {
     flex-direction: column;
     height: 100vh;
 }
-.main .navigation,
-.main .controls {
-    flex: 0 0 auto;
-}
-.main .main-content {
-    overflow-y: auto;
-    flex-grow: 1;
-}

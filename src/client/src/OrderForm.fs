@@ -5,8 +5,6 @@ open Api.Order
 open Elmish
 open Fable.FontAwesome
 open Feliz
-open Feliz.Bulma
-open Feliz.Bulma.Operators
 open Feliz.UseDeferred
 open Feliz.UseElmish
 open MusiOrder.Models
@@ -207,56 +205,49 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             | Sent _ -> None
         let amount = order |> Option.bind (Map.tryFind product.Id)
         Html.div [
-            prop.className "flex justify-between gap-2"
+            prop.className "flex items-center gap-2"
             prop.children [
-                Html.div [
-                    prop.className "shrink flex items-center"
+                Html.span [
+                    prop.className "text-3xl"
+                    prop.text product.Name
+                ]
+                Html.hr [
+                    prop.className "grow h-px self-center bg-gray-300"
+                ]
+                Html.span [
+                    prop.classes [
+                        "text-2xl"
+                        if Option.isSome amount then "text-musi-green font-semibold"
+                    ]
+                    let price =
+                        match amount with
+                        | Some amount -> decimal amount * product.Price
+                        | None -> product.Price 
+                    prop.text $"%.2f{price}€"
+                ]
+
+                Html.button [
+                    prop.className "btn btn-solid btn-red text-3xl"
+                    prop.disabled (Option.defaultValue 0 amount <= 0)
+                    prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, -1)))
                     prop.children [
-                        Html.span [
-                            prop.className "text-3xl"
-                            prop.text product.Name
-                        ]
+                        Fa.i [ Fa.Solid.Minus ] []
                     ]
                 ]
-                Html.div [
-                    prop.className "flex items-center gap-2"
+
+                match amount with
+                | Some amount ->
+                    Html.span [
+                        prop.className "text-2xl"
+                        prop.text $"%d{amount}"
+                    ]
+                | None -> ()
+
+                Html.button [
+                    prop.className "btn btn-solid btn-green text-3xl"
+                    prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, 1)))
                     prop.children [
-                        Html.span [
-                            prop.classes [
-                                "text-2xl"
-                                if Option.isSome amount then "text-musi-green font-semibold"
-                            ]
-                            let price =
-                                match amount with
-                                | Some amount -> decimal amount * product.Price
-                                | None -> product.Price 
-                            prop.text $"%.2f{price}€"
-                        ]
-
-                        Html.button [
-                            prop.className "btn btn-solid btn-red text-3xl"
-                            prop.disabled (Option.defaultValue 0 amount <= 0)
-                            prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, -1)))
-                            prop.children [
-                                Fa.i [ Fa.Solid.Minus ] []
-                            ]
-                        ]
-
-                        match amount with
-                        | Some amount ->
-                            Html.span [
-                                prop.className "text-2xl"
-                                prop.text $"%d{amount}"
-                            ]
-                        | None -> ()
-
-                        Html.button [
-                            prop.className "btn btn-solid btn-green text-3xl"
-                            prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, 1)))
-                            prop.children [
-                                Fa.i [ Fa.Solid.Plus ] []
-                            ]
-                        ]
+                        Fa.i [ Fa.Solid.Plus ] []
                     ]
                 ]
             ]
@@ -279,57 +270,52 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             ]
         ]
 
-    let userButtons = Html.div [
-        prop.className "flex gap-2"
-        prop.children [
-            Html.button [
-                prop.className "btn btn-solid btn-red text-2xl py-4"
-                match state.Order with
-                | Drafting order ->
-                    prop.disabled (Map.isEmpty order)
-                    prop.onClick (fun _ -> dispatch ResetOrder)
-                | _ -> ()
-                prop.children [
-                    Html.span [
-                        prop.className "inline-flex gap-2 items-center"
-                        prop.children [
-                            Fa.i [ Fa.Solid.UndoAlt ] []
-                            Html.span [ prop.text "Zurücksetzen" ]
-                        ]
+    let userButtons = [
+        Html.button [
+            prop.className "btn btn-solid btn-red text-2xl py-4"
+            match state.Order with
+            | Drafting order ->
+                prop.disabled (Map.isEmpty order)
+                prop.onClick (fun _ -> dispatch ResetOrder)
+            | _ -> ()
+            prop.children [
+                Html.span [
+                    prop.className "inline-flex gap-2 items-center"
+                    prop.children [
+                        Fa.i [ Fa.Solid.UndoAlt ] []
+                        Html.span [ prop.text "Zurücksetzen" ]
                     ]
                 ]
             ]
-            Html.button [
-                prop.className "btn btn-solid btn-green text-2xl py-4"
-                match state.Order with
-                | Drafting order ->
-                    prop.disabled (Map.isEmpty order)
-                    prop.onClick (fun _ -> dispatch (SendOrder (None, None)))
-                | _ -> ()
-                prop.children [
-                    Html.span [
-                        prop.className "inline-flex gap-2 items-center"
-                        prop.children [
-                            Fa.i [ Fa.Solid.EuroSign ] []
-                            Html.span [ prop.text "Bestellen" ]
-                        ]
-                    ]
-                ]
-            ]
-            yield! userButtons
         ]
+        Html.button [
+            prop.className "btn btn-solid btn-green text-2xl py-4"
+            match state.Order with
+            | Drafting order ->
+                prop.disabled (Map.isEmpty order)
+                prop.onClick (fun _ -> dispatch (SendOrder (None, None)))
+            | _ -> ()
+            prop.children [
+                Html.span [
+                    prop.className "inline-flex gap-2 items-center"
+                    prop.children [
+                        Fa.i [ Fa.Solid.EuroSign ] []
+                        Html.span [ prop.text "Bestellen" ]
+                    ]
+                ]
+            ]
+        ]
+        yield! userButtons
     ]
 
     let errorView =
         View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
-            Bulma.container [
-                text.hasTextCentered
-                ++ color.hasTextDanger
-                ++ spacing.px2
+            Html.div [
+                prop.className "flex flex-col items-center gap-2 text-musi-red"
                 prop.children [
                     Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
-                    Bulma.title.p [
-                        color.hasTextDanger
+                    Html.span [
+                        prop.className "text-center text-3xl"
                         prop.children [
                             Html.text "Fehler beim Bestellen."
                             Html.br []
@@ -349,39 +335,24 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | LoadUsersError _ -> errorView
         | LoadedUsers (_, authKey, users) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
-                Bulma.table [
-                    table.isFullWidth
+                Html.div [
+                    prop.className "flex flex-wrap gap-2"
                     prop.children [
-                        Html.thead [
-                            Html.tr [
-                                Html.th [ prop.text "Nachname" ]
-                                Html.th [ prop.text "Vorname" ]
-                                Html.th [ prop.text "Aktuelles Guthaben" ]
-                                Html.th []
-                            ]
-                        ]
-                        Html.tbody [
-                            for user in users ->
-                                Html.tr [
-                                    prop.onClick (fun _ -> dispatch (SendOrder (authKey, Some user.Id)))
-
-                                    prop.children [
-                                        Html.td [
-                                            text.hasTextLeft
-                                            ++ text.isUppercase
-                                            prop.text user.LastName
-                                        ]
-                                        Html.td [
-                                            text.hasTextLeft
-                                            prop.text user.FirstName
-                                        ]
-                                        Html.td [
-                                            View.balanceColor user.Balance
-                                            prop.textf "%.2f€" user.Balance
-                                        ]
+                        for user in users do
+                            Html.div [
+                                prop.className "flex flex-col grow shadow rounded p-2 cursor-pointer"
+                                prop.onClick (fun _ -> dispatch (SendOrder (authKey, Some user.Id)))
+                                prop.children [
+                                    Html.span [
+                                        prop.className "text-center"
+                                        prop.text $"%s{user.LastName.ToUpper()} %s{user.FirstName}"
+                                    ]
+                                    Html.span [
+                                        prop.className $"text-center text-sm %s{View.balanceColor user.Balance}"
+                                        prop.text $"%.2f{user.Balance}€"
                                     ]
                                 ]
-                        ]
+                            ]
                     ]
                 ]
             ] []
@@ -389,42 +360,41 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | SendError _ -> errorView
         | Sent (_, _, loadSummaryState) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
-                Bulma.container [
-                    text.hasTextCentered
-                    ++ spacing.px2
-                    ++ color.hasTextSuccess
+                Html.div [
+                    prop.className "flex flex-col gap-2"
                     prop.children [
                         Html.div [
-                            Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
-                        ]
-                        Bulma.title.p [
-                            color.hasTextSuccess
+                            prop.className "flex flex-col items-center gap-2 text-musi-green"
                             prop.children [
-                                Html.text "Bestellung erfolgreich gespeichert. Prost Mahlzeit"
-                                match loadSummaryState with
-                                | Deferred.Resolved orderSummary ->
-                                    Html.text ", "
-                                    Html.span [
-                                        color.hasTextPrimary
-                                        prop.text orderSummary.ClientFullName
+                                Html.div [
+                                    Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
+                                ]
+                                Html.span [
+                                    prop.className "text-center text-3xl"
+                                    prop.children [
+                                        Html.text "Bestellung erfolgreich gespeichert."
+                                        Html.br []
+                                        Html.text "Prost Mahlzeit"
+                                        match loadSummaryState with
+                                        | Deferred.Resolved orderSummary ->
+                                            Html.text ", "
+                                            Html.span [
+                                                prop.className "text-musi-green"
+                                                prop.text orderSummary.ClientFullName
+                                            ]
+                                        | _ -> ()
+                                        Html.text "!"
                                     ]
-                                | _ -> ()
-                                Html.text "!"
+                                ]
                             ]
                         ]
-                    ]
-                ]
-                Bulma.container [
-                    spacing.mt2
-                    text.hasTextCentered
-                    prop.children [
                         match loadSummaryState with
                         | Deferred.HasNotStartedYet
                         | Deferred.InProgress -> View.loadIconBig
                         | Deferred.Failed error ->
                             View.errorNotificationWithRetry error.Message (fun () -> dispatch LoadOrderSummary)
                         | Deferred.Resolved orderSummary ->
-                            yield! View.Order.orderSummary orderSummary
+                            View.Order.orderSummary orderSummary
                     ]
                 ]
             ] []
@@ -434,14 +404,23 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | Deferred.HasNotStartedYet ->
             ()
         | Deferred.InProgress ->
-            Bulma.section [ Bulma.progress [ color.isPrimary ] ]
+            Html.div [
+                prop.className "p-8"
+                prop.children [ View.loadIconBig ]
+            ]
         | Deferred.Failed error ->
-            Bulma.section [ View.errorNotificationWithRetry error.Message (fun () -> dispatch LoadProducts) ]
+            Html.div [
+                prop.className "p-8"
+                prop.children [ View.errorNotificationWithRetry error.Message (fun () -> dispatch LoadProducts) ]
+            ]
         | Deferred.Resolved [] ->
-            Bulma.section [ View.errorNotificationWithRetry "No products available." (fun () -> dispatch LoadProducts) ]
+            Html.div [
+                prop.className "p-8"
+                prop.children [ View.errorNotificationWithRetry "No products available." (fun () -> dispatch LoadProducts) ]
+            ]
         | Deferred.Resolved productGroups ->
-            Bulma.section [
-                prop.className "main-content"
+            Html.div [
+                prop.className "overflow-y-auto grow p-8"
                 prop.children [
                     Html.div [
                         prop.className "container flex flex-col gap-2"
@@ -453,20 +432,19 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                     ]
                 ]
             ]
-            Bulma.section [
-                prop.className "controls"
+            Html.div [
+                prop.className "grow-0 container p-8"
                 prop.children [
-                    Bulma.container [
-                        Bulma.level [
-                            Bulma.levelLeft [
-                                Bulma.levelItem [
-                                    userButtons
-                                ]
+                    Html.div [
+                        prop.className "flex justify-between"
+                        prop.children [
+                            Html.div [
+                                prop.className "flex items-end gap-2"
+                                prop.children userButtons
                             ]
-                            Bulma.levelRight [
-                                Bulma.levelItem [
-                                    Bulma.buttons adminButtons
-                                ]
+                            Html.div [
+                                prop.className "flex items-end gap-2"
+                                prop.children adminButtons
                             ]
                         ]
                     ]

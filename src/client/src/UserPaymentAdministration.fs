@@ -194,7 +194,7 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
                                             prop.text latestOrderTime
                                         ]
                                         Html.td [
-                                            View.balanceColor user.Balance
+                                            View.bulmaBalanceColor user.Balance
                                             prop.textf "%.2f€" user.Balance
                                         ]
                                     ]

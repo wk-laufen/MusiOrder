@@ -117,37 +117,51 @@ let authError error onRetry =
 let modalAuthError title error onRetry onHide =
     modal title onHide [ authError error onRetry ] []
 
-let balanceColor balance =
+let bulmaBalanceColor balance =
     if balance >= 5.m then color.isSuccess
     elif balance >= 0.m then color.isWarning
     else color.isDanger
+
+let balanceColor balance =
+    if balance >= 5.m then "text-musi-green"
+    elif balance >= 0.m then "text-musi-blue"
+    else "text-musi-red"
 
 module Order =
     open MusiOrder.Models.Order
 
     let orderSummary (orderSummary: OrderSummary) =
-        [
-            Html.text "Dein aktuelles Guthaben beträgt: "
-            Bulma.tag [
-                balanceColor orderSummary.Balance
-                control.isLarge
-                prop.textf "%.2f€" orderSummary.Balance
-            ]
-            Html.br []
-            match orderSummary.LatestOrders with
-            | [] -> Html.text "Keine Bestellungen in der letzten Zeit. 😱"
-            | orders ->
-                Html.text "Deine letzten Bestellungen waren:"
-                Html.ul [
-                    for order in orders ->
-                        Html.li [
-                            Html.textf "%s: " (moment(order.Timestamp)?fromNow())
-                            Bulma.tag [
-                                color.isInfo
-                                control.isMedium
-                                spacing.mt2
-                                prop.textf "%d x %s" order.Amount order.ProductName
-                            ]
-                        ]
+        Html.div [
+            prop.className "flex flex-col gap-2 text-center"
+            prop.children [
+                Html.span [
+                    Html.text "Dein aktuelles Guthaben beträgt: "
+                    Html.span [
+                        prop.className $"text-lg %s{balanceColor orderSummary.Balance}"
+                        prop.text $"%.2f{orderSummary.Balance}€"
+                    ]
                 ]
+                Html.div [
+                    prop.className "flex flex-col gap-2"
+                    prop.children [
+                        match orderSummary.LatestOrders with
+                        | [] -> Html.text "Keine Bestellungen in der letzten Zeit. 😱"
+                        | orders ->
+                            Html.span [ prop.text "Deine letzten Bestellungen waren:" ]
+                            Html.ul [
+                                prop.className "flex flex-col gap-2"
+                                prop.children [
+                                    for order in orders do
+                                        Html.li [
+                                            Html.textf "%s: " (moment(order.Timestamp)?fromNow())
+                                            Html.span [
+                                                prop.className "inline-block px-2 py-1 bg-musi-blue text-white rounded"
+                                                prop.text $"%d{order.Amount} x %s{order.ProductName}"
+                                            ]
+                                        ]
+                                ]
+                            ]
+                    ]
+                ]
+            ]
         ]

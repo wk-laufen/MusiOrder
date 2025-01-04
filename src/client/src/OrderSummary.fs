@@ -117,7 +117,7 @@ let OrderSummary () =
                                             prop.text user.FirstName
                                         ]
                                         Html.td [
-                                            View.balanceColor user.Balance
+                                            View.bulmaBalanceColor user.Balance
                                             prop.textf "%.2f€" user.Balance
                                         ]
                                     ]
@@ -148,10 +148,7 @@ let OrderSummary () =
             ] []
         | LoadedOrderSummary orderSummary ->
             View.modal (sprintf "Bestellungen von %s" orderSummary.ClientFullName) (fun () -> dispatch Close) [
-                Bulma.container [
-                    text.hasTextCentered
-                    prop.children (View.Order.orderSummary orderSummary)
-                ]
+                View.Order.orderSummary orderSummary
             ] []
 
     React.fragment [
