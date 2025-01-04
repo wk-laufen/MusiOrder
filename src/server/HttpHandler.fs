@@ -67,8 +67,7 @@ module Order =
         | GetUsersAllowed ->
             let! result = getUserInfo ()
             return! Successful.OK result next ctx
-        | GetUsersNotAuthorized when Option.isNone authKey -> return! RequestErrors.BAD_REQUEST LoadUsersError.NotAuthorized next ctx
-        | GetUsersNotAuthorized -> return! RequestErrors.BAD_REQUEST LoadUsersError.InvalidAuthKey next ctx
+        | GetUsersNotAuthorized -> return! RequestErrors.BAD_REQUEST LoadUsersError.NotAuthorized next ctx
     }
 
 module UserPaymentAdministration =
