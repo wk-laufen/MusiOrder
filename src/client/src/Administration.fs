@@ -5,8 +5,6 @@ open Fable.Core.JsInterop
 open Fable.FontAwesome
 open Fable.React
 open Feliz
-open Feliz.Bulma
-open Feliz.Bulma.Operators
 open Feliz.UseElmish
 open Feliz.Router
 open global.JS
