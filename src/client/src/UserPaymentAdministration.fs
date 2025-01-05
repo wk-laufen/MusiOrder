@@ -6,8 +6,6 @@ open Elmish
 open Fable.Core.JsInterop
 open Fable.FontAwesome
 open Feliz
-open Feliz.Bulma
-open Feliz.Bulma.Operators
 open Feliz.UseDeferred
 open Feliz.UseElmish
 open global.JS
@@ -116,7 +114,8 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
                         yield! [ 0.1m; 0.2m; 0.5m; 1.m; 2.m; 5.m; 10.m; 20.m ]
                     ]
                     for amount in amounts do
-                        Bulma.button.button [
+                        Html.button [
+                            prop.className "btn"
                             match state.AddPaymentState with
                             | Deferred.InProgress ->
                                 prop.disabled true
@@ -124,77 +123,73 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
                             prop.textf "%s%.2f€" (if amount >= 0.m then "+" else "") amount
                             prop.onClick (fun _ -> dispatch (AddPayment (selectedUserId, amount)))
                         ]
-                    let icon iconProps faProps =
-                        Bulma.levelItem [
-                            Bulma.icon [
-                                control.isMedium
-                                yield! iconProps
-                                prop.children [
-                                    Fa.i [
-                                        Fa.Size Fa.FaLarge
-                                        yield! faProps
-                                    ] []
-                                ]
-                            ]
-                        ]
                     match state.AddPaymentState with
                     | Deferred.HasNotStartedYet -> ()
-                    | Deferred.InProgress -> icon [ color.hasTextPrimary ] [ Fa.Solid.Spinner; Fa.Pulse ]
-                    | Deferred.Failed e -> icon [ color.hasTextDanger; prop.title e.Message ] [ Fa.Solid.Times ]
-                    | Deferred.Resolved _ -> icon [ color.hasTextSuccess ] [ Fa.Solid.Check ]
+                    | Deferred.InProgress -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Spinner; Fa.Pulse; Fa.CustomClass "text-musi-gold" ] []
+                    | Deferred.Failed e -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Times; Fa.CustomClass "text-musi-red"; Fa.Props [ Fable.React.Props.Title e.Message ] ] []
+                    | Deferred.Resolved _ -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Check; Fa.CustomClass "text-musi-green" ] []
                 ]
             | None -> ()
 
-            Bulma.container [
-                Bulma.table [
-                    table.isFullWidth
-                    prop.children [
-                        Html.thead [
-                            Html.tr [
-                                Html.th [ prop.text "Nachname" ]
-                                Html.th [ prop.text "Vorname" ]
-                                Html.th [ prop.text "Letzte Bestellung" ]
-                                Html.th [ prop.text "Aktuelles Guthaben" ]
-                            ]
-                        ]
-                        Html.tbody [
-                            for user in state.Users ->
-                                let (latestOrderColor, latestOrderTime) =
-                                    user.LatestOrderTimestamp
-                                    |> Option.map (fun v ->
-                                        let m = moment(v)
-                                        let daysSinceLatestOrder = moment(System.DateTimeOffset.Now)?diff(m, "days")
-                                        let color =
-                                            if daysSinceLatestOrder < 10. then Some color.isSuccess
-                                            elif daysSinceLatestOrder < 30. then Some color.isWarning
-                                            else Some color.isDanger
-                                        color, moment(v)?fromNow()
-                                    )
-                                    |> Option.defaultValue (None, "-")
+            Html.div [
+                prop.className "container"
+                prop.children [
+                    Html.table [
+                        prop.className "w-full"
+                        prop.children [
+                            Html.thead [
                                 Html.tr [
-                                    prop.onClick (fun _ -> dispatch (SelectUser user.Id))
+                                    prop.className "border-b-2 border-slate-200 *:px-4 *:py-2"
                                     prop.children [
-                                        Html.td [
-                                            if state.SelectedUser = Some user.Id then tr.isSelected
-                                            prop.style [ style.textTransform.uppercase ]
-                                            prop.text user.LastName
-                                        ]
-                                        Html.td [
-                                            if state.SelectedUser = Some user.Id then tr.isSelected
-                                            prop.text user.FirstName
-                                        ]
-                                        Html.td [
-                                            match latestOrderColor with
-                                            | Some color -> color
-                                            | None -> ()
-                                            prop.text latestOrderTime
-                                        ]
-                                        Html.td [
-                                            prop.className $"%s{View.balanceColor user.Balance}"
-                                            prop.textf "%.2f€" user.Balance
-                                        ]
+                                        Html.th [ prop.text "Nachname" ]
+                                        Html.th [ prop.text "Vorname" ]
+                                        Html.th [ prop.text "Letzte Bestellung" ]
+                                        Html.th [ prop.text "Aktuelles Guthaben" ]
                                     ]
                                 ]
+                            ]
+                            Html.tbody [
+                                for user in state.Users ->
+                                    let (latestOrderColor, latestOrderTime) =
+                                        user.LatestOrderTimestamp
+                                        |> Option.map (fun v ->
+                                            let m = moment(v)
+                                            let daysSinceLatestOrder = moment(System.DateTimeOffset.Now)?diff(m, "days")
+                                            let color =
+                                                if daysSinceLatestOrder < 10. then Some "text-musi-green"
+                                                elif daysSinceLatestOrder < 30. then Some "text-musi-blue"
+                                                else Some "text-musi-red"
+                                            color, moment(v)?fromNow()
+                                        )
+                                        |> Option.defaultValue (None, "-")
+                                    Html.tr [
+                                        prop.classes [
+                                            "border-b border-slate-200 *:px-4 *:py-2"
+                                            if state.SelectedUser = Some user.Id then "bg-slate-200"
+                                            else "hover:bg-slate-100"
+                                        ]
+                                        prop.onClick (fun _ -> dispatch (SelectUser user.Id))
+                                        prop.children [
+                                            Html.td [
+                                                prop.style [ style.textTransform.uppercase ]
+                                                prop.text user.LastName
+                                            ]
+                                            Html.td [
+                                                prop.text user.FirstName
+                                            ]
+                                            Html.td [
+                                                prop.classes [
+                                                    yield! Option.toList latestOrderColor
+                                                ]
+                                                prop.text latestOrderTime
+                                            ]
+                                            Html.td [
+                                                prop.className $"%s{View.balanceColor user.Balance}"
+                                                prop.text $"%.2f{user.Balance}€"
+                                            ]
+                                        ]
+                                    ]
+                            ]
                         ]
                     ]
                 ]
