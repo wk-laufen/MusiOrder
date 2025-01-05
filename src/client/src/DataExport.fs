@@ -5,7 +5,6 @@ open Api.DataExport
 open Elmish
 open Fable.Core.JsInterop
 open Feliz
-open Feliz.Bulma
 open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
@@ -77,16 +76,15 @@ let DataExport authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> Rea
     | NotLoaded -> Html.none
     | Loaded (_, loadedModel) ->
         React.fragment [
-            Bulma.container [
-                text.hasTextCentered
+            Html.div [
+                prop.className "container flex flex-col items-center"
                 prop.children [
-                    Bulma.button.button [
+                    Html.button [
+                        prop.className "btn btn-solid btn-blue"
                         match loadedModel.ExportDatabase with
                         | ExportingDatabase ->
                             prop.disabled true
-                            button.isLoading
                         | _ -> ()
-                        color.isLink
                         prop.text "Datenbank exportieren"
                         prop.onClick (fun _ -> dispatch ExportDatabase)
                     ]
