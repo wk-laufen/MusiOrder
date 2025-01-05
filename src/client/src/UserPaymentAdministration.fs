@@ -139,13 +139,10 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
                         prop.children [
                             Html.thead [
                                 Html.tr [
-                                    prop.className "border-b-2 border-slate-200 *:px-4 *:py-2"
-                                    prop.children [
-                                        Html.th [ prop.text "Nachname" ]
-                                        Html.th [ prop.text "Vorname" ]
-                                        Html.th [ prop.text "Letzte Bestellung" ]
-                                        Html.th [ prop.text "Aktuelles Guthaben" ]
-                                    ]
+                                    Html.th [ prop.text "Nachname" ]
+                                    Html.th [ prop.text "Vorname" ]
+                                    Html.th [ prop.text "Letzte Bestellung" ]
+                                    Html.th [ prop.text "Aktuelles Guthaben" ]
                                 ]
                             ]
                             Html.tbody [
@@ -164,14 +161,12 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
                                         |> Option.defaultValue (None, "-")
                                     Html.tr [
                                         prop.classes [
-                                            "border-b border-slate-200 *:px-4 *:py-2"
-                                            if state.SelectedUser = Some user.Id then "bg-slate-200"
-                                            else "hover:bg-slate-100"
+                                            if state.SelectedUser = Some user.Id then "selected"
                                         ]
                                         prop.onClick (fun _ -> dispatch (SelectUser user.Id))
                                         prop.children [
                                             Html.td [
-                                                prop.style [ style.textTransform.uppercase ]
+                                                prop.className "uppercase"
                                                 prop.text user.LastName
                                             ]
                                             Html.td [

@@ -6,7 +6,6 @@ open Elmish
 open Fable.Core.JsInterop
 open Fable.FontAwesome
 open Feliz
-open Feliz.Bulma
 open Feliz.UseDeferred
 open Feliz.UseElmish
 open global.JS
@@ -93,47 +92,50 @@ let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement li
     | Loaded (_, { Orders = [] }) ->
         View.infoNotification "Keine Bestellungen vorhanden." []
     | Loaded (_, state) ->
-        Bulma.container [
-            Bulma.table [
-                table.isFullWidth
-                prop.children [
-                    Html.thead [
-                        Html.tr [
-                            Html.th [ prop.text "Nachname" ]
-                            Html.th [ prop.text "Vorname" ]
-                            Html.th [ prop.text "Bestellung" ]
-                            Html.th [ prop.text "Zeitpunkt" ]
-                            Html.th [ prop.style [ style.width (length.px 150) ] ]
-                        ]
-                    ]
-                    Html.tbody [
-                        for order in state.Orders ->
-                            let deleteOrderState = Map.tryFind order.Id state.DeleteOrderState
+        Html.div [
+            prop.className "container"
+            prop.children [
+                Html.table [
+                    prop.className "w-full"
+                    prop.children [
+                        Html.thead [
                             Html.tr [
-                                if deleteOrderState = Some (Deferred.Resolved ()) then
-                                    color.hasTextGreyLight
-                                prop.children [
-                                    Html.td [
-                                        text.isUppercase
-                                        prop.text order.LastName
+                                Html.th [ prop.text "Nachname" ]
+                                Html.th [ prop.text "Vorname" ]
+                                Html.th [ prop.text "Bestellung" ]
+                                Html.th [ prop.text "Zeitpunkt" ]
+                                Html.th [ prop.style [ style.width (length.px 150) ] ]
+                            ]
+                        ]
+                        Html.tbody [
+                            for order in state.Orders ->
+                                let deleteOrderState = Map.tryFind order.Id state.DeleteOrderState
+                                Html.tr [
+                                    prop.classes [
+                                        if deleteOrderState = Some (Deferred.Resolved ()) then "opacity-50"
                                     ]
-                                    Html.td [
-                                        prop.text order.FirstName
-                                    ]
-                                    Html.td [
-                                        prop.textf "%d x %s à %.2f€" order.Amount order.ProductName order.PricePerUnit
-                                    ]
-                                    Html.td [
-                                        let relativeTime: string = moment(order.Timestamp)?fromNow()
-                                        let timestamp: string = moment(order.Timestamp)?format("LLLL")
-                                        prop.text (sprintf "%s (%s)" timestamp relativeTime)
-                                    ]
-                                    Html.td [
-                                        Bulma.level [
-                                            Bulma.levelLeft [
-                                                Bulma.levelItem [
-                                                    Bulma.button.a [
-                                                        color.isDanger
+                                    prop.children [
+                                        Html.td [
+                                            prop.className "uppercase"
+                                            prop.text order.LastName
+                                        ]
+                                        Html.td [
+                                            prop.text order.FirstName
+                                        ]
+                                        Html.td [
+                                            prop.text $"%d{order.Amount} x %s{order.ProductName} à %.2f{order.PricePerUnit}€"
+                                        ]
+                                        Html.td [
+                                            let relativeTime: string = moment(order.Timestamp)?fromNow()
+                                            let timestamp: string = moment(order.Timestamp)?format("LLLL")
+                                            prop.text $"%s{timestamp} (%s{relativeTime})"
+                                        ]
+                                        Html.td [
+                                            Html.div [
+                                                prop.className "flex items-center gap-2"
+                                                prop.children [
+                                                    Html.button [
+                                                        prop.className "btn btn-solid btn-red"
                                                         prop.onClick (fun _ -> dispatch (DeleteOrder order.Id))
                                                         
                                                         match deleteOrderState with
@@ -142,36 +144,21 @@ let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement li
                                                         | _ -> ()
 
                                                         prop.children [
-                                                            Bulma.icon [ Fa.i [ Fa.Solid.TrashAlt ] [] ]
+                                                            Fa.i [ Fa.Solid.TrashAlt ] []
                                                         ]
-                                                        if deleteOrderState = Some Deferred.InProgress then
-                                                            button.isLoading
                                                     ]
+                                                    match deleteOrderState with
+                                                    | Some Deferred.HasNotStartedYet -> ()
+                                                    | Some Deferred.InProgress -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Spinner; Fa.Pulse; Fa.CustomClass "text-musi-gold" ] []
+                                                    | Some (Deferred.Failed e) -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Times; Fa.CustomClass "text-musi-red"; Fa.Props [ Fable.React.Props.Title e.Message ] ] []
+                                                    | Some (Deferred.Resolved _) -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Check; Fa.CustomClass "text-musi-green" ] []
+                                                    | None -> ()
                                                 ]
-                                                let icon iconProps faProps =
-                                                    Bulma.levelItem [
-                                                        Bulma.icon [
-                                                            control.isMedium
-                                                            yield! iconProps
-                                                            prop.children [
-                                                                Fa.i [
-                                                                    Fa.Size Fa.FaLarge
-                                                                    yield! faProps
-                                                                ] []
-                                                            ]
-                                                        ]
-                                                    ]
-                                                match deleteOrderState with
-                                                | Some Deferred.HasNotStartedYet -> ()
-                                                | Some Deferred.InProgress -> icon [ color.hasTextPrimary ] [ Fa.Solid.Spinner; Fa.Pulse ]
-                                                | Some (Deferred.Failed e) -> icon [ color.hasTextDanger; prop.title e.Message ] [ Fa.Solid.Times ]
-                                                | Some (Deferred.Resolved _) -> icon [ color.hasTextSuccess ] [ Fa.Solid.Check ]
-                                                | None -> ()
                                             ]
                                         ]
                                     ]
                                 ]
-                            ]
+                        ]
                     ]
                 ]
             ]

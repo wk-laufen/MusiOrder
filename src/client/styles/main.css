@@ -12,6 +12,24 @@ html, body, #app {
 a:hover {
   @apply text-inherit;  /* because of Bulma */
 }
+
+table thead tr {
+  @apply border-b-2 border-slate-200;
+}
+table thead tr th,
+table tbody tr td {
+  @apply px-4 py-2;
+}
+table tbody tr {
+  @apply border-b border-slate-200;
+}
+table tbody tr.selected {
+  @apply bg-slate-200;
+}
+table tbody tr:not(.selected) {
+  @apply hover:bg-slate-100;
+}
+
 .btn {
   @apply inline-block text-center cursor-pointer font-semibold py-2 px-4 border rounded-lg;
 }
