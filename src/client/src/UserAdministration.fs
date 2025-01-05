@@ -5,10 +5,7 @@ open Api.UserAdministration
 open Elmish
 open Fable.FontAwesome
 open Fable.Form.Simple
-open Fable.Form.Simple.Bulma
 open Feliz
-open Feliz.Bulma
-open Feliz.Bulma.Operators
 open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
@@ -199,138 +196,146 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
     | Loaded (_, state) ->
         React.fragment [
             setMenuItems [
-                Bulma.levelItem [
-                    Bulma.button.a [
-                        color.isSuccess
-                        prop.onClick (fun _ -> dispatch EditNewUser)
-                        
-                        prop.children [
-                            Bulma.icon [ Fa.i [ Fa.Solid.Plus ] [] ]
-                            Html.span [ prop.text "Neuer Benutzer" ]
-                        ]
+                Html.a [
+                    prop.className "!flex items-center gap-2 btn btn-solid btn-green"
+                    prop.onClick (fun _ -> dispatch EditNewUser)
+                    
+                    prop.children [
+                        Fa.i [ Fa.Solid.Plus ] []
+                        Html.span [ prop.text "Neuer Benutzer" ]
                     ]
                 ]
             ]
 
-            Bulma.container [
-                Bulma.table [
-                    table.isFullWidth
-                    prop.children [
-                        Html.thead [
-                            Html.tr [
-                                Html.th "Nachname"
-                                Html.th "Vorname"
-                                Html.th "Schlüsselnummer"
-                                Html.th "Rolle"
-                                Html.th []
-                            ]
-                        ]
-                        Html.tbody [
-                            for user in state.Users ->
-                                let deleteUserState = Map.tryFind user.Id state.DeleteUserStates
-                                let isDeleted =
-                                    match deleteUserState with
-                                    | Some (Deleted (Ok _)) -> true
-                                    | _ -> false
+            Html.div [
+                prop.className "container"
+                prop.children [
+                    Html.table [
+                        prop.className "w-full table-fixed"
+                        prop.children [
+                            Html.thead [
                                 Html.tr [
-                                    if isDeleted then color.hasTextGreyLight
+                                    Html.th "Nachname"
+                                    Html.th "Vorname"
+                                    Html.th "Schlüsselnummer"
+                                    Html.th "Rolle"
+                                    Html.th []
+                                ]
+                            ]
+                            Html.tbody [
+                                for user in state.Users ->
+                                    let deleteUserState = Map.tryFind user.Id state.DeleteUserStates
+                                    let isDeleted =
+                                        match deleteUserState with
+                                        | Some (Deleted (Ok _)) -> true
+                                        | _ -> false
+                                    Html.tr [
+                                        prop.classes [
+                                            if isDeleted then "opacity-50"
+                                        ]
 
-                                    prop.children [
-                                        Html.td [
-                                            text.isUppercase
-                                            prop.text user.Data.LastName.Value
-                                        ]
-                                        Html.td [
-                                            prop.text user.Data.FirstName.Value
-                                        ]
-                                        Html.td [
-                                            match user.Data.AuthKey with
-                                            | Some authKey ->
-                                                if Set.contains user.Id state.VisibleKeyCodeUserIds then
-                                                    prop.text (AuthKey.toString authKey)
-                                                else
-                                                    prop.children [
-                                                        Bulma.level [
-                                                            Bulma.levelLeft [
-                                                                Bulma.levelItem [
-                                                                    prop.text "●●●●●●●●●●"
-                                                                ]
-                                                                Bulma.levelItem [
-                                                                    Bulma.button.a [
+                                        prop.children [
+                                            Html.td [
+                                                prop.className "uppercase"
+                                                prop.text user.Data.LastName.Value
+                                            ]
+                                            Html.td [
+                                                prop.text user.Data.FirstName.Value
+                                            ]
+                                            Html.td [
+                                                match user.Data.AuthKey with
+                                                | Some authKey ->
+                                                    if Set.contains user.Id state.VisibleKeyCodeUserIds then
+                                                        prop.text (AuthKey.toString authKey)
+                                                    else
+                                                        prop.children [
+                                                            Html.div [
+                                                                prop.className "flex items-center gap-2"
+                                                                prop.children [
+                                                                    Html.span [ prop.text "●●●●●●●●●●" ]
+                                                                    Html.a [
+                                                                        prop.className "btn btn-white"
                                                                         prop.onClick (fun _ -> dispatch (ShowAuthKey user.Id))
                                                                         prop.disabled isDeleted
                                                                         
                                                                         prop.children [
-                                                                            Bulma.icon [ Fa.i [ Fa.Solid.Eye ] [] ]
+                                                                            Fa.i [ Fa.Solid.Eye ] []
                                                                         ]
                                                                     ]
                                                                 ]
                                                             ]
                                                         ]
-                                                    ]
-                                            | None -> prop.text "-"
-                                        ]
-                                        Html.td [
-                                            prop.text (UserRole.label user.Data.Role)
-                                        ]
-                                        Html.td [
-                                            Bulma.buttons [
-                                                Bulma.button.a [
-                                                    color.isWarning
-                                                    prop.disabled isDeleted
-                                                    prop.onClick (fun _ -> dispatch (EditUser user))
-                                                    
-                                                    prop.children [
-                                                        Bulma.icon [ Fa.i [ Fa.Solid.Edit ] [] ]
-                                                    ]
-                                                ]
-                                                Bulma.button.a [
-                                                    color.isDanger
-                                                    prop.disabled isDeleted
-
-                                                    match deleteUserState with
-                                                    | None -> prop.onClick (fun _ -> dispatch (DeleteUser user.Id))
-                                                    | Some LoadingWarnings -> button.isLoading
-                                                    | Some (LoadedWarnings (Error _)) -> prop.onClick (fun _ -> dispatch (DeleteUser user.Id))
-                                                    | Some (LoadedWarnings (Ok _)) -> prop.onClick (fun _ -> dispatch (ForceDeleteUser user.Id))
-                                                    | Some Deleting -> button.isLoading
-                                                    | Some (Deleted (Error _)) -> prop.onClick (fun _ -> dispatch (ForceDeleteUser user.Id))
-                                                    | Some (Deleted (Ok _)) -> ()
-                                                    
-                                                    prop.children [
-                                                        Bulma.icon [ Fa.i [ Fa.Solid.TrashAlt ] [] ]
-                                                    ]
-                                                ]
+                                                | None -> prop.text "-"
                                             ]
-                                            match deleteUserState with
-                                            | Some (LoadedWarnings (Ok [])) ->
-                                                Bulma.help [
-                                                    color.isSuccess
-                                                    prop.text "Alles gut. Der Benutzer kann jetzt gelöscht werden."
-                                                ]
-                                            | Some (LoadedWarnings (Ok warnings)) ->
-                                                Bulma.content [
-                                                    Html.div [
-                                                        prop.className "help"
-                                                        ++ color.hasTextDanger
-                                                        prop.children [
-                                                            Html.span "Beachte folgendes, bevor du den Benutzer löschst:"
-                                                            Html.ul [
-                                                                for warning in warnings ->
-                                                                    Html.li [ prop.text (DeleteUserWarning.label warning) ]
+                                            Html.td [
+                                                prop.text (UserRole.label user.Data.Role)
+                                            ]
+                                            Html.td [
+                                                Html.div [
+                                                    prop.className "flex gap-2"
+                                                    prop.children [
+                                                        Html.button [
+                                                            prop.className "btn btn-solid btn-blue"
+                                                            prop.disabled isDeleted
+                                                            prop.onClick (fun _ -> dispatch (EditUser user))
+                                                            
+                                                            prop.children [
+                                                                Fa.i [ Fa.Solid.Edit ] []
+                                                            ]
+                                                        ]
+                                                        Html.button [
+                                                            prop.className "btn btn-solid btn-red"
+                                                            prop.disabled isDeleted
+
+                                                            match deleteUserState with
+                                                            | None -> prop.onClick (fun _ -> dispatch (DeleteUser user.Id))
+                                                            | Some LoadingWarnings -> ()
+                                                            | Some (LoadedWarnings (Error _)) -> prop.onClick (fun _ -> dispatch (DeleteUser user.Id))
+                                                            | Some (LoadedWarnings (Ok _)) -> prop.onClick (fun _ -> dispatch (ForceDeleteUser user.Id))
+                                                            | Some Deleting -> ()
+                                                            | Some (Deleted (Error _)) -> prop.onClick (fun _ -> dispatch (ForceDeleteUser user.Id))
+                                                            | Some (Deleted (Ok _)) -> ()
+                                                            
+                                                            prop.children [
+                                                                Fa.i [ Fa.Solid.TrashAlt ] []
                                                             ]
                                                         ]
                                                     ]
                                                 ]
-                                            | Some (Deleted (Error _)) ->
-                                                Bulma.help [
-                                                    color.isDanger
-                                                    prop.text "Fehler beim Löschen des Benutzers."
-                                                ]
-                                            | _ -> ()
+                                                match deleteUserState with
+                                                | Some (LoadedWarnings (Ok [])) ->
+                                                    Html.span [
+                                                        prop.className "text-sm text-musi-green"
+                                                        prop.text "Alles gut. Der Benutzer kann jetzt gelöscht werden."
+                                                    ]
+                                                | Some (LoadedWarnings (Ok warnings)) ->
+                                                    Html.p [
+                                                        prop.className "text-sm text-musi-red"
+                                                        prop.children [
+                                                            Html.span "Beachte folgendes, bevor du den Benutzer löschst:"
+                                                            Html.ul [
+                                                                prop.className "list-disc ml-4"
+                                                                prop.children [
+                                                                    for warning in warnings ->
+                                                                        Html.li [ prop.text (DeleteUserWarning.label warning) ]
+                                                                ]
+                                                            ]
+                                                        ]
+                                                    ]
+                                                | Some (LoadedWarnings (Error _))
+                                                | Some (Deleted (Error _)) ->
+                                                    Html.span [
+                                                        prop.className "text-sm text-musi-red"
+                                                        prop.text "Fehler beim Löschen des Benutzers."
+                                                    ]
+                                                | Some LoadingWarnings
+                                                | Some Deleting
+                                                | Some (Deleted (Ok ()))
+                                                | None -> ()
+                                            ]
                                         ]
                                     ]
-                                ]
+                            ]
                         ]
                     ]
                 ]
@@ -426,63 +431,130 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                     | Some _ -> "Benutzer bearbeiten"
                     | None -> "Benutzer anlegen"
 
-                let formView (config: Form.View.FormConfig<Msg>) =
-                    Html.form [
-                        prop.onSubmit (fun ev ->
-                            ev.stopPropagation()
-                            ev.preventDefault()
+                let formBuilder = fun (config: Form.View.FormConfig<_>) ->
+                    View.modal title (fun () -> dispatch CancelEditUser)
+                        [
+                            Html.form [
+                                prop.id "edit-user"
+                                prop.onSubmit (fun ev ->
+                                    ev.preventDefault()
 
-                            config.OnSubmit
-                            |> Option.map dispatch
-                            |> Option.defaultWith ignore
-                        )
-                        prop.children [
-                            View.modal title (fun () -> dispatch CancelEditUser)
-                                [
-                                    yield! config.Fields
+                                    config.OnSubmit
+                                    |> Option.map dispatch
+                                    |> Option.defaultWith ignore
+                                )
+                                prop.children config.Fields
+                            ]
+                        ]
+                        [
+                            match config.State with
+                            | Form.View.Error message ->
+                                Html.span [
+                                    prop.className "self-center text-musi-red"
+                                    prop.text message
                                 ]
-                                [
-                                    Bulma.field.div [
-                                        prop.classes [ "is-flex-grow-1" ]
-                                        field.isGrouped
-                                        field.isGroupedRight
+                            | Form.View.Success message ->
+                                Html.span [
+                                    prop.className "self-center text-musi-green"
+                                    prop.text message
+                                ]
+                            | Form.View.Loading
+                            | Form.View.Idle -> ()
 
-                                        prop.children [
-                                            match config.State with
-                                            | Form.View.Error error ->
-                                                Bulma.control.div [
-                                                    prop.classes [ "is-align-self-center"; "is-flex-shrink-1" ]
-                                                    prop.children [
-                                                        Form.View.errorMessage error
-                                                    ]
-                                                ]
-                                            | Form.View.Success success ->
-                                                Bulma.control.div [
-                                                    prop.classes [ "is-align-self-center"; "is-flex-shrink-1" ]
-                                                    text.hasTextCentered
-                                                    color.hasTextSuccess
-                                                    text.hasTextWeightBold
+                            Html.button [
+                                prop.form "edit-user"
+                                prop.className "btn btn-solid btn-green"
+                                prop.text config.Action
+                                prop.disabled (config.State = Form.View.Loading)
+                            ]
+                        ]
 
-                                                    prop.text success
-                                                ]
-                                            | Form.View.Loading
-                                            | Form.View.Idle -> ()
-
-                                            Bulma.control.div [
-                                                Bulma.button.button [
-                                                    color.isPrimary
-                                                    prop.text config.Action
-                                                    if config.State = Form.View.Loading then
-                                                        button.isLoading
-                                                ]
-                                            ]
-                                        ]
-                                    ]
+                let wrapFormField (label: string) showError error (field: ReactElement) =
+                    Html.div [
+                        prop.className "flex flex-col gap-2 mb-4 last:mb-0"
+                        prop.children [
+                            Html.span [
+                                prop.className "font-semibold"
+                                prop.text label
+                            ]
+                            field
+                            if showError then
+                                Html.span [
+                                    prop.className "text-sm text-musi-red"
+                                    match error with
+                                    | Some error ->
+                                        let message =
+                                            match error with
+                                            | Fable.Form.Error.RequiredFieldIsEmpty -> $"%s{label} darf nicht leer sein."
+                                            | Fable.Form.Error.ValidationFailed message -> message
+                                            | Fable.Form.Error.External message -> message
+                                        prop.text message
+                                    | _ -> ()
                                 ]
                         ]
                     ]
 
-                let htmlViewConfig = { Form.View.htmlViewConfig with Form = formView }
+                let inputFieldBuilder typeName = fun (config: Form.View.TextFieldConfig<_>) ->
+                    Html.input [
+                        prop.type' typeName
+                        prop.classes [
+                            if config.ShowError && config.Error.IsSome then "border-musi-red"
+                        ]
+                        prop.onChange (fun (text : string) -> config.OnChange text |> dispatch)
+                        match config.OnBlur with
+                        | Some onBlur -> prop.onBlur (fun _ -> dispatch onBlur)
+                        | None -> ()
+                        prop.disabled config.Disabled
+                        prop.placeholder config.Attributes.Placeholder
+                        prop.value config.Value
+                    ]
+                    |> wrapFormField config.Attributes.Label config.ShowError config.Error
+
+                let radioFieldBuilder = fun (config: Form.View.RadioFieldConfig<_>) ->
+                    Html.div [
+                        prop.className "flex gap-4"
+                        prop.children [
+                            yield!
+                                config.Attributes.Options
+                                |> List.map (fun (value, title) ->
+                                    Html.label [
+                                        prop.className "inline-flex items-center gap-2"
+                                        prop.children [
+                                            Html.input [
+                                                prop.type' "radio"
+                                                prop.value value
+                                                prop.name config.Attributes.Label
+                                                prop.isChecked (config.Value = value)
+                                                prop.disabled config.Disabled
+                                                prop.onChange (fun (_ : bool) -> config.OnChange value |> dispatch)
+                                                match config.OnBlur with
+                                                | Some onBlur -> prop.onBlur (fun _ -> dispatch onBlur)
+                                                | None -> ()
+                                            ]
+                                            Html.span [
+                                                prop.text title
+                                            ]
+                                        ]
+                                    ]
+                                )
+                        ]
+                    ]
+                    |> wrapFormField config.Attributes.Label config.ShowError config.Error
+
+                let htmlViewConfig : Form.View.CustomConfig<_> = {
+                    Form = formBuilder
+                    TextField = inputFieldBuilder "text"
+                    PasswordField = inputFieldBuilder "password"
+                    EmailField = fun config -> failwith "EmailField not implemented"
+                    TextAreaField = fun config -> failwith "TextAreaField not implemented"
+                    CheckboxField = fun config -> failwith "CheckboxField not implemented"
+                    RadioField = radioFieldBuilder
+                    SelectField = fun config -> failwith "SelectField not implemented"
+                    Group = fun fields -> failwith "Group not implemented"
+                    Section = fun title fields -> failwith "Section not implemented"
+                    FormList = fun config -> failwith "FormList not implemented"
+                    FormListItem = fun config -> failwith "FormListItem not implemented"
+                }
                 let config: Form.View.ViewConfig<_, _> =
                     {
                         Dispatch = dispatch
