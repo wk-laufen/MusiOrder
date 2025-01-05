@@ -309,7 +309,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                                         prop.text "Alles gut. Der Benutzer kann jetzt gelöscht werden."
                                                     ]
                                                 | Some (LoadedWarnings (Ok warnings)) ->
-                                                    Html.p [
+                                                    Html.div [
                                                         prop.className "text-sm text-musi-red"
                                                         prop.children [
                                                             Html.span "Beachte folgendes, bevor du den Benutzer löschst:"
