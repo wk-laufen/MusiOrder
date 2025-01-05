@@ -67,7 +67,7 @@ let Main () =
 
         router.children [
             Html.div [
-                prop.className "flex flex-col h-full"
+                prop.className "flex flex-col h-full text-stone-700"
                 prop.children [
                     match state.CurrentUrl with
                     | Administration.route :: subUrl ->
