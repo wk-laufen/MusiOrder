@@ -99,35 +99,31 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
             match state.SelectedUser with
             | Some selectedUserId ->
                 setMenuItems [
-                    Bulma.levelItem [
+                    Html.span [
                         prop.text "Guthaben ändern:"
                     ]
-                    Bulma.levelItem [
-                        Bulma.buttons [
-                            let amounts = [
-                                yield!
-                                    state.SelectedUser
-                                    |> Option.bind (fun userId ->
-                                        state.Users
-                                        |> List.tryFind (fun v -> v.Id = userId)
-                                    )
-                                    |> Option.filter (fun v -> v.Balance <> 0.m)
-                                    |> Option.map (fun v -> -v.Balance)
-                                    |> Option.toList
+                    let amounts = [
+                        yield!
+                            state.SelectedUser
+                            |> Option.bind (fun userId ->
+                                state.Users
+                                |> List.tryFind (fun v -> v.Id = userId)
+                            )
+                            |> Option.filter (fun v -> v.Balance <> 0.m)
+                            |> Option.map (fun v -> -v.Balance)
+                            |> Option.toList
 
-                                yield! [ 0.1m; 0.2m; 0.5m; 1.m; 2.m; 5.m; 10.m; 20.m ]
-                            ]
-                            for amount in amounts do
-                                Bulma.button.button [
-                                    match state.AddPaymentState with
-                                    | Deferred.InProgress ->
-                                        prop.disabled true
-                                    | _ -> ()
-                                    prop.textf "%s%.2f€" (if amount >= 0.m then "+" else "") amount
-                                    prop.onClick (fun _ -> dispatch (AddPayment (selectedUserId, amount)))
-                                ]
-                        ]
+                        yield! [ 0.1m; 0.2m; 0.5m; 1.m; 2.m; 5.m; 10.m; 20.m ]
                     ]
+                    for amount in amounts do
+                        Bulma.button.button [
+                            match state.AddPaymentState with
+                            | Deferred.InProgress ->
+                                prop.disabled true
+                            | _ -> ()
+                            prop.textf "%s%.2f€" (if amount >= 0.m then "+" else "") amount
+                            prop.onClick (fun _ -> dispatch (AddPayment (selectedUserId, amount)))
+                        ]
                     let icon iconProps faProps =
                         Bulma.levelItem [
                             Bulma.icon [

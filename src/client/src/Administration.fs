@@ -80,8 +80,8 @@ let Administration activeTab =
         | None -> nothing
 
     let abortButton =
-        Bulma.button.a [
-            spacing.mt6
+        Html.a [
+            prop.className "btn"
             prop.href (Router.format(""))
             prop.text "Abbrechen"
         ]
@@ -89,60 +89,70 @@ let Administration activeTab =
     React.fragment [
         match state.AuthKey with
         | NoAuthKeyProvided ->
-            Bulma.section [
-                text.hasTextCentered
+            Html.div [
+                prop.className "flex flex-col items-center gap-4 p-8"
                 prop.children [
                     View.authForm
                     abortButton
                 ]
             ]
         | InvalidAuthKeyProvided ->
-            Bulma.section [
-                text.hasTextCentered
-                ++ color.hasTextDanger
-                ++ spacing.px2
+            Html.div [
+                prop.className "flex flex-col items-center gap-4 p-8"
                 prop.children [
-                    Bulma.container [
-                        Fa.stack [ Fa.Stack.Size Fa.Fa4x ] [
-                            Fa.i [ Fa.Solid.Key; Fa.Stack1x ] []
-                            Fa.i [ Fa.Solid.Ban; Fa.Stack2x ] []
-                        ]
-                        Bulma.title.p [
-                            color.hasTextDanger
-                            prop.children [
-                                Html.text "Schlüssel ist nicht autorisiert."
-                                Html.br []
-                                Html.text "Versuche es nochmal mit einem Administrator-Schlüssel."
-                            ]
+                    Fa.stack [ Fa.Stack.Size Fa.Fa4x; Fa.Stack.CustomClass "text-musi-red" ] [
+                        Fa.i [ Fa.Solid.Key; Fa.Stack1x ] []
+                        Fa.i [ Fa.Solid.Ban; Fa.Stack2x ] []
+                    ]
+                    Html.span [
+                        prop.className "text-center text-2xl text-musi-red"
+                        prop.children [
+                            Html.text "Schlüssel ist nicht autorisiert."
+                            Html.br []
+                            Html.text "Versuche es nochmal mit einem Administrator-Schlüssel."
                         ]
                     ]
                     abortButton
                 ]
             ]
         | AuthKeyProvided (Error error) ->
-            Bulma.section [
-                text.hasTextCentered
+            Html.div [
+                prop.className "flex flex-col gap-4 p-8"
                 prop.children [
                     View.authError error (fun () -> dispatch Show)
-                    abortButton
+                    Html.div [
+                        prop.className "flex flex-col items-center"
+                        prop.children [
+                            abortButton
+                        ]
+                    ]
                 ]
             ]
         | AuthKeyProvided (Ok authKey) ->
-            Bulma.section [
+            Html.div [
                 prop.className "overflow-y-auto grow p-8"
                 prop.children [
-                    Bulma.tabs [
-                        Html.ul [
-                            for tab in allTabs ->
-                                Bulma.tab [
-                                    if tab = activeTab then Bulma.tab.isActive
-                                    prop.children [
-                                        Html.a [
-                                            prop.text (Tab.title tab)
-                                            prop.href (Router.format(route, Tab.toRoute tab))
+                    Html.div [
+                        prop.className "container mb-4"
+                        prop.children [
+                            Html.ul [
+                                prop.className "flex border-b border-slate-200"
+                                prop.children [
+                                    for tab in allTabs ->
+                                        Html.li [
+                                            prop.classes [
+                                                "px-4 py-2 -mb-px hover:border-b hover:border-musi-blue hover:text-musi-blue"
+                                                if tab = activeTab then "border-b border-musi-blue text-musi-blue"
+                                            ]
+                                            prop.children [
+                                                Html.a [
+                                                    prop.text (Tab.title tab)
+                                                    prop.href (Router.format(route, Tab.toRoute tab))
+                                                ]
+                                            ]
                                         ]
-                                    ]
                                 ]
+                            ]
                         ]
                     ]
                     match activeTab with
@@ -153,21 +163,24 @@ let Administration activeTab =
                     | DataExport -> DataExport.DataExport (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                 ]
             ]
-            Bulma.section [
-                prop.className "controls"
+            Html.div [
+                prop.className "p-8"
                 prop.children [
-                    Bulma.container [
-                        Bulma.level [
-                            Bulma.levelLeft [
+                    Html.div [
+                        prop.className "container flex justify-between"
+                        prop.children [
+                            Html.div [
+                                prop.className "flex items-center gap-2"
                                 prop.ref tabMenuContainerRef
                             ]
-
-                            Bulma.levelRight [
-                                Bulma.levelItem [
-                                    Bulma.button.a [
+                            Html.div [
+                                prop.className "flex gap-2"
+                                prop.children [
+                                    Html.a [
+                                        prop.className "!flex items-center gap-2 btn"
                                         prop.href (Router.format(""))
                                         prop.children [
-                                            Bulma.icon [ Fa.i [ Fa.Solid.Check ] [] ]
+                                            Fa.i [ Fa.Solid.Check ] []
                                             Html.span [ prop.text "Fertig" ]
                                         ]
                                     ]
