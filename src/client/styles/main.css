@@ -40,6 +40,9 @@ input[type='radio'] {
 *:has(>input[type='radio']:disabled) {
   @apply opacity-50 cursor-not-allowed;
 }
+select {
+  @apply shadow bg-white text-gray-700 rounded focus:ring-blue-500 focus:border-blue-500 p-2.5 disabled:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed;
+}
 
 .btn {
   @apply inline-block text-center cursor-pointer font-semibold py-2 px-4 border rounded-lg;

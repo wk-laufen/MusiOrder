@@ -224,6 +224,33 @@ let form title fields data dispatch closeMsg formChangedMsg =
         ]
         |> wrapFormField config.Attributes.Label config.ShowError config.Error
 
+    let selectFieldBuilder = fun (config: Form.View.SelectFieldConfig<_>) ->
+        Html.select [
+            prop.classes [
+                if config.ShowError && config.Error.IsSome then "border-musi-red"
+            ]
+            prop.onChange (fun (value : string) -> config.OnChange value |> dispatch)
+            match config.OnBlur with
+            | Some onBlur -> prop.onBlur (fun _ -> dispatch onBlur)
+            | None -> ()
+            prop.disabled config.Disabled
+            prop.placeholder config.Attributes.Placeholder
+            prop.value config.Value
+            prop.children [
+                Html.option [
+                    prop.disabled true
+                    prop.value ""
+                    prop.text ($"-- {config.Attributes.Placeholder} --")
+                ]
+                for (value, text) in config.Attributes.Options do
+                    Html.option [
+                        prop.value value
+                        prop.text text
+                    ]
+            ]
+        ]
+        |> wrapFormField config.Attributes.Label config.ShowError config.Error
+
     let htmlViewConfig : Form.View.CustomConfig<_> = {
         Form = formBuilder
         TextField = inputFieldBuilder "text"
@@ -232,7 +259,7 @@ let form title fields data dispatch closeMsg formChangedMsg =
         TextAreaField = fun config -> failwith "TextAreaField not implemented"
         CheckboxField = fun config -> failwith "CheckboxField not implemented"
         RadioField = radioFieldBuilder
-        SelectField = fun config -> failwith "SelectField not implemented"
+        SelectField = selectFieldBuilder
         Group = fun fields -> failwith "Group not implemented"
         Section = fun title fields -> failwith "Section not implemented"
         FormList = fun config -> failwith "FormList not implemented"

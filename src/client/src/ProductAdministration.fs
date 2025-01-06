@@ -5,9 +5,7 @@ open Api.ProductAdministration
 open Elmish
 open Fable.FontAwesome
 open Fable.Form.Simple
-open Fable.Form.Simple.Bulma
 open Feliz
-open Feliz.Bulma
 open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
@@ -269,158 +267,171 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
     | Loaded (_, state) ->
         React.fragment [
             setMenuItems [
-                Bulma.levelItem [
-                    Bulma.button.a [
-                        color.isSuccess
-                        prop.onClick (fun _ -> dispatch EditNewProduct)
-                        
-                        prop.children [
-                            Bulma.icon [ Fa.i [ Fa.Solid.Plus ] [] ]
-                            Html.span [ prop.text "Neuer Artikel" ]
-                        ]
+                Html.button [
+                    prop.className "!flex items-center gap-2 btn btn-solid btn-green"
+                    prop.onClick (fun _ -> dispatch EditNewProduct)
+                    
+                    prop.children [
+                        Fa.i [ Fa.Solid.Plus ] []
+                        Html.span [ prop.text "Neuer Artikel" ]
                     ]
                 ]
             ]
 
-            Bulma.container [
-                for (index, group) in List.indexed state.Products do
-                    yield Bulma.level [
-                        Bulma.levelLeft [
-                            Bulma.levelItem [
-                                Bulma.title [
-                                    prop.text group.Data.Name
-                                ]
-                            ]
-                            Bulma.levelItem [
-                                Bulma.buttons [
-                                    Bulma.button.a [
-                                        color.isSuccess
-                                        prop.disabled <| (index = 0)
-                                        prop.onClick (fun _ -> dispatch (MoveUpProductGroup group.Id))
-                                        match state.MovingUpProductGroup with
-                                        | Some (groupId, MovingProductGroup) when groupId = group.Id -> button.isLoading
-                                        | _ -> ()
-                                        
-                                        prop.children [
-                                            Bulma.icon [ Fa.i [ Fa.Solid.ArrowUp ] [] ]
+            Html.div [
+                prop.className "container flex flex-col gap-4"
+                prop.children [
+                    for (index, group) in List.indexed state.Products do
+                        Html.div [
+                            prop.className "flex flex-col gap-2"
+                            prop.children [
+                                Html.div [
+                                    prop.className "flex items-center gap-2"
+                                    prop.children [
+                                        Html.h3 [
+                                            prop.className "text-2xl"
+                                            prop.text group.Data.Name
+                                        ]
+                                        Html.button [
+                                            prop.className "btn btn-solid btn-green"
+                                            let isMoving =
+                                                match state.MovingUpProductGroup with
+                                                | Some (groupId, MovingProductGroup) when groupId = group.Id -> true
+                                                | _ -> false
+                                            prop.disabled ((isMoving || index = 0))
+                                            prop.onClick (fun _ -> dispatch (MoveUpProductGroup group.Id))
+                                            
+                                            prop.children [
+                                                Fa.i [ Fa.Solid.ArrowUp ] []
+                                            ]
+                                        ]
+                                        Html.button [
+                                            prop.className "btn btn-solid btn-green"
+                                            let isMoving =
+                                                match state.MovingDownProductGroup with
+                                                | Some (groupId, MovingProductGroup) when groupId = group.Id -> true
+                                                | _ -> false
+                                            prop.disabled ((isMoving || index = state.Products.Length - 1))
+                                            prop.onClick (fun _ -> dispatch (MoveDownProductGroup group.Id))
+                                            
+                                            prop.children [
+                                                Fa.i [ Fa.Solid.ArrowDown ] []
+                                            ]
                                         ]
                                     ]
-                                    Bulma.button.a [
-                                        color.isSuccess
-                                        prop.disabled <| (index = state.Products.Length - 1)
-                                        prop.onClick (fun _ -> dispatch (MoveDownProductGroup group.Id))
-                                        match state.MovingDownProductGroup with
-                                        | Some (groupId, MovingProductGroup) when groupId = group.Id -> button.isLoading
-                                        | _ -> ()
-                                        
-                                        prop.children [
-                                            Bulma.icon [ Fa.i [ Fa.Solid.ArrowDown ] [] ]
+                                ]
+                                Html.table [
+                                    prop.className "w-full"
+                                    prop.children [
+                                        Html.thead [
+                                            Html.tr [
+                                                Html.th "Name"
+                                                Html.th "Preis"
+                                                Html.th "Aktiv"
+                                                Html.th []
+                                            ]
                                         ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                    yield Bulma.table [
-                        table.isFullWidth
-                        prop.children [
-                            Html.thead [
-                                Html.tr [
-                                    Html.th "Name"
-                                    Html.th "Preis"
-                                    Html.th "Aktiv"
-                                    Html.th []
-                                ]
-                            ]
-                            Html.tbody [
-                                for (index, product) in List.indexed group.Products ->
-                                    let deleteProductState = Map.tryFind product.Id state.ProductStates
-                                    let isDeleted =
-                                        match deleteProductState with
-                                        | Some (DeletedProduct (Ok _)) -> true
-                                        | _ -> false
-                                    Html.tr [
-                                        if isDeleted then color.hasTextGreyLight
+                                        Html.tbody [
+                                            for (index, product) in List.indexed group.Products ->
+                                                let deleteProductState = Map.tryFind product.Id state.ProductStates
+                                                let isDeleted =
+                                                    match deleteProductState with
+                                                    | Some (DeletedProduct (Ok _)) -> true
+                                                    | _ -> false
+                                                let isDeletingOrDeleted =
+                                                    match deleteProductState with
+                                                    | None -> false
+                                                    | Some DeletingProduct -> true
+                                                    | Some (DeletedProduct (Ok _)) -> true
+                                                    | Some (DeletedProduct (Error _)) -> false
+                                                Html.tr [
+                                                    prop.classes [
+                                                        if isDeleted then "opacity-50"
+                                                    ]
 
-                                        prop.children [
-                                            Html.td [
-                                                prop.text product.Data.Name.Value
-                                            ]
-                                            Html.td [
-                                                prop.textf "%.2f€" (NonNegativeDecimal.value product.Data.Price)
-                                            ]
-                                            Html.td [
-                                                    match product.Data.State with
-                                                    | Enabled ->
-                                                        color.hasTextSuccess
-                                                        prop.text "✔"
-                                                    | Disabled ->
-                                                        color.hasTextDanger
-                                                        prop.text "✘"
-                                            ]
-                                            Html.td [
-                                                Bulma.buttons [
-                                                    Bulma.button.a [
-                                                        color.isSuccess
-                                                        prop.disabled (isDeleted || index = 0)
-                                                        prop.onClick (fun _ -> dispatch (MoveUpProduct product.Id))
-                                                        match state.MovingUpProduct with
-                                                        | Some (productId, MovingProduct) when productId = product.Id -> button.isLoading
-                                                        | _ -> ()
-                                                        
-                                                        prop.children [
-                                                            Bulma.icon [ Fa.i [ Fa.Solid.ArrowUp ] [] ]
+                                                    prop.children [
+                                                        Html.td product.Data.Name.Value
+                                                        Html.td $"%.2f{NonNegativeDecimal.value product.Data.Price}€"
+                                                        Html.td [
+                                                            match product.Data.State with
+                                                            | Enabled ->
+                                                                prop.className "text-musi-green"
+                                                                prop.text "✔"
+                                                            | Disabled ->
+                                                                prop.className "text-musi-red"
+                                                                prop.text "✘"
                                                         ]
-                                                    ]
-                                                    Bulma.button.a [
-                                                        color.isSuccess
-                                                        prop.disabled (isDeleted || index = group.Products.Length - 1)
-                                                        prop.onClick (fun _ -> dispatch (MoveDownProduct product.Id))
-                                                        match state.MovingDownProduct with
-                                                        | Some (productId, MovingProduct) when productId = product.Id -> button.isLoading
-                                                        | _ -> ()
-                                                        
-                                                        prop.children [
-                                                            Bulma.icon [ Fa.i [ Fa.Solid.ArrowDown ] [] ]
-                                                        ]
-                                                    ]
-                                                    Bulma.button.a [
-                                                        color.isWarning
-                                                        prop.disabled isDeleted
-                                                        prop.onClick (fun _ -> dispatch (EditProduct (group.Id, product)))
-                                                        
-                                                        prop.children [
-                                                            Bulma.icon [ Fa.i [ Fa.Solid.Edit ] [] ]
-                                                        ]
-                                                    ]
-                                                    Bulma.button.a [
-                                                        color.isDanger
-                                                        prop.disabled isDeleted
+                                                        Html.td [
+                                                            Html.div [
+                                                                prop.className "flex gap-2"
+                                                                prop.children [
+                                                                    Html.button [
+                                                                        prop.className "btn btn-solid btn-green"
+                                                                        let isMoving =
+                                                                            match state.MovingUpProduct with
+                                                                            | Some (productId, MovingProduct) when productId = product.Id -> true
+                                                                            | _ -> false
+                                                                        prop.disabled (isMoving || isDeletingOrDeleted || index = 0)
+                                                                        prop.onClick (fun _ -> dispatch (MoveUpProduct product.Id))
+                                                                        
+                                                                        prop.children [
+                                                                            Fa.i [ Fa.Solid.ArrowUp ] []
+                                                                        ]
+                                                                    ]
+                                                                    Html.button [
+                                                                        prop.className "btn btn-solid btn-green"
+                                                                        let isMoving =
+                                                                            match state.MovingDownProduct with
+                                                                            | Some (productId, MovingProduct) when productId = product.Id -> true
+                                                                            | _ -> false
+                                                                        prop.disabled (isMoving || isDeletingOrDeleted || index = group.Products.Length - 1)
+                                                                        prop.onClick (fun _ -> dispatch (MoveDownProduct product.Id))
+                                                                        
+                                                                        prop.children [
+                                                                            Fa.i [ Fa.Solid.ArrowDown ] []
+                                                                        ]
+                                                                    ]
+                                                                    Html.button [
+                                                                        prop.className "btn btn-solid btn-blue"
+                                                                        prop.disabled isDeletingOrDeleted
+                                                                        prop.onClick (fun _ -> dispatch (EditProduct (group.Id, product)))
+                                                                        
+                                                                        prop.children [
+                                                                            Fa.i [ Fa.Solid.Edit ] []
+                                                                        ]
+                                                                    ]
+                                                                    Html.button [
+                                                                        prop.className "btn btn-solid btn-red"
+                                                                        prop.disabled isDeletingOrDeleted
 
-                                                        match deleteProductState with
-                                                        | None -> prop.onClick (fun _ -> dispatch (DeleteProduct product.Id))
-                                                        | Some DeletingProduct -> button.isLoading
-                                                        | Some (DeletedProduct (Error _)) -> prop.onClick (fun _ -> dispatch (DeleteProduct product.Id))
-                                                        | Some (DeletedProduct (Ok _)) -> ()
-                                                        
-                                                        prop.children [
-                                                            Bulma.icon [ Fa.i [ Fa.Solid.TrashAlt ] [] ]
+                                                                        match deleteProductState with
+                                                                        | None
+                                                                        | Some (DeletedProduct (Error _)) -> prop.onClick (fun _ -> dispatch (DeleteProduct product.Id))
+                                                                        | Some DeletingProduct
+                                                                        | Some (DeletedProduct (Ok _)) -> ()
+                                                                        
+                                                                        prop.children [
+                                                                            Fa.i [ Fa.Solid.TrashAlt ] []
+                                                                        ]
+                                                                    ]
+                                                                ]
+                                                            ]
+                                                            match deleteProductState with
+                                                            | Some (DeletedProduct (Error _)) ->
+                                                                Html.span [
+                                                                    prop.className "text-sm text-musi-red"
+                                                                    prop.text "Fehler beim Löschen des Artikels."
+                                                                ]
+                                                            | _ -> ()
                                                         ]
                                                     ]
                                                 ]
-                                                match deleteProductState with
-                                                | Some (DeletedProduct (Error _)) ->
-                                                    Bulma.help [
-                                                        color.isDanger
-                                                        prop.text "Fehler beim Löschen des Artikels."
-                                                    ]
-                                                | _ -> ()
-                                            ]
                                         ]
                                     ]
+                                ]
                             ]
                         ]
-                    ]
+                ]
             ]
 
             match state.EditingProduct with
@@ -513,70 +524,6 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                     | Some _ -> "Artikel bearbeiten"
                     | None -> "Artikel anlegen"
 
-                let formView (config: Form.View.FormConfig<Msg>) =
-                    Html.form [
-                        prop.onSubmit (fun ev ->
-                            ev.stopPropagation()
-                            ev.preventDefault()
-
-                            config.OnSubmit
-                            |> Option.map dispatch
-                            |> Option.defaultWith ignore
-                        )
-                        prop.children [
-                            View.modal title (fun () -> dispatch CancelEditProduct)
-                                [
-                                    yield! config.Fields
-                                ]
-                                [
-                                    Bulma.field.div [
-                                        prop.classes [ "is-flex-grow-1" ]
-                                        field.isGrouped
-                                        field.isGroupedRight
-
-                                        prop.children [
-                                            match config.State with
-                                            | Form.View.Error error ->
-                                                Bulma.control.div [
-                                                    prop.classes [ "is-align-self-center"; "is-flex-shrink-1" ]
-                                                    prop.children [
-                                                        Form.View.errorMessage error
-                                                    ]
-                                                ]
-                                            | Form.View.Success success ->
-                                                Bulma.control.div [
-                                                    prop.classes [ "is-align-self-center"; "is-flex-shrink-1" ]
-                                                    text.hasTextCentered
-                                                    color.hasTextSuccess
-                                                    text.hasTextWeightBold
-
-                                                    prop.text success
-                                                ]
-                                            | Form.View.Loading
-                                            | Form.View.Idle -> ()
-
-                                            Bulma.control.div [
-                                                Bulma.button.button [
-                                                    color.isPrimary
-                                                    prop.text config.Action
-                                                    if config.State = Form.View.Loading then
-                                                        button.isLoading
-                                                ]
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                        ]
-                    ]
-
-                let htmlViewConfig = { Form.View.htmlViewConfig with Form = formView }
-                let config: Form.View.ViewConfig<_, _> =
-                    {
-                        Dispatch = dispatch
-                        OnChange = FormChanged
-                        Action = "Speichern"
-                        Validation = Form.View.ValidateOnSubmit
-                    }
-                Form.View.custom htmlViewConfig config form editingProduct.Data
+                View.form title form editingProduct.Data dispatch CancelEditProduct FormChanged
             | None -> ()
         ]
