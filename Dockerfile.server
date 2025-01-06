@@ -1,14 +1,18 @@
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0 AS client-build-env
 
-# Install Node.js and yarn
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
-    echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
-    apt update && \
-    apt install -y nodejs yarn
-
-RUN echo "Node version: $(node --version)" && \
-    echo "Yarn version: $(yarn --version)"
+# Install Node.js and yarn - see https://nodejs.org/en/download and https://stackoverflow.com/a/57546198/1293659
+ENV NODE_VERSION=22.12.0
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+ENV NVM_DIR=/root/.nvm
+RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION}
+RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
+RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
+RUN . "$NVM_DIR/nvm.sh" && corepack enable yarn
+ENV PATH="$NVM_DIR/versions/node/v${NODE_VERSION}/bin/:${PATH}"
+RUN node --version
+RUN npm --version
+RUN yarn --version
 
 WORKDIR /app
 

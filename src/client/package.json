@@ -12,29 +12,32 @@
         "remotedev": "^0.2.9"
     },
     "devDependencies": {
-        "@babel/core": "^7.14.6",
-        "@babel/plugin-transform-runtime": "^7.14.5",
+        "@babel/core": "^7.26.0",
+        "@babel/plugin-transform-runtime": "^7.25.9",
         "@babel/polyfill": "^7.12.1",
-        "@babel/preset-env": "^7.14.7",
-        "@babel/preset-react": "^7.14.5",
-        "@babel/runtime": "^7.14.6",
+        "@babel/preset-env": "^7.26.0",
+        "@babel/preset-react": "^7.26.3",
+        "@babel/runtime": "^7.26.0",
         "autoprefixer": "^10.4.20",
-        "babel-loader": "^8.2.2",
+        "babel-loader": "^8.4.1",
         "copy-webpack-plugin": "^9.0.0",
         "core-js": "^3.15.1",
         "css-loader": "^5.2.6",
         "file-loader": "^6.2.0",
         "html-webpack-plugin": "^5.3.2",
         "mini-css-extract-plugin": "^1.6.0",
-        "postcss": "^7.0.39",
-        "postcss-loader": "^7.3.4",
+        "postcss": "^8.4.49",
+        "postcss-loader": "^8.1.1",
         "sass": "^1.35.1",
         "sass-loader": "^12.1.0",
         "style-loader": "^3.0.0",
         "tailwindcss": "^3.4.17",
         "terser": "^5.7.0",
-        "webpack": "^5.40.0",
+        "webpack": "^5.97.1",
         "webpack-cli": "^4.7.2",
         "webpack-dev-server": "^3.11.2"
+    },
+    "resolutions": {
+        "loader-utils": "2.0.4"
     }
 }
