@@ -2,6 +2,7 @@ module View
 
 open Fable.Core.JsInterop
 open Fable.FontAwesome
+open Fable.Form.Simple
 open Feliz
 open global.JS
 
@@ -111,6 +112,140 @@ let balanceColor balance =
     if balance >= 5.m then "text-musi-green"
     elif balance >= 0.m then "text-musi-blue"
     else "text-musi-red"
+
+let form title fields data dispatch closeMsg formChangedMsg =
+    let formBuilder = fun (config: Form.View.FormConfig<_>) ->
+        modal title (fun () -> dispatch closeMsg)
+            [
+                Html.form [
+                    prop.id "edit-user"
+                    prop.onSubmit (fun ev ->
+                        ev.preventDefault()
+
+                        config.OnSubmit
+                        |> Option.map dispatch
+                        |> Option.defaultWith ignore
+                    )
+                    prop.children config.Fields
+                ]
+            ]
+            [
+                match config.State with
+                | Form.View.Error message ->
+                    Html.span [
+                        prop.className "self-center text-musi-red"
+                        prop.text message
+                    ]
+                | Form.View.Success message ->
+                    Html.span [
+                        prop.className "self-center text-musi-green"
+                        prop.text message
+                    ]
+                | Form.View.Loading
+                | Form.View.Idle -> ()
+
+                Html.button [
+                    prop.form "edit-user"
+                    prop.className "btn btn-solid btn-green"
+                    prop.text config.Action
+                    prop.disabled (config.State = Form.View.Loading)
+                ]
+            ]
+
+    let wrapFormField (label: string) showError error (field: ReactElement) =
+        Html.div [
+            prop.className "flex flex-col gap-2 mb-4 last:mb-0"
+            prop.children [
+                Html.span [
+                    prop.className "font-semibold"
+                    prop.text label
+                ]
+                field
+                if showError then
+                    Html.span [
+                        prop.className "text-sm text-musi-red"
+                        match error with
+                        | Some error ->
+                            let message =
+                                match error with
+                                | Fable.Form.Error.RequiredFieldIsEmpty -> $"%s{label} darf nicht leer sein."
+                                | Fable.Form.Error.ValidationFailed message -> message
+                                | Fable.Form.Error.External message -> message
+                            prop.text message
+                        | _ -> ()
+                    ]
+            ]
+        ]
+
+    let inputFieldBuilder typeName = fun (config: Form.View.TextFieldConfig<_>) ->
+        Html.input [
+            prop.type' typeName
+            prop.classes [
+                if config.ShowError && config.Error.IsSome then "border-musi-red"
+            ]
+            prop.onChange (fun (text : string) -> config.OnChange text |> dispatch)
+            match config.OnBlur with
+            | Some onBlur -> prop.onBlur (fun _ -> dispatch onBlur)
+            | None -> ()
+            prop.disabled config.Disabled
+            prop.placeholder config.Attributes.Placeholder
+            prop.value config.Value
+        ]
+        |> wrapFormField config.Attributes.Label config.ShowError config.Error
+
+    let radioFieldBuilder = fun (config: Form.View.RadioFieldConfig<_>) ->
+        Html.div [
+            prop.className "flex gap-4"
+            prop.children [
+                yield!
+                    config.Attributes.Options
+                    |> List.map (fun (value, title) ->
+                        Html.label [
+                            prop.className "inline-flex items-center gap-2"
+                            prop.children [
+                                Html.input [
+                                    prop.type' "radio"
+                                    prop.value value
+                                    prop.name config.Attributes.Label
+                                    prop.isChecked (config.Value = value)
+                                    prop.disabled config.Disabled
+                                    prop.onChange (fun (_ : bool) -> config.OnChange value |> dispatch)
+                                    match config.OnBlur with
+                                    | Some onBlur -> prop.onBlur (fun _ -> dispatch onBlur)
+                                    | None -> ()
+                                ]
+                                Html.span [
+                                    prop.text title
+                                ]
+                            ]
+                        ]
+                    )
+            ]
+        ]
+        |> wrapFormField config.Attributes.Label config.ShowError config.Error
+
+    let htmlViewConfig : Form.View.CustomConfig<_> = {
+        Form = formBuilder
+        TextField = inputFieldBuilder "text"
+        PasswordField = inputFieldBuilder "password"
+        EmailField = fun config -> failwith "EmailField not implemented"
+        TextAreaField = fun config -> failwith "TextAreaField not implemented"
+        CheckboxField = fun config -> failwith "CheckboxField not implemented"
+        RadioField = radioFieldBuilder
+        SelectField = fun config -> failwith "SelectField not implemented"
+        Group = fun fields -> failwith "Group not implemented"
+        Section = fun title fields -> failwith "Section not implemented"
+        FormList = fun config -> failwith "FormList not implemented"
+        FormListItem = fun config -> failwith "FormListItem not implemented"
+    }
+    let config: Form.View.ViewConfig<_, _> =
+        {
+            Dispatch = dispatch
+            OnChange = formChangedMsg
+            Action = "Speichern"
+            Validation = Form.View.ValidateOnSubmit
+        }
+    Form.View.custom htmlViewConfig config fields data
 
 module Order =
     open MusiOrder.Models.Order
