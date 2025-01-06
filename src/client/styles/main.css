@@ -12,6 +12,9 @@ body {
 table thead tr {
   @apply border-b-2 border-slate-200;
 }
+table thead tr th {
+  @apply text-left;
+}
 table thead tr th,
 table tbody tr td {
   @apply px-4 py-2;
