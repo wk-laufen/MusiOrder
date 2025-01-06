@@ -273,7 +273,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
     let userButtons = [
         yield! userButtons
         Html.button [
-            prop.className "btn btn-solid btn-red text-xl py-4"
+            prop.className "btn btn-solid btn-red text-xl !py-4"
             match state.Order with
             | Drafting order ->
                 prop.disabled (Map.isEmpty order)
@@ -290,7 +290,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             ]
         ]
         Html.button [
-            prop.className "btn btn-solid btn-green text-xl py-4"
+            prop.className "btn btn-solid btn-green text-xl !py-4"
             match state.Order with
             | Drafting order ->
                 prop.disabled (Map.isEmpty order)

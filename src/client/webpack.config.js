@@ -17,7 +17,7 @@ var CONFIG = {
     // See https://github.com/jantimon/html-webpack-plugin
     indexHtmlTemplate: "./src/index.html",
     fsharpEntry: "./src/Main.fs.js",
-    cssEntry: "./styles/main.scss",
+    cssEntry: "./styles/main.css",
     outputDir: "./deploy",
     assetsDir: "./public",
     devServerPort: 5050,
@@ -60,7 +60,7 @@ module.exports = {
     // In development, bundle styles together with the code so they can also
     // trigger hot reloads. In production, put them in a separate CSS file.
     entry: isProduction ? {
-        app: [resolve(CONFIG.fsharpEntry), resolve(CONFIG.cssEntry), resolve('./styles/main.css')]
+        app: [resolve(CONFIG.fsharpEntry), resolve(CONFIG.cssEntry)]
     } : {
             app: [resolve(CONFIG.fsharpEntry)],
             style: [resolve(CONFIG.cssEntry)]

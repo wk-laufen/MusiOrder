@@ -1,17 +1,5 @@
-$primary: rgba(169, 132, 20, 0.7);
-@import "~bulma";
-@import "~fable-form-simple-bulma";
-
 $fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
 @import "~@fortawesome/fontawesome-free/scss/fontawesome";
 @import "~@fortawesome/fontawesome-free/scss/regular";
 @import "~@fortawesome/fontawesome-free/scss/solid";
 @import "~@fortawesome/fontawesome-free/scss/brands";
-
-table td {
-    vertical-align: middle !important;
-}
-input[type="checkbox"],
-input[type="radio"] {
-    margin-right: 0.5em;
-}

@@ -1715,11 +1715,6 @@ buffer-indexof@^1.0.0:
   resolved "https://registry.yarnpkg.com/buffer-indexof/-/buffer-indexof-1.1.1.tgz#52fabcc6a606d1a00302802648ef68f639da268c"
   integrity sha512-4/rOEg86jivtPTeOUUT61jJO1Ya1TrR/OkqCSZDyq84WJh3LuuiphBYJN+fm5xufIk4XAFcEwte/8WzC8If/1g==
 
-bulma@^0.9.3:
-  version "0.9.3"
-  resolved "https://registry.yarnpkg.com/bulma/-/bulma-0.9.3.tgz#ddccb7436ebe3e21bf47afe01d3c43a296b70243"
-  integrity sha512-0d7GNW1PY4ud8TWxdNcP6Cc8Bu7MxcntD/RRLGWuiw/s0a9P+XlH/6QoOIrmbj6o8WWJzJYhytiu9nFjTszk1g==
-
 bytes@3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/bytes/-/bytes-3.0.0.tgz#d32815404d689699f85a4ea4fa8755dd13a96048"
@@ -2625,11 +2620,6 @@ extglob@^2.0.4:
     regex-not "^1.0.0"
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
-
-fable-form-simple-bulma@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/fable-form-simple-bulma/-/fable-form-simple-bulma-1.0.0.tgz#2b8420b8cf92512b58756447d50b0dbd8a3ac624"
-  integrity sha512-TuEI/L0I4rx9Z9tMHNU97EpjFB6/HEdSPlUwXQr6kprZDyAH1BIn4WW9Ei3JbnuxPXS6im2WMxldDKNoPTaGSA==
 
 fast-deep-equal@^3.1.1:
   version "3.1.3"
