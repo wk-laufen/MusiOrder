@@ -60,8 +60,8 @@ module User =
             )
 
     let getBalance (UserId userId) = task {
-        let! totalOrderPrice = DB.readSingle "SELECT COALESCE(SUM(`amount` * `pricePerUnit`), 0) as `price` FROM `Order` WHERE userId = @UserId" [ ("@UserId", userId) ] (fun reader -> reader.GetDecimal(0))
-        let! totalBalance = DB.readSingle "SELECT COALESCE(SUM(`amount`), 0) FROM `MemberPayment` WHERE userId = @UserId" [ ("@UserId", userId) ] (fun reader -> reader.GetDecimal(0))
+        let! totalOrderPrice = DB.readSingle "SELECT COALESCE(SUM(`amount` * (`pricePerUnit` * 100)), 0) as `price` FROM `Order` WHERE userId = @UserId" [ ("@UserId", userId) ] (fun reader -> reader.GetDecimal(0) / 100m)
+        let! totalBalance = DB.readSingle "SELECT COALESCE(SUM(`amount` * 100), 0) FROM `MemberPayment` WHERE userId = @UserId" [ ("@UserId", userId) ] (fun reader -> reader.GetDecimal(0) / 100m)
         return (Option.defaultValue 0m totalBalance) - (Option.defaultValue 0m totalOrderPrice)
     }
 
@@ -104,8 +104,8 @@ module Order =
         let query = """
             SELECT `M`.`id`, `M`.`firstName`, `M`.`lastName`, `M`.`keyCode`, COALESCE(`payment`, 0) - COALESCE(`orderPrice`, 0) as `balance`
             FROM `ActiveMember` as `M`
-            LEFT OUTER JOIN (SELECT userId, SUM(`amount`) as `payment` FROM `MemberPayment` GROUP BY userId) AS `P` ON `M`.`id` = `P`.`userId`
-            LEFT OUTER JOIN (SELECT userId, SUM(`amount` * `pricePerUnit`) as `orderPrice` FROM `Order` GROUP BY userId) AS `O` ON `M`.`id` = `O`.`userId`
+            LEFT OUTER JOIN (SELECT userId, SUM(`amount` * 100) as `payment` FROM `MemberPayment` GROUP BY userId) AS `P` ON `M`.`id` = `P`.`userId`
+            LEFT OUTER JOIN (SELECT userId, SUM(`amount` * (`pricePerUnit` * 100)) as `orderPrice` FROM `Order` GROUP BY userId) AS `O` ON `M`.`id` = `O`.`userId`
             GROUP BY `M`.`id`
             ORDER BY `M`.`lastName`, `M`.`firstName`
         """
@@ -115,7 +115,7 @@ module Order =
                 FirstName = reader.GetString(1)
                 LastName = reader.GetString(2)
                 AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey
-                Balance = reader.GetDecimal(4)
+                Balance = reader.GetDecimal(4) / 100m
             })
     }
 
@@ -161,8 +161,8 @@ module UserPaymentAdministration =
         let query = """
             SELECT `M`.`id`, `M`.`firstName`, `M`.`lastName`, `lastOrderTimestamp`, COALESCE(`payment`, 0) - COALESCE(`orderPrice`, 0) as `balance`
             FROM `ActiveMember` as `M`
-            LEFT OUTER JOIN (SELECT userId, SUM(`amount`) as `payment` FROM `MemberPayment` GROUP BY userId) AS `P` ON `M`.`id` = `P`.`userId`
-            LEFT OUTER JOIN (SELECT userId, MAX(DATETIME(`Order`.`timestamp`, 'localtime')) as `lastOrderTimestamp`, SUM(`amount` * `pricePerUnit`) as `orderPrice` FROM `Order` GROUP BY userId) AS `O` ON `M`.`id` = `O`.`userId`
+            LEFT OUTER JOIN (SELECT userId, SUM(`amount` * 100) as `payment` FROM `MemberPayment` GROUP BY userId) AS `P` ON `M`.`id` = `P`.`userId`
+            LEFT OUTER JOIN (SELECT userId, MAX(DATETIME(`Order`.`timestamp`, 'localtime')) as `lastOrderTimestamp`, SUM(`amount` * (`pricePerUnit` * 100)) as `orderPrice` FROM `Order` GROUP BY userId) AS `O` ON `M`.`id` = `O`.`userId`
             GROUP BY `M`.`id`
             ORDER BY `M`.`lastName`, `M`.`firstName`
         """
@@ -172,7 +172,7 @@ module UserPaymentAdministration =
                 FirstName = reader.GetString(1)
                 LastName = reader.GetString(2)
                 LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 3
-                Balance = reader.GetDecimal(4)
+                Balance = reader.GetDecimal(4) / 100m
             })
     }
 
