@@ -317,7 +317,11 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                                                 prop.className "list-disc ml-4"
                                                                 prop.children [
                                                                     for warning in warnings ->
-                                                                        Html.li [ prop.text (DeleteUserWarning.label warning) ]
+                                                                        let text =
+                                                                            match warning with
+                                                                            | AuthKeyPresent -> "Der Benutzer hat noch einen Schlüssel zugeordnet."
+                                                                            | CurrentBalanceNotZero v -> $"Der Benutzer hat noch ein Guthaben von %s{View.formatBalance v}"
+                                                                        Html.li text
                                                                 ]
                                                             ]
                                                         ]

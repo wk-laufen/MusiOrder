@@ -1,10 +1,20 @@
 module View
 
+open Fable.Core
 open Fable.Core.JsInterop
 open Fable.FontAwesome
 open Fable.Form.Simple
 open Feliz
 open global.JS
+
+[<Emit("new Intl.NumberFormat(navigator.language, { style: 'currency', currency: 'EUR' }).format($0)")>]
+let formatPrice (v: decimal) : string = jsNative
+
+[<Emit("new Intl.NumberFormat(navigator.language, { minimumFractionDigits: 2 }).format($0)")>]
+let formatNumber (v: decimal) : string = jsNative
+
+[<Emit("new Intl.NumberFormat(navigator.language, { style: 'currency', currency: 'EUR', signDisplay: 'always' }).format($0)")>]
+let formatBalance (v: decimal) : string = jsNative
 
 let retryButton onClick =
     Html.button [
@@ -118,7 +128,7 @@ let form title fields data dispatch closeMsg formChangedMsg =
         modal title (fun () -> dispatch closeMsg)
             [
                 Html.form [
-                    prop.id "edit-user"
+                    prop.id "modal-form"
                     prop.onSubmit (fun ev ->
                         ev.preventDefault()
 
@@ -145,7 +155,7 @@ let form title fields data dispatch closeMsg formChangedMsg =
                 | Form.View.Idle -> ()
 
                 Html.button [
-                    prop.form "edit-user"
+                    prop.form "modal-form"
                     prop.className "btn btn-solid btn-green"
                     prop.text config.Action
                     prop.disabled (config.State = Form.View.Loading)
@@ -179,7 +189,12 @@ let form title fields data dispatch closeMsg formChangedMsg =
 
     let inputFieldBuilder typeName = fun (config: Form.View.TextFieldConfig<_>) ->
         Html.input [
+            // dirty hack to change HTML attributes
+            let typeName = Option.ofObj config.Attributes?Type |> Option.defaultValue typeName
             prop.type' typeName
+            yield! Option.ofObj config.Attributes?Min |> Option.map (fun v -> prop.custom ("min", string v)) |> Option.toList
+            yield! Option.ofObj config.Attributes?Max |> Option.map (fun v -> prop.custom ("max", string v)) |> Option.toList
+            yield! Option.ofObj config.Attributes?Step |> Option.map (fun v -> prop.custom ("step", string v)) |> Option.toList
             prop.classes [
                 if config.ShowError && config.Error.IsSome then "border-musi-red"
             ]
@@ -285,7 +300,7 @@ module Order =
                     Html.text "Dein aktuelles Guthaben beträgt: "
                     Html.span [
                         prop.className $"text-lg %s{balanceColor orderSummary.Balance}"
-                        prop.text $"%.2f{orderSummary.Balance}€"
+                        prop.text (formatBalance orderSummary.Balance)
                     ]
                 ]
                 Html.div [
@@ -328,7 +343,7 @@ module Order =
                             ]
                             Html.span [
                                 prop.className $"text-center text-sm %s{balanceColor user.Balance}"
-                                prop.text $"%.2f{user.Balance}€"
+                                prop.text (formatBalance user.Balance)
                             ]
                         ]
                     ]

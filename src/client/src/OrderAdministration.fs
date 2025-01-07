@@ -123,7 +123,7 @@ let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement li
                                             prop.text order.FirstName
                                         ]
                                         Html.td [
-                                            prop.text $"%d{order.Amount} x %s{order.ProductName} à %.2f{order.PricePerUnit}€"
+                                            prop.text $"%d{order.Amount} x %s{order.ProductName} à %s{View.formatPrice order.PricePerUnit}"
                                         ]
                                         Html.td [
                                             let relativeTime: string = moment(order.Timestamp)?fromNow()

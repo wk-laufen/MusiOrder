@@ -224,7 +224,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                         match amount with
                         | Some amount -> decimal amount * product.Price
                         | None -> product.Price 
-                    prop.text $"%.2f{price}€"
+                    prop.text (View.formatPrice price)
                 ]
 
                 Html.button [

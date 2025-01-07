@@ -8,6 +8,7 @@ open Fable.Form.Simple
 open Feliz
 open Feliz.UseElmish
 open global.JS
+open Fable.Core.JsInterop
 open MusiOrder.Models
 open MusiOrder.Models.ProductAdministration
 
@@ -41,7 +42,7 @@ module ProductFormData =
         {
             ProductGroupId = productGroupId
             Name = v.Name.Value
-            Price = NonNegativeDecimal.value v.Price |> sprintf "%.2f"
+            Price = NonNegativeDecimal.value v.Price |> View.formatNumber
             State = ProductState.toString v.State
         }
     let empty =
@@ -351,7 +352,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
 
                                                     prop.children [
                                                         Html.td product.Data.Name.Value
-                                                        Html.td $"%.2f{NonNegativeDecimal.value product.Data.Price}€"
+                                                        Html.td (NonNegativeDecimal.value product.Data.Price |> View.formatPrice)
                                                         Html.td [
                                                             match product.Data.State with
                                                             | Enabled ->
@@ -483,10 +484,14 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                 Update = fun v product -> { product with Price = v }
                                 Error = fun _ -> None
                                 Attributes =
-                                    {
-                                        Label = "Preis"
-                                        Placeholder = ""
-                                    }
+                                    // dirty hack to change HTML attributes
+                                    (
+                                        {
+                                            Label = "Preis [€]"
+                                            Placeholder = ""
+                                        } : Field.TextField.Attributes
+                                    )
+                                    |> fun v -> !!{| v with Type = "number"; Min = 0; Step = 0.1 |}
                             }
 
                     let stateField =

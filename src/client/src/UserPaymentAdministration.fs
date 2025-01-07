@@ -120,7 +120,7 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
                             | Deferred.InProgress ->
                                 prop.disabled true
                             | _ -> ()
-                            prop.textf "%s%.2f€" (if amount >= 0.m then "+" else "") amount
+                            prop.text (View.formatBalance amount)
                             prop.onClick (fun _ -> dispatch (AddPayment (selectedUserId, amount)))
                         ]
                     match state.AddPaymentState with
@@ -180,7 +180,7 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
                                             ]
                                             Html.td [
                                                 prop.className $"%s{View.balanceColor user.Balance}"
-                                                prop.text $"%.2f{user.Balance}€"
+                                                prop.text (View.formatBalance user.Balance)
                                             ]
                                         ]
                                     ]

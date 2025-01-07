@@ -195,10 +195,6 @@ module UserAdministration =
     type DeleteUserWarning =
         | AuthKeyPresent
         | CurrentBalanceNotZero of decimal
-    module DeleteUserWarning =
-        let label = function
-            | AuthKeyPresent -> "Der Benutzer hat noch einen Schlüssel zugeordnet."
-            | CurrentBalanceNotZero v -> sprintf "Der Benutzer hat noch ein Guthaben von %.2f€" v
 
     type LoadExistingUsersError =
         | InvalidAuthKey
