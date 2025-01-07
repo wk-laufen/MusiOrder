@@ -97,7 +97,8 @@ let update msg (state: Model) =
         | Drafting order
         | Authenticating order
         | LoadUsersError (order, _)
-        | Sending (order, _, _) ->
+        | Sending (order, _, _)
+        | SendError (order, _) ->
             { state with Order = LoadingUsers (order, authKey) },
             Cmd.OfAsync.perform loadUsers authKey LoadUsersResult
         | _ -> state, Cmd.none
