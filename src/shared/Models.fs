@@ -240,7 +240,7 @@ module ProductAdministration =
     }
 
     type ProductGroupData = {
-        Name: string
+        Name: NotEmptyString
     }
 
     type ExistingProductGroup = {

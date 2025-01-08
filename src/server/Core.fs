@@ -267,10 +267,11 @@ module ProductAdministration =
                 "SELECT `id`, `name` FROM `ArticleGroup` ORDER BY `grade`"
                 []
                 (fun reader ->
+                    let productGroupId = ProductGroupId (reader.GetString(0))
                     {
-                        Id = ProductGroupId (reader.GetString(0))
+                        Id = productGroupId
                         Data = {
-                            Name = reader.GetString(1)
+                            Name = reader.GetString(1) |> NotEmptyString.tryCreate |> Option.defaultWith (fun () -> failwithf "DB error: Name of product group (%O) is empty" productGroupId)
                         }
                         Products = []
                     }
@@ -296,14 +297,12 @@ module ProductAdministration =
                 )
         return
             groups
-            |> List.choose (fun group ->
+            |> List.map (fun group ->
                 let products =
                     products
                     |> List.filter (fun (groupId, product) -> groupId = group.Id)
                     |> List.map snd
-                match products with
-                | [] -> None
-                | x -> Some { group with Products = x }
+                { group with Products = products }
             )
     }
 
@@ -311,7 +310,7 @@ module ProductAdministration =
         let newProductGroupId = sprintf "%O" (Guid.NewGuid()) |> ProductGroupId
         do!
             DB.write
-                "INSERT INTO `ArticleGroup` (`id`, `grade`, `name`) VALUES (@Id, (SELECT COALESCE(MAX(`grade`), 1) FROM `ArticleGroup`), @Name)"
+                "INSERT INTO `ArticleGroup` (`id`, `grade`, `name`) VALUES (@Id, (SELECT COALESCE(MAX(`grade`) + 1, 1) FROM `ArticleGroup`), @Name)"
                 [
                     "@Id", Helper.Box newProductGroupId
                     "@Name", Helper.Box data.Name

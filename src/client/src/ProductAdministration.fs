@@ -31,6 +31,24 @@ module Form =
                 }
         )
 
+type ProductGroupFormData = {
+    Name: string
+}
+module ProductGroupFormData =
+    let fromProductData (v: ProductGroupData) =
+        {
+            Name = v.Name.Value
+        }
+    let empty =
+        {
+            Name = ""
+        }
+
+type EditingProductGroup = {
+    Id: ProductGroupId option
+    Data: Form.View.Model<ProductGroupFormData>
+}
+
 type ProductFormData = {
     ProductGroupId: string
     Name: string
@@ -72,6 +90,7 @@ type DeleteProductState =
 
 type LoadedModel = {
     Products: ExistingProductGroup list
+    EditingProductGroup: EditingProductGroup option
     MovingUpProductGroup: (ProductGroupId * MoveProductGroupState) option
     MovingDownProductGroup: (ProductGroupId * MoveProductGroupState) option
     EditingProduct: EditingProduct option
@@ -83,6 +102,7 @@ module LoadedModel =
     let init products =
         {
             Products = products
+            EditingProductGroup = None
             MovingUpProductGroup = None
             MovingDownProductGroup = None
             EditingProduct = None
@@ -111,8 +131,13 @@ type Msg =
     | MoveDownProductResult of ProductId * Result<unit, ApiError<MoveProductError>>
     | DeleteProduct of ProductId
     | DeleteProductResult of ProductId * Result<unit, ApiError<DeleteProductError>>
+    | EditNewProductGroup
+    | ProductGroupFormChanged of Form.View.Model<ProductGroupFormData>
+    | SaveProductGroup of ProductGroupData
+    | SaveProductGroupResult of Result<ProductGroupId, ApiError<SaveProductGroupError>>
+    | CancelEditProductGroup
     | EditNewProduct
-    | FormChanged of Form.View.Model<ProductFormData>
+    | ProductFormChanged of Form.View.Model<ProductFormData>
     | SaveProduct of ProductGroupId * ProductData
     | SaveProductResult of Result<ProductId, ApiError<SaveProductError>>
     | CancelEditProduct
@@ -200,13 +225,56 @@ let update msg state =
             Loaded (authKey, { state with ProductStates = Map.add productId (DeletedProduct result) state.ProductStates }),
             Cmd.none
         | _ -> state, Cmd.none
+    | EditNewProductGroup ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with EditingProductGroup = Some { Id = None; Data = Form.View.idle ProductGroupFormData.empty } }),
+            Cmd.none
+        | _ -> state, Cmd.none
+    | ProductGroupFormChanged formData ->
+        match state with
+        | Loaded (authKey, ({ EditingProductGroup = Some editingProductGroup } as state)) ->
+            Loaded (authKey, { state with EditingProductGroup = Some { editingProductGroup with Data = formData } }),
+            Cmd.none
+        | _ -> state, Cmd.none
+    | SaveProductGroup productGroup ->
+        match state with
+        | Loaded (authKey, ({ EditingProductGroup = Some editingProductGroup } as state)) ->
+            let state = Loaded (authKey, { state with EditingProductGroup = Some { editingProductGroup with Data = { editingProductGroup.Data with State = Form.View.State.Loading } } })
+            let cmd =
+                match editingProductGroup.Id with
+                | Some productGroupId -> Cmd.OfAsync.perform (updateProductGroup authKey productGroupId) productGroup (Result.map (fun () -> productGroupId) >> SaveProductGroupResult)
+                | None -> Cmd.OfAsync.perform (createProductGroup authKey) productGroup SaveProductGroupResult
+            state, cmd
+        | _ -> state, Cmd.none
+    | SaveProductGroupResult (Ok productGroupId) ->
+        match state with
+        | Loaded (authKey, ({ EditingProductGroup = Some editingProductGroup } as state)) ->
+            Loaded (authKey, { state with EditingProductGroup = Some { editingProductGroup with Id = Some productGroupId; Data = { editingProductGroup.Data with State = Form.View.State.Success "Artikelgruppe erfolgreich gespeichert." } } }),
+            Cmd.none
+        | _ -> state, Cmd.none
+    | SaveProductGroupResult (Error e) ->
+        match state with
+        | Loaded (authKey, ({ EditingProductGroup = Some editingProductGroup } as state)) ->
+            let errorMessage =
+                match e with
+                | ExpectedError SaveProductGroupError.InvalidAuthKey
+                | ExpectedError SaveProductGroupError.NotAuthorized
+                | UnexpectedError _ -> "Fehler beim Speichern der Artikelgruppe."
+            Loaded (authKey, { state with EditingProductGroup = Some { editingProductGroup with Data = { editingProductGroup.Data with State = Form.View.State.Error errorMessage } } }),
+            Cmd.none
+        | _ -> state, Cmd.none
+    | CancelEditProductGroup ->
+        match state with
+        | Loaded (authKey, state) -> Loaded (authKey, { state with EditingProductGroup = None }), Cmd.ofMsg (Load authKey)
+        | _ -> state, Cmd.none
     | EditNewProduct ->
         match state with
         | Loaded (authKey, state) ->
             Loaded (authKey, { state with EditingProduct = Some { Id = None; Data = Form.View.idle ProductFormData.empty } }),
             Cmd.none
         | _ -> state, Cmd.none
-    | FormChanged formData ->
+    | ProductFormChanged formData ->
         match state with
         | Loaded (authKey, ({ EditingProduct = Some editingProduct } as state)) ->
             Loaded (authKey, { state with EditingProduct = Some { editingProduct with Data = formData } }),
@@ -270,6 +338,15 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
             setMenuItems [
                 Html.button [
                     prop.className "!flex items-center gap-2 btn btn-solid btn-green"
+                    prop.onClick (fun _ -> dispatch EditNewProductGroup)
+                    
+                    prop.children [
+                        Fa.i [ Fa.Solid.Plus ] []
+                        Html.span [ prop.text "Neue Artikelgruppe" ]
+                    ]
+                ]
+                Html.button [
+                    prop.className "!flex items-center gap-2 btn btn-solid btn-green"
                     prop.onClick (fun _ -> dispatch EditNewProduct)
                     
                     prop.children [
@@ -291,7 +368,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                     prop.children [
                                         Html.h3 [
                                             prop.className "text-2xl"
-                                            prop.text group.Data.Name
+                                            prop.text group.Data.Name.Value
                                         ]
                                         Html.button [
                                             prop.className "btn btn-solid btn-green"
@@ -321,119 +398,165 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                         ]
                                     ]
                                 ]
-                                Html.table [
-                                    prop.className "w-full"
-                                    prop.children [
-                                        Html.thead [
-                                            Html.tr [
-                                                Html.th "Name"
-                                                Html.th "Preis"
-                                                Html.th "Aktiv"
-                                                Html.th []
+                                match group.Products with
+                                | [] ->
+                                    Html.div [
+                                        prop.className "px-4 py-2"
+                                        prop.children [
+                                            Html.span [
+                                                prop.className "text-lg"
+                                                prop.text "Keine Artikel vorhanden."
                                             ]
                                         ]
-                                        Html.tbody [
-                                            for (index, product) in List.indexed group.Products ->
-                                                let deleteProductState = Map.tryFind product.Id state.ProductStates
-                                                let isDeleted =
-                                                    match deleteProductState with
-                                                    | Some (DeletedProduct (Ok _)) -> true
-                                                    | _ -> false
-                                                let isDeletingOrDeleted =
-                                                    match deleteProductState with
-                                                    | None -> false
-                                                    | Some DeletingProduct -> true
-                                                    | Some (DeletedProduct (Ok _)) -> true
-                                                    | Some (DeletedProduct (Error _)) -> false
+                                    ]
+                                | _ ->
+                                    Html.table [
+                                        prop.className "w-full"
+                                        prop.children [
+                                            Html.thead [
                                                 Html.tr [
-                                                    prop.classes [
-                                                        if isDeleted then "opacity-50"
-                                                    ]
-
-                                                    prop.children [
-                                                        Html.td product.Data.Name.Value
-                                                        Html.td (NonNegativeDecimal.value product.Data.Price |> View.formatPrice)
-                                                        Html.td [
-                                                            match product.Data.State with
-                                                            | Enabled ->
-                                                                prop.className "text-musi-green"
-                                                                prop.text "✔"
-                                                            | Disabled ->
-                                                                prop.className "text-musi-red"
-                                                                prop.text "✘"
-                                                        ]
-                                                        Html.td [
-                                                            Html.div [
-                                                                prop.className "flex gap-2"
-                                                                prop.children [
-                                                                    Html.button [
-                                                                        prop.className "btn btn-solid btn-green"
-                                                                        let isMoving =
-                                                                            match state.MovingUpProduct with
-                                                                            | Some (productId, MovingProduct) when productId = product.Id -> true
-                                                                            | _ -> false
-                                                                        prop.disabled (isMoving || isDeletingOrDeleted || index = 0)
-                                                                        prop.onClick (fun _ -> dispatch (MoveUpProduct product.Id))
-                                                                        
-                                                                        prop.children [
-                                                                            Fa.i [ Fa.Solid.ArrowUp ] []
-                                                                        ]
-                                                                    ]
-                                                                    Html.button [
-                                                                        prop.className "btn btn-solid btn-green"
-                                                                        let isMoving =
-                                                                            match state.MovingDownProduct with
-                                                                            | Some (productId, MovingProduct) when productId = product.Id -> true
-                                                                            | _ -> false
-                                                                        prop.disabled (isMoving || isDeletingOrDeleted || index = group.Products.Length - 1)
-                                                                        prop.onClick (fun _ -> dispatch (MoveDownProduct product.Id))
-                                                                        
-                                                                        prop.children [
-                                                                            Fa.i [ Fa.Solid.ArrowDown ] []
-                                                                        ]
-                                                                    ]
-                                                                    Html.button [
-                                                                        prop.className "btn btn-solid btn-blue"
-                                                                        prop.disabled isDeletingOrDeleted
-                                                                        prop.onClick (fun _ -> dispatch (EditProduct (group.Id, product)))
-                                                                        
-                                                                        prop.children [
-                                                                            Fa.i [ Fa.Solid.Edit ] []
-                                                                        ]
-                                                                    ]
-                                                                    Html.button [
-                                                                        prop.className "btn btn-solid btn-red"
-                                                                        prop.disabled isDeletingOrDeleted
-
-                                                                        match deleteProductState with
-                                                                        | None
-                                                                        | Some (DeletedProduct (Error _)) -> prop.onClick (fun _ -> dispatch (DeleteProduct product.Id))
-                                                                        | Some DeletingProduct
-                                                                        | Some (DeletedProduct (Ok _)) -> ()
-                                                                        
-                                                                        prop.children [
-                                                                            Fa.i [ Fa.Solid.TrashAlt ] []
-                                                                        ]
-                                                                    ]
-                                                                ]
-                                                            ]
-                                                            match deleteProductState with
-                                                            | Some (DeletedProduct (Error _)) ->
-                                                                Html.span [
-                                                                    prop.className "text-sm text-musi-red"
-                                                                    prop.text "Fehler beim Löschen des Artikels."
-                                                                ]
-                                                            | _ -> ()
-                                                        ]
-                                                    ]
+                                                    Html.th "Name"
+                                                    Html.th "Preis"
+                                                    Html.th "Aktiv"
+                                                    Html.th []
                                                 ]
+                                            ]
+                                            Html.tbody [
+                                                for (index, product) in List.indexed group.Products ->
+                                                    let deleteProductState = Map.tryFind product.Id state.ProductStates
+                                                    let isDeleted =
+                                                        match deleteProductState with
+                                                        | Some (DeletedProduct (Ok _)) -> true
+                                                        | _ -> false
+                                                    let isDeletingOrDeleted =
+                                                        match deleteProductState with
+                                                        | None -> false
+                                                        | Some DeletingProduct -> true
+                                                        | Some (DeletedProduct (Ok _)) -> true
+                                                        | Some (DeletedProduct (Error _)) -> false
+                                                    Html.tr [
+                                                        prop.classes [
+                                                            if isDeleted then "opacity-50"
+                                                        ]
+
+                                                        prop.children [
+                                                            Html.td product.Data.Name.Value
+                                                            Html.td (NonNegativeDecimal.value product.Data.Price |> View.formatPrice)
+                                                            Html.td [
+                                                                match product.Data.State with
+                                                                | Enabled ->
+                                                                    prop.className "text-musi-green"
+                                                                    prop.text "✔"
+                                                                | Disabled ->
+                                                                    prop.className "text-musi-red"
+                                                                    prop.text "✘"
+                                                            ]
+                                                            Html.td [
+                                                                Html.div [
+                                                                    prop.className "flex gap-2"
+                                                                    prop.children [
+                                                                        Html.button [
+                                                                            prop.className "btn btn-solid btn-green"
+                                                                            let isMoving =
+                                                                                match state.MovingUpProduct with
+                                                                                | Some (productId, MovingProduct) when productId = product.Id -> true
+                                                                                | _ -> false
+                                                                            prop.disabled (isMoving || isDeletingOrDeleted || index = 0)
+                                                                            prop.onClick (fun _ -> dispatch (MoveUpProduct product.Id))
+                                                                            
+                                                                            prop.children [
+                                                                                Fa.i [ Fa.Solid.ArrowUp ] []
+                                                                            ]
+                                                                        ]
+                                                                        Html.button [
+                                                                            prop.className "btn btn-solid btn-green"
+                                                                            let isMoving =
+                                                                                match state.MovingDownProduct with
+                                                                                | Some (productId, MovingProduct) when productId = product.Id -> true
+                                                                                | _ -> false
+                                                                            prop.disabled (isMoving || isDeletingOrDeleted || index = group.Products.Length - 1)
+                                                                            prop.onClick (fun _ -> dispatch (MoveDownProduct product.Id))
+                                                                            
+                                                                            prop.children [
+                                                                                Fa.i [ Fa.Solid.ArrowDown ] []
+                                                                            ]
+                                                                        ]
+                                                                        Html.button [
+                                                                            prop.className "btn btn-solid btn-blue"
+                                                                            prop.disabled isDeletingOrDeleted
+                                                                            prop.onClick (fun _ -> dispatch (EditProduct (group.Id, product)))
+                                                                            
+                                                                            prop.children [
+                                                                                Fa.i [ Fa.Solid.Edit ] []
+                                                                            ]
+                                                                        ]
+                                                                        Html.button [
+                                                                            prop.className "btn btn-solid btn-red"
+                                                                            prop.disabled isDeletingOrDeleted
+
+                                                                            match deleteProductState with
+                                                                            | None
+                                                                            | Some (DeletedProduct (Error _)) -> prop.onClick (fun _ -> dispatch (DeleteProduct product.Id))
+                                                                            | Some DeletingProduct
+                                                                            | Some (DeletedProduct (Ok _)) -> ()
+                                                                            
+                                                                            prop.children [
+                                                                                Fa.i [ Fa.Solid.TrashAlt ] []
+                                                                            ]
+                                                                        ]
+                                                                    ]
+                                                                ]
+                                                                match deleteProductState with
+                                                                | Some (DeletedProduct (Error _)) ->
+                                                                    Html.span [
+                                                                        prop.className "text-sm text-musi-red"
+                                                                        prop.text "Fehler beim Löschen des Artikels."
+                                                                    ]
+                                                                | _ -> ()
+                                                            ]
+                                                        ]
+                                                    ]
+                                            ]
                                         ]
                                     ]
-                                ]
                             ]
                         ]
                 ]
             ]
+
+            match state.EditingProductGroup with
+            | Some editingProductGroup ->
+                let form : Form.Form<ProductGroupFormData, Msg> =
+                    let nameField =
+                        Form.textField
+                            {
+                                Parser = fun value ->
+                                    match NotEmptyString.tryCreate value with
+                                    | Some v -> Ok v
+                                    | None -> Error "Name darf nicht leer sein"
+                                Value = fun (productGroup : ProductGroupFormData) -> productGroup.Name
+                                Update = fun v productGroup -> { productGroup with Name = v }
+                                Error = fun _ -> None
+                                Attributes =
+                                    {
+                                        Label = "Name"
+                                        Placeholder = ""
+                                    }
+                            }
+
+                    let onSubmit = fun name ->
+                        SaveProductGroup { Name = name }
+
+                    Form.succeed onSubmit
+                    |> Form.append nameField
+
+                let title =
+                    match editingProductGroup.Id with
+                    | Some _ -> "Artikelgruppe bearbeiten"
+                    | None -> "Artikelgruppe anlegen"
+
+                View.form title form editingProductGroup.Data dispatch CancelEditProductGroup ProductGroupFormChanged
+            | None -> ()
 
             match state.EditingProduct with
             | Some editingProduct ->
@@ -451,7 +574,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                         Placeholder = "Wähle eine Artikelgruppe"
                                         Options =
                                             state.Products
-                                            |> List.map (fun productGroup -> (let (ProductGroupId v) = productGroup.Id in v, productGroup.Data.Name))
+                                            |> List.map (fun productGroup -> (let (ProductGroupId v) = productGroup.Id in v, productGroup.Data.Name.Value))
                                     }
                             }
                         |> Form.disable (Option.isSome editingProduct.Id)
@@ -529,6 +652,6 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                     | Some _ -> "Artikel bearbeiten"
                     | None -> "Artikel anlegen"
 
-                View.form title form editingProduct.Data dispatch CancelEditProduct FormChanged
+                View.form title form editingProduct.Data dispatch CancelEditProduct ProductFormChanged
             | None -> ()
         ]
