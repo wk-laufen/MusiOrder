@@ -364,8 +364,13 @@ module ProductAdministration =
                 "@Id", Helper.Box productGroupId
             ]
 
-    let deleteProductGroup (productGroupId: ProductGroupId) =
-        DB.write "DELETE FROM `ArticleGroup` WHERE `id` = @Id" [ "@Id", Helper.Box productGroupId ]
+    let deleteProductGroup (productGroupId: ProductGroupId) = task {
+        try
+            do! DB.write "DELETE FROM `ArticleGroup` WHERE `id` = @Id" [ "@Id", Helper.Box productGroupId ]
+            return true
+        with :? SqliteException as e when e.SqliteErrorCode = 19 -> // FOREIGN KEY constraint failed
+            return false
+    }
 
     let createProduct (productGroupId: ProductGroupId) (data: ProductData) = task {
         let newProductId = sprintf "%O" (Guid.NewGuid()) |> ProductGroupId

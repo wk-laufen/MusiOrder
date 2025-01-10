@@ -208,8 +208,9 @@ module ProductAdministration =
     let handleDeleteProductGroup productGroupId : HttpHandler = fun next ctx -> task {
         match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
         | Some user when User.isAdmin user ->
-            do! deleteProductGroup productGroupId
-            return! Successful.OK () next ctx
+            let! isDeleted = deleteProductGroup productGroupId
+            if isDeleted then return! Successful.OK () next ctx
+            else return! RequestErrors.BAD_REQUEST DeleteProductGroupError.GroupNotEmpty next ctx
         | Some _ -> return! RequestErrors.BAD_REQUEST DeleteProductGroupError.NotAuthorized next ctx
         | None -> return! RequestErrors.BAD_REQUEST DeleteProductGroupError.InvalidAuthKey next ctx
     }

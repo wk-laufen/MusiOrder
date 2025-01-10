@@ -80,6 +80,10 @@ type MoveProductGroupState =
     | MovingProductGroup
     | MovedProductGroup of Result<unit, ApiError<MoveProductGroupError>>
 
+type DeleteProductGroupState =
+    | DeletingProductGroup
+    | DeletedProductGroup of Result<unit, ApiError<DeleteProductGroupError>>
+
 type MoveProductState =
     | MovingProduct
     | MovedProduct of Result<unit, ApiError<MoveProductError>>
@@ -93,6 +97,7 @@ type LoadedModel = {
     EditingProductGroup: EditingProductGroup option
     MovingUpProductGroup: (ProductGroupId * MoveProductGroupState) option
     MovingDownProductGroup: (ProductGroupId * MoveProductGroupState) option
+    ProductGroupStates: Map<ProductGroupId, DeleteProductGroupState>
     EditingProduct: EditingProduct option
     MovingUpProduct: (ProductId * MoveProductState) option
     MovingDownProduct: (ProductId * MoveProductState) option
@@ -105,6 +110,7 @@ module LoadedModel =
             EditingProductGroup = None
             MovingUpProductGroup = None
             MovingDownProductGroup = None
+            ProductGroupStates = Map.empty
             EditingProduct = None
             MovingUpProduct = None
             MovingDownProduct = None
@@ -124,6 +130,8 @@ type Msg =
     | MoveUpProductGroupResult of ProductGroupId * Result<unit, ApiError<MoveProductGroupError>>
     | MoveDownProductGroup of ProductGroupId
     | MoveDownProductGroupResult of ProductGroupId * Result<unit, ApiError<MoveProductGroupError>>
+    | DeleteProductGroup of ProductGroupId
+    | DeleteProductGroupResult of ProductGroupId * Result<unit, ApiError<DeleteProductGroupError>>
     | EditProduct of ProductGroupId * ExistingProduct
     | MoveUpProduct of ProductId
     | MoveUpProductResult of ProductId * Result<unit, ApiError<MoveProductError>>
@@ -182,6 +190,18 @@ let update msg state =
         | Loaded (authKey, state) when state.MovingDownProductGroup = Some (groupId, MovingProductGroup) ->
             Loaded (authKey, { state with MovingDownProductGroup = Some (groupId, MovedProductGroup result) }),
             Cmd.ofMsg (Load authKey)
+        | _ -> state, Cmd.none
+    | DeleteProductGroup productGroupId ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with ProductGroupStates = Map.add productGroupId DeletingProductGroup state.ProductGroupStates }),
+            Cmd.OfAsync.perform (deleteProductGroup authKey) productGroupId (fun result -> DeleteProductGroupResult (productGroupId, result))
+        | _ -> state, Cmd.none
+    | DeleteProductGroupResult (productGroupId, result) ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with ProductGroupStates = Map.add productGroupId (DeletedProductGroup result) state.ProductGroupStates }),
+            Cmd.none
         | _ -> state, Cmd.none
     | EditProduct (productGroupId, product) ->
         match state with
@@ -360,8 +380,14 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                 prop.className "container flex flex-col gap-4"
                 prop.children [
                     for (index, group) in List.indexed state.Products do
-                        Html.div [
-                            prop.className "flex flex-col gap-2"
+                        let deleteProductGroupState = Map.tryFind group.Id state.ProductGroupStates
+                        let isDeleted =
+                            match deleteProductGroupState with
+                            | Some (DeletedProductGroup (Ok _)) -> true
+                            | _ -> false
+                        Html.fieldSet [
+                            prop.className "flex flex-col gap-2 disabled:opacity-50"
+                            if isDeleted then prop.disabled true
                             prop.children [
                                 Html.div [
                                     prop.className "flex items-center gap-2"
@@ -396,6 +422,38 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                                 Fa.i [ Fa.Solid.ArrowDown ] []
                                             ]
                                         ]
+                                        Html.button [
+                                            let isDeletingOrDeleted =
+                                                match deleteProductGroupState with
+                                                | None -> false
+                                                | Some DeletingProductGroup -> true
+                                                | Some (DeletedProductGroup (Ok _)) -> true
+                                                | Some (DeletedProductGroup (Error _)) -> false
+                                            prop.className "btn btn-solid btn-red"
+                                            prop.disabled isDeletingOrDeleted
+
+                                            match deleteProductGroupState with
+                                            | None
+                                            | Some (DeletedProductGroup (Error _)) -> prop.onClick (fun _ -> dispatch (DeleteProductGroup group.Id))
+                                            | Some DeletingProductGroup
+                                            | Some (DeletedProductGroup (Ok _)) -> ()
+                                            
+                                            prop.children [
+                                                Fa.i [ Fa.Solid.TrashAlt ] []
+                                            ]
+                                        ]
+                                        match deleteProductGroupState with
+                                        | Some (DeletedProductGroup (Error (ExpectedError DeleteProductGroupError.GroupNotEmpty))) ->
+                                            Html.span [
+                                                prop.className "text-sm text-musi-red"
+                                                prop.text "Die Artikelgruppe kann nicht gelöscht werden, weil noch Artikel vorhanden sind."
+                                            ]
+                                        | Some (DeletedProductGroup (Error _)) ->
+                                            Html.span [
+                                                prop.className "text-sm text-musi-red"
+                                                prop.text "Fehler beim Löschen der Artikelgruppe."
+                                            ]
+                                        | _ -> ()
                                     ]
                                 ]
                                 match group.Products with

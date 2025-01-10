@@ -264,6 +264,7 @@ module ProductAdministration =
     type DeleteProductGroupError =
         | InvalidAuthKey
         | NotAuthorized
+        | GroupNotEmpty
 
     type SaveProductError =
         | InvalidAuthKey
