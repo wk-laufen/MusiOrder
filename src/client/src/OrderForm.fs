@@ -361,7 +361,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                                         | Deferred.Resolved orderSummary ->
                                             Html.text ", "
                                             Html.span [
-                                                prop.className "text-musi-green"
+                                                prop.className "text-musi-gold"
                                                 prop.text orderSummary.ClientFullName
                                             ]
                                         | _ -> ()
