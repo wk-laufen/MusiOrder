@@ -66,7 +66,7 @@ let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement
             prop.onClick (ignore >> onHide)
             prop.children [
                 Html.div [
-                    prop.className "w-[640px] max-h-screen py-8 flex flex-col"
+                    prop.className "min-w-[640px] max-h-screen px-8 py-8 flex flex-col"
                     prop.onClick (fun e -> e.stopPropagation())
                     prop.children [
                         Html.div [
@@ -102,7 +102,11 @@ let authForm =
             Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
             Html.span [
                 prop.className "text-center text-3xl"
-                prop.text "Authentifiziere dich mit deinem Musischlüssel"
+                prop.children [
+                    Html.text "Authentifiziere dich mit deinem"
+                    Html.br []
+                    Html.text "Musischlüssel"
+                ]
             ]
         ]
     ]
@@ -330,20 +334,43 @@ module Order =
 
     let userCards users onClick =
         Html.div [
-            prop.className "flex flex-wrap gap-2"
+            prop.className "flex flex-col gap-2"
             prop.children [
-                for user in users do
+                for (key, users) in users |> List.groupBy (fun v -> v.LastName |> Seq.tryHead |> Option.map System.Char.ToUpper) do
                     Html.div [
-                        prop.className "flex flex-col grow shadow rounded p-2 cursor-pointer"
-                        prop.onClick (fun _ -> onClick user)
+                        prop.className "flex flex-col gap-2"
                         prop.children [
-                            Html.span [
-                                prop.className "text-center"
-                                prop.text $"%s{user.LastName.ToUpper()} %s{user.FirstName}"
+                            Html.div [
+                                prop.className "flex gap-2 items-center"
+                                prop.children [
+                                    match key with
+                                    | Some c ->
+                                        Html.hr [ prop.className "grow h-px bg-gray-300" ]
+                                        Html.span $"%c{c}"
+                                        Html.hr [ prop.className "grow h-px bg-gray-300" ]
+                                    | None ->
+                                        Html.hr [ prop.className "grow h-px bg-gray-300" ]
+                                ]
                             ]
-                            Html.span [
-                                prop.className $"text-center text-sm %s{balanceColor user.Balance}"
-                                prop.text (formatBalance user.Balance)
+                            Html.div [
+                                prop.className "flex flex-wrap justify-center gap-2"
+                                prop.children [
+                                    for user in users do
+                                        Html.div [
+                                            prop.className "flex flex-col shadow rounded p-2 cursor-pointer"
+                                            prop.onClick (fun _ -> onClick user)
+                                            prop.children [
+                                                Html.span [
+                                                    prop.className "text-center"
+                                                    prop.text $"%s{user.LastName.ToUpper()} %s{user.FirstName}"
+                                                ]
+                                                Html.span [
+                                                    prop.className $"text-center text-sm %s{balanceColor user.Balance}"
+                                                    prop.text (formatBalance user.Balance)
+                                                ]
+                                            ]
+                                        ]
+                                ]
                             ]
                         ]
                     ]
