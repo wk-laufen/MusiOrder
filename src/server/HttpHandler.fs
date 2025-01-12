@@ -110,7 +110,7 @@ module UserAdministration =
     let handlePostUser : HttpHandler = fun next ctx -> task {
         match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
         | Some user when User.isAdmin user ->
-            let! data = ctx.BindModelAsync<UserData>()
+            let! data = ctx.BindModelAsync<ExistingUserData>()
             match! createUser data with
             | Ok newUserId -> return! Successful.OK newUserId next ctx
             | Error e -> return! RequestErrors.BAD_REQUEST e next ctx
@@ -121,9 +121,11 @@ module UserAdministration =
     let handlePutUser userId : HttpHandler = fun next ctx -> task {
         match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
         | Some user when User.isAdmin user ->
-            let! data = ctx.BindModelAsync<UserData>()
-            if user.Id = userId && data.Role <> Admin then
+            let! data = ctx.BindModelAsync<PatchUserData>()
+            if user.Id = userId && (data.Role <> None && data.Role <> Some Admin) then
                 return! RequestErrors.BAD_REQUEST DowngradeSelfNotAllowed next ctx
+            elif user.Id = userId && (data.SetAuthKey && Option.isNone data.AuthKey) then
+                return! RequestErrors.BAD_REQUEST RemoveKeyCodeNotAllowed next ctx
             else
                 match! updateUser userId data with
                 | Ok () -> return! Successful.OK () next ctx

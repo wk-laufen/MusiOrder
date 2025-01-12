@@ -174,16 +174,26 @@ module UserAdministration =
             | Admin -> "Administrator"
             | User -> "Benutzer"
 
-    type UserData = {
+    type ExistingUserData = {
         FirstName: NotEmptyString
         LastName: NotEmptyString
         AuthKey: AuthKey option
         Role: UserRole
     }
 
+    type PatchUserData = {
+        FirstName: NotEmptyString option
+        LastName: NotEmptyString option
+        AuthKey: AuthKey option
+        SetAuthKey: bool
+        Role: UserRole option
+    }
+    module PatchUserData =
+        let empty = { FirstName = None; LastName = None; AuthKey = None; SetAuthKey = false; Role = None }
+
     type ExistingUser = {
         Id: UserId
-        Data: UserData
+        Data: ExistingUserData
     }
     module ExistingUserData =
         let create userId userData =
@@ -202,6 +212,7 @@ module UserAdministration =
 
     type SaveUserError =
         | DowngradeSelfNotAllowed
+        | RemoveKeyCodeNotAllowed
         | KeyCodeTaken of string option
         | InvalidAuthKey
         | NotAuthorized

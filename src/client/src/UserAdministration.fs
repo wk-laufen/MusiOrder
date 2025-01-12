@@ -11,6 +11,12 @@ open global.JS
 open MusiOrder.Models
 open MusiOrder.Models.UserAdministration
 
+type EditingUserAuthKeyState =
+    | WaitingForUserAuthKey
+    | GettingUserAuthKeyError of React.AuthenticationError
+    | SavingUserAuthKey of AuthKey option
+    | SaveUserAuthKeyResult of Result<AuthKey option, ApiError<SaveUserError>>
+
 type UserFormData = {
     FirstName: string
     LastName: string
@@ -18,7 +24,7 @@ type UserFormData = {
     Role: string
 }
 module UserFormData =
-    let fromUserData (v: UserData) =
+    let fromUserData (v: ExistingUserData) =
         {
             FirstName = v.FirstName.Value
             LastName = v.LastName.Value
@@ -47,6 +53,7 @@ type DeleteUserState =
 type LoadedModel = {
     Users: ExistingUser list
     VisibleKeyCodeUserIds: Set<UserId>
+    EditingUserAuthKey: (ExistingUser * EditingUserAuthKeyState) option
     EditingUser: EditingUser option
     DeleteUserStates: Map<UserId, DeleteUserState>
 }
@@ -61,6 +68,10 @@ type Msg =
     | Load of AuthKey option
     | LoadResult of Result<ExistingUser list, ApiError<LoadExistingUsersError>>
     | ShowAuthKey of UserId
+    | EditAuthKey of ExistingUser
+    | SetAuthKey of Result<AuthKey option, React.AuthenticationError>
+    | SetAuthKeyResult of Result<AuthKey option, ApiError<SaveUserError>>
+    | CancelEditAuthKey
     | EditUser of ExistingUser
     | DeleteUser of UserId
     | DeleteUserResult of UserId * Result<DeleteUserWarning list, ApiError<DeleteUserError>>
@@ -68,7 +79,7 @@ type Msg =
     | ForceDeleteUserResult of UserId * Result<unit, ApiError<ForceDeleteUserError>>
     | EditNewUser
     | FormChanged of Form.View.Model<UserFormData>
-    | SaveUser of UserData
+    | SaveUser of ExistingUserData
     | SaveUserResult of Result<UserId, ApiError<SaveUserError>>
     | CancelEditUser
 
@@ -82,7 +93,7 @@ let update msg state =
     | LoadResult (Ok users) ->
         match state with
         | Loading authKey ->
-            Loaded (authKey, { Users = users; VisibleKeyCodeUserIds = Set.empty; EditingUser = None; DeleteUserStates = Map.empty }),
+            Loaded (authKey, { Users = users; VisibleKeyCodeUserIds = Set.empty; EditingUserAuthKey = None; EditingUser = None; DeleteUserStates = Map.empty }),
             Cmd.none
         | _ -> state, Cmd.none
     | LoadResult (Error e) ->
@@ -94,6 +105,36 @@ let update msg state =
         | Loaded (authKey, state) ->
             Loaded (authKey, { state with VisibleKeyCodeUserIds = Set.add userId state.VisibleKeyCodeUserIds }),
             Cmd.none
+        | _ -> state, Cmd.none
+    | EditAuthKey user ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with EditingUserAuthKey = Some (user, WaitingForUserAuthKey) }),
+            Cmd.none
+        | _ -> state, Cmd.none
+    | SetAuthKey (Ok userAuthKey) ->
+        match state with
+        | Loaded (authKey, ({ EditingUserAuthKey = Some (user, _) } as state)) ->
+            Loaded (authKey, { state with EditingUserAuthKey = Some (user, SavingUserAuthKey userAuthKey) }),
+            Cmd.OfAsync.perform (updateUser authKey user.Id) { PatchUserData.empty with AuthKey = userAuthKey; SetAuthKey = true } (Result.map (fun () -> userAuthKey) >> SetAuthKeyResult)
+        | _ -> state, Cmd.none
+    | SetAuthKey (Error error) ->
+        match state with
+        | Loaded (authKey, ({ EditingUserAuthKey = Some (user, _) } as state)) ->
+            Loaded (authKey, { state with EditingUserAuthKey = Some (user, GettingUserAuthKeyError error) }),
+            Cmd.none
+        | _ -> state, Cmd.none
+    | SetAuthKeyResult result ->
+        match state with
+        | Loaded (authKey, ({ EditingUserAuthKey = Some (user, _) } as state)) ->
+            Loaded (authKey, { state with EditingUserAuthKey = Some (user, SaveUserAuthKeyResult result) }),
+            Cmd.none
+        | _ -> state, Cmd.none
+    | CancelEditAuthKey ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with EditingUserAuthKey = None }),
+            Cmd.ofMsg (Load authKey)
         | _ -> state, Cmd.none
     | EditUser user ->
         match state with
@@ -143,7 +184,9 @@ let update msg state =
             let state = Loaded (authKey, { state with EditingUser = Some { editingUser with Data = { editingUser.Data with State = Form.View.State.Loading } } })
             let cmd =
                 match editingUser.Id with
-                | Some userId -> Cmd.OfAsync.perform (updateUser authKey userId) user (Result.map (fun () -> userId) >> SaveUserResult)
+                | Some userId ->
+                    let patchData = { PatchUserData.empty with FirstName = Some user.FirstName; LastName = Some user.LastName; Role = Some user.Role }
+                    Cmd.OfAsync.perform (updateUser authKey userId) patchData (Result.map (fun () -> userId) >> SaveUserResult)
                 | None -> Cmd.OfAsync.perform (createUser authKey) user SaveUserResult
             state, cmd
         | _ -> state, Cmd.none
@@ -158,7 +201,8 @@ let update msg state =
         | Loaded (authKey, ({ EditingUser = Some editingUser } as state)) ->
             let errorMessage =
                 match e with
-                | ExpectedError DowngradeSelfNotAllowed -> "Fehler beim Speichern des Benutzers: Rollenwechsel nicht erlaubt."
+                | ExpectedError DowngradeSelfNotAllowed -> "Fehler beim Speichern des Benutzers: Die eigene Rolle darf nicht gewechselt werden."
+                | ExpectedError RemoveKeyCodeNotAllowed -> "Fehler beim Speichern des Benutzers: Die eigene Schlüsselnummer darf nicht entfernt werden."
                 | ExpectedError (KeyCodeTaken None) -> "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits vergeben."
                 | ExpectedError (KeyCodeTaken (Some userName)) -> sprintf "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits an %s vergeben." userName
                 | ExpectedError SaveUserError.InvalidAuthKey
@@ -183,6 +227,14 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
             setAuthKeyInvalid ()
         | _ -> ()
     )
+
+    let acceptsAuthKey =
+        match state with
+        | Loaded (_, { EditingUserAuthKey = Some (_, WaitingForUserAuthKey) })
+        | Loaded (_, { EditingUserAuthKey = Some (_, GettingUserAuthKeyError _) })
+        | Loaded (_, { EditingUserAuthKey = Some (_, SaveUserAuthKeyResult (Error _)) }) -> true
+        | _ -> false
+    React.useAuthentication acceptsAuthKey (Result.map Some >> SetAuthKey >> dispatch)
 
     match state with
     | NotLoaded -> Html.none // Handled by parent component
@@ -243,29 +295,37 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                                 prop.text user.Data.FirstName.Value
                                             ]
                                             Html.td [
-                                                match user.Data.AuthKey with
-                                                | Some authKey ->
-                                                    if Set.contains user.Id state.VisibleKeyCodeUserIds then
-                                                        prop.text (AuthKey.toString authKey)
-                                                    else
-                                                        prop.children [
-                                                            Html.div [
-                                                                prop.className "flex items-center gap-2"
-                                                                prop.children [
-                                                                    Html.span [ prop.text "●●●●●●●●●●" ]
-                                                                    Html.a [
-                                                                        prop.className "btn btn-white"
-                                                                        prop.onClick (fun _ -> dispatch (ShowAuthKey user.Id))
-                                                                        prop.disabled isDeleted
-                                                                        
-                                                                        prop.children [
-                                                                            Fa.i [ Fa.Solid.Eye ] []
-                                                                        ]
+                                                Html.div [
+                                                    prop.className "flex items-center gap-2"
+                                                    prop.children [
+                                                        match user.Data.AuthKey with
+                                                        | Some authKey ->
+                                                            if Set.contains user.Id state.VisibleKeyCodeUserIds then
+                                                                Html.span (AuthKey.toString authKey)
+                                                            else
+                                                                Html.span [ prop.text "●●●●●●●●●●" ]
+                                                                Html.button [
+                                                                    prop.className "btn btn-white"
+                                                                    prop.onClick (fun _ -> dispatch (ShowAuthKey user.Id))
+                                                                    prop.disabled isDeleted
+                                                                    
+                                                                    prop.children [
+                                                                        Fa.i [ Fa.Solid.Eye ] []
                                                                     ]
                                                                 ]
+                                                        | None -> Html.span "-"
+
+                                                        Html.button [
+                                                            prop.className "btn btn-white"
+                                                            prop.onClick (fun _ -> dispatch (EditAuthKey user))
+                                                            prop.disabled isDeleted
+                                                            
+                                                            prop.children [
+                                                                Fa.i [ Fa.Solid.Edit ] []
                                                             ]
                                                         ]
-                                                | None -> prop.text "-"
+                                                    ]
+                                                ]
                                             ]
                                             Html.td [
                                                 prop.text (UserRole.label user.Data.Role)
@@ -345,6 +405,78 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                 ]
             ]
 
+            match state.EditingUserAuthKey with
+            | Some (user, WaitingForUserAuthKey) ->
+                View.modal $"Schlüsselnummer von %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} ändern" (fun () -> dispatch CancelEditAuthKey) [
+                    Html.div [
+                        prop.className "flex flex-col gap-2 items-center text-musi-gold"
+                        prop.children [
+                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                            Html.span [
+                                prop.className "text-center text-3xl"
+                                prop.children [
+                                    Html.text "Halte den Musischlüssel"
+                                    Html.br []
+                                    Html.text "zum Lesegerät"
+                                ]
+                            ]
+                        ]
+                    ]
+                ] [
+                    Html.button [
+                        prop.className "btn btn-solid btn-red"
+                        prop.onClick (fun _ -> dispatch (SetAuthKey (Ok None)))
+                        prop.text "Schlüsselnummer löschen"
+                    ]
+                ]
+            | Some (user, GettingUserAuthKeyError error) ->
+                View.modalAuthError $"Schlüsselnummer von %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} ändern" error (fun () -> dispatch (EditAuthKey user)) (fun () -> dispatch CancelEditAuthKey)
+            | Some (user, SavingUserAuthKey _) ->
+                View.modal $"Schlüsselnummer von %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} ändern" (fun () -> dispatch CancelEditAuthKey) [ View.loadIconBig ] []
+            | Some (user, SaveUserAuthKeyResult (Ok authKey)) ->
+                View.modal $"Schlüsselnummer von %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} ändern" (fun () -> dispatch CancelEditAuthKey) [
+                    Html.div [
+                        prop.className "flex flex-col items-center gap-2 text-musi-green"
+                        prop.children [
+                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                            Html.span [
+                                prop.className "text-center text-3xl"
+                                if Option.isSome authKey then prop.text "Schlüssel wurde erfolgreich gespeichert."
+                                else prop.text "Schlüssel wurde erfolgreich gelöscht."
+                            ]
+                        ]
+                    ]
+                ] []
+            | Some (user, SaveUserAuthKeyResult (Error error)) ->
+                View.modal $"Schlüsselnummer von %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} ändern" (fun () -> dispatch CancelEditAuthKey) [
+                    Html.div [
+                        prop.className "flex flex-col items-center gap-2 text-musi-red"
+                        prop.children [
+                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                            Html.span [
+                                prop.className "text-center text-3xl"
+                                prop.children [
+                                    Html.text "Fehler beim Speichern."
+                                    Html.br []
+                                    match error with
+                                    | ExpectedError DowngradeSelfNotAllowed ->
+                                        Html.text "Die eigene Rolle darf nicht gewechselt werden."
+                                    | ExpectedError RemoveKeyCodeNotAllowed ->
+                                        Html.text "Die eigene Schlüsselnummer darf nicht entfernt werden."
+                                    | ExpectedError (KeyCodeTaken None) ->
+                                        Html.text "Schlüsselnummer ist bereits vergeben."
+                                    | ExpectedError (KeyCodeTaken (Some userName)) ->
+                                        Html.text $"Schlüsselnummer ist bereits an %s{userName} vergeben."
+                                    | ExpectedError SaveUserError.InvalidAuthKey
+                                    | ExpectedError SaveUserError.NotAuthorized
+                                    | UnexpectedError _ -> Html.text "Versuche es nochmal."
+                                ]
+                            ]
+                        ]
+                    ]
+                ] []
+            | None -> ()
+
             match state.EditingUser with
             | Some editingUser ->
                 let form : Form.Form<UserFormData, Msg> =
@@ -382,24 +514,6 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                     }
                             }
 
-                    // TODO prevent submitting form when entering auth key using physical key (sends `Enter` at the end)
-                    let authKeyField =
-                        let config: Fable.Form.Base.FieldConfig<Field.TextField.Attributes, string, _, _> =
-                            {
-                                Parser = fun value ->
-                                    if System.String.IsNullOrWhiteSpace value then Ok None
-                                    else Ok (Some (AuthKey value))
-                                Value = fun user -> user.AuthKey
-                                Update = fun v user -> { user with AuthKey = v }
-                                Error = fun _ -> None
-                                Attributes =
-                                    {
-                                        Label = "Schlüsselnummer"
-                                        Placeholder = "Schlüssel zum Lesegerät halten, Nummer händisch eingeben oder leer lassen"
-                                    }
-                            }
-                        Fable.Form.Base.field (fun _ -> false) (fun x -> Form.Field.Text (Form.TextPassword, x)) config
-
                     let roleField =
                         Form.radioField
                             {
@@ -421,13 +535,12 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                     }
                             }
 
-                    let onSubmit = fun firstName lastName authKey role ->
-                        SaveUser { FirstName = firstName; LastName = lastName; AuthKey = authKey; Role = role }
+                    let onSubmit = fun firstName lastName role ->
+                        SaveUser { FirstName = firstName; LastName = lastName; AuthKey = None; Role = role }
 
                     Form.succeed onSubmit
                     |> Form.append firstNameField
                     |> Form.append lastNameField
-                    |> Form.append authKeyField
                     |> Form.append roleField
 
                 let title =

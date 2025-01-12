@@ -133,7 +133,7 @@ module UserAdministration =
         return! tryGet url |> handleErrors
     }
 
-    let createUser authKey (user: UserData) : Async<Result<UserId, ApiError<SaveUserError>>> = async {
+    let createUser authKey (user: ExistingUserData) : Async<Result<UserId, ApiError<SaveUserError>>> = async {
         let query = queryString [
             authKeyQueryParam authKey
         ]
@@ -141,7 +141,7 @@ module UserAdministration =
         return! tryPost url user |> handleErrors
     }
 
-    let updateUser authKey (UserId userId) (user: UserData) : Async<Result<unit, ApiError<SaveUserError>>> = async {
+    let updateUser authKey (UserId userId) (user: PatchUserData) : Async<Result<unit, ApiError<SaveUserError>>> = async {
         let query = queryString [
             authKeyQueryParam authKey
         ]

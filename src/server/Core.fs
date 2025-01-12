@@ -212,7 +212,7 @@ module UserAdministration =
     let private isDuplicateKeyCodeException (e: SqliteException) =
         e.Message = "SQLite Error 19: 'UNIQUE constraint failed: Member.keyCode'."
 
-    let createUser data = task {
+    let createUser (data: ExistingUserData) = task {
         try
             let newUserId = sprintf "%O" (Guid.NewGuid()) |> UserId
             do!
@@ -233,25 +233,42 @@ module UserAdministration =
             return Error (KeyCodeTaken userName)
     }
 
-    let updateUser (userId: UserId) data = task {
+    let updateUser (userId: UserId) (data: PatchUserData) = task {
         try
             // TODO only allow updating not deleted users?
+            let fields = [
+                match data.FirstName with
+                | Some v -> ("firstName", Helper.Box v)
+                | None -> ()
+
+                match data.LastName with
+                | Some v -> ("lastName", Helper.Box v)
+                | None -> ()
+
+                if data.SetAuthKey then
+                    ("keyCode", data.AuthKey |> Option.map Helper.Box |> Option.defaultValue (Helper.Box DBNull.Value))
+
+                match data.Role with
+                | Some v -> ("role", UserRole.toString v |> Helper.Box)
+                | None -> ()
+            ]
+            let updateFields = fields |> Seq.map (fst >> fun v -> $"`%s{v}`=@%s{v}") |> String.concat ", "
             do!
                 DB.write
-                    "UPDATE `Member` SET `firstName` = @FirstName, `lastName` = @LastName, `keyCode` = @KeyCode, `role` = @Role WHERE `id` = @Id"
+                    $"UPDATE `Member` SET %s{updateFields} WHERE `id`=@Id"
                     [
                         ("@Id", Helper.Box userId)
-                        ("@FirstName", Helper.Box data.FirstName)
-                        ("@LastName", Helper.Box data.LastName)
-                        ("@KeyCode", data.AuthKey |> Option.map Helper.Box |> Option.defaultValue (Helper.Box DBNull.Value))
-                        ("@Role", UserRole.toString data.Role |> Helper.Box)
+                        yield! fields |> List.map (fun (name, value) -> ($"@%s{name}", value))
                     ]
             return Ok ()
         with
         | :? SqliteException as e when isDuplicateKeyCodeException e ->
-            let! user = data.AuthKey |> Option.bindTask User.getByAuthKey
-            let userName = user |> Option.map (fun v -> sprintf "%s %s" v.LastName v.FirstName)
-            return Error (KeyCodeTaken userName)
+            match data.SetAuthKey, data.AuthKey with
+            | true, Some authKey ->
+                let! user = User.getByAuthKey authKey
+                let userName = user |> Option.map (fun v -> $"%s{v.LastName} %s{v.FirstName}")
+                return Error (KeyCodeTaken userName)
+            | _ -> return raise e
     }
 
     let deleteUser (userId: UserId) = task {
