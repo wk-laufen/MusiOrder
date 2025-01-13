@@ -88,7 +88,7 @@ let OrderSummary () =
         | LoadingOrderSummary _ -> View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [ View.loadIconBig ] []
         | LoadedUsers (authKey, users) ->
             View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [
-                View.Order.userCards users (fun user -> dispatch (LoadOrderSummary (authKey, Some user.Id)))
+                UserCards.UserCards users (fun user -> dispatch (LoadOrderSummary (authKey, Some user.Id)))
             ] []
         | LoadUsersError _
         | LoadOrderSummaryError _ ->
