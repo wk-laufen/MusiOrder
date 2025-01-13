@@ -53,8 +53,7 @@ let UserCards (users: UserInfo list) onClick =
                 ]
             ]
             let users =
-                // state.Users
-                [ for i in 0..10 do yield! state.Users ]
+                state.Users
                 |> List.filter (fun v ->
                     match state.Filter with
                     | Some firstChar -> v.LastName |> Seq.tryHead |> Option.map System.Char.ToUpper = firstChar
