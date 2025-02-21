@@ -16,7 +16,8 @@ table thead tr th {
   @apply text-left;
 }
 table thead tr th,
-table tbody tr td {
+table tbody tr td,
+table tfoot tr td {
   @apply px-4 py-2;
 }
 table tbody tr {
@@ -28,8 +29,14 @@ table tbody tr.selected {
 table tbody tr:not(.selected) {
   @apply hover:bg-slate-100;
 }
+table tfoot tr {
+  @apply border-t-2 border-slate-200;
+}
+table tfoot tr td {
+  @apply text-left;
+}
 
-input[type='text'], input[type='number'], input[type='password'] {
+input[type='text'], input[type='number'], input[type='password'], input[type='date'] {
   @apply shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none disabled:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed;
 }
 input[type='radio'] {

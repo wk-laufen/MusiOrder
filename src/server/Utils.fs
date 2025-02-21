@@ -31,3 +31,10 @@ module List =
             | Ok e, Error v -> Error [ v ]
             | Error e, Error ve -> Error (ve :: e)
         )
+
+module DateTime =
+    open System.Globalization
+    let tryParseDate (v: string) =
+        match System.DateTime.TryParseExact(v, [|"yyyy-MM-dd"|], CultureInfo.InvariantCulture, DateTimeStyles.None) with
+        | (true, v) -> Some v
+        | (false, _) -> None

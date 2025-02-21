@@ -18,6 +18,7 @@ type Tab =
     | Orders
     | Users
     | Products
+    | OrderStatistics
     | DataExport
 module Tab =
     let title = function
@@ -25,14 +26,16 @@ module Tab =
         | Orders -> "Bestellungen"
         | Users -> "Benutzer"
         | Products -> "Artikel"
+        | OrderStatistics -> "Bericht"
         | DataExport -> "Datenexport"
     let toRoute = function
         | UserPayment -> "guthaben"
         | Orders -> "bestellungen"
         | Users -> "benutzer"
         | Products -> "artikel"
+        | OrderStatistics -> "bericht"
         | DataExport -> "data-export"
-let allTabs = [ UserPayment; Orders; Users; Products; DataExport ]
+let allTabs = [ UserPayment; Orders; Users; Products; OrderStatistics; DataExport ]
 
 type AuthKeyState =
     | NoAuthKeyProvided
@@ -158,6 +161,7 @@ let Administration activeTab =
                     | Orders -> OrderAdministration.OrderAdministration (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                     | Users -> UserAdministration.UserAdministration (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                     | Products -> ProductAdministration.ProductAdministration (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
+                    | OrderStatistics -> OrderStatistics.OrderStatistics (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                     | DataExport -> DataExport.DataExport (Some authKey) (fun () -> setAuthKey InvalidAuthKeyProvided) setTabMenuItems
                 ]
             ]

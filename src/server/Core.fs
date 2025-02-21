@@ -465,7 +465,7 @@ module OrderAdministration =
             SELECT `O`.`id`, `M`.`firstName`, `M`.`lastName`, `O`.`articleName`, `O`.`amount`, `O`.`pricePerUnit`, `O`.`timestamp`
             FROM `Order` AS `O`
             JOIN `Member` AS `M` ON `M`.id = `O`.userId
-            WHERE `O`.`timestamp` > @OldestTime
+            WHERE `O`.`timestamp` >= @OldestTime
             ORDER BY `O`.`timestamp` DESC
         """
         return!
@@ -487,4 +487,33 @@ module OrderAdministration =
 
     let deleteOrder (orderId: OrderId) = task {
         do! DB.write "DELETE FROM `Order` WHERE `id` = @Id" [ ("@Id", Helper.Box orderId) ]
+    }
+
+module OrderStatistics =
+    open MusiOrder.Models.OrderStatistics
+
+    let getOrders (startTime: DateTime) (endTime: DateTime) = task {
+        let query = """
+            SELECT `O`.`id`, `M`.`firstName`, `M`.`lastName`, `O`.`articleName`, `O`.`amount`, `O`.`pricePerUnit`, `O`.`timestamp`
+            FROM `Order` AS `O`
+            JOIN `Member` AS `M` ON `M`.id = `O`.userId
+            WHERE `O`.`timestamp` >= @OldestTime AND `O`.`timestamp` < @NewestTime
+        """
+        return!
+            DB.read
+                query
+                [
+                    "@OldestTime", Helper.Box startTime
+                    "@NewestTime", Helper.Box endTime
+                ]
+                (fun reader ->
+                    {
+                        FirstName = reader.GetString(1)
+                        LastName = reader.GetString(2)
+                        ProductName = reader.GetString(3)
+                        Amount = reader.GetInt32(4)
+                        PricePerUnit = reader.GetDecimal(5)
+                        Timestamp = reader.GetDateTimeOffset(6)
+                    }
+                )
     }

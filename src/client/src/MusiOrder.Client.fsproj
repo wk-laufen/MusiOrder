@@ -15,6 +15,7 @@
         <Compile Include="OrderSummary.fs" />
         <Compile Include="UserPaymentAdministration.fs" />
         <Compile Include="OrderAdministration.fs" />
+        <Compile Include="OrderStatistics.fs" />
         <Compile Include="UserAdministration.fs" />
         <Compile Include="ProductAdministration.fs" />
         <Compile Include="DataExport.fs" />

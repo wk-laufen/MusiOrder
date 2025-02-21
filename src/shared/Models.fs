@@ -308,6 +308,21 @@ module OrderAdministration =
         | InvalidAuthKey
         | NotAuthorized
 
+module OrderStatistics =
+    type OrderInfo = {
+        FirstName: string
+        LastName: string
+        ProductName: string
+        Amount: int
+        PricePerUnit: decimal
+        Timestamp: DateTimeOffset
+    }
+
+    type LoadOrderInfoError =
+        | InvalidAuthKey
+        | NotAuthorized
+        | MissingTimeRange
+
 module DataExport =
     type ExportDatabaseError =
         | InvalidAuthKey

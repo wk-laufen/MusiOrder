@@ -276,6 +276,19 @@ module OrderAdministration =
         return! tryDelete url |> handleErrors
     }
 
+module OrderStatistics =
+    open MusiOrder.Models.OrderStatistics
+
+    let loadOrderInfo authKey (startTime: System.DateTime, endTime: System.DateTime) : Async<Result<OrderInfo list, ApiError<LoadOrderInfoError>>> = async {
+        let query = queryString [
+            Some ("startTime", startTime.ToString "yyyy-MM-dd")
+            Some ("endTime", endTime.ToString "yyyy-MM-dd")
+            authKeyQueryParam authKey
+        ]
+        let url = $"/api/administration/report/orders%s{query}"
+        return! tryGet url |> handleErrors
+    }
+
 module DataExport =
     open MusiOrder.Models.DataExport
 

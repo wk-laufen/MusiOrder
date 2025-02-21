@@ -286,6 +286,24 @@ module OrderAdministration =
         | None -> return! RequestErrors.BAD_REQUEST DeleteOrderError.InvalidAuthKey next ctx
     }
 
+module OrderStatistics =
+    open MusiOrder.Core.OrderStatistics
+    open MusiOrder.Models.OrderStatistics
+
+    let handleGetOrders : HttpHandler = fun next ctx -> task {
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        | Some user when User.isAdmin user ->
+            let startTime = ctx.TryGetQueryStringValue "startTime" |> Option.bind DateTime.tryParseDate
+            let endTime = ctx.TryGetQueryStringValue "endTime" |> Option.bind DateTime.tryParseDate
+            match startTime, endTime with
+            | Some startTime, Some endTime ->
+                let! result = getOrders startTime endTime
+                return! Successful.OK result next ctx
+            | _ -> return! RequestErrors.BAD_REQUEST LoadOrderInfoError.MissingTimeRange next ctx
+        | Some _ -> return! RequestErrors.BAD_REQUEST LoadOrderInfoError.NotAuthorized next ctx
+        | None -> return! RequestErrors.BAD_REQUEST LoadOrderInfoError.InvalidAuthKey next ctx
+    }
+
 module DataExport =
     open MusiOrder.Models.DataExport
     open System.IO

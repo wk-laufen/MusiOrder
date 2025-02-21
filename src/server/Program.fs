@@ -68,6 +68,11 @@ let webApp =
                                 DELETE >=> routef "/orders/%s" (OrderId >> HttpHandler.OrderAdministration.handleDeleteOrder)
                             ]
                         )
+                        subRoute "/report" (
+                            choose [
+                                GET >=> route "/orders" >=> HttpHandler.OrderStatistics.handleGetOrders
+                            ]
+                        )
                         subRoute "/data-export" (
                             choose [
                                 GET >=> route "/export-db" >=> HttpHandler.DataExport.handleExportDatabase
