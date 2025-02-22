@@ -3,6 +3,8 @@ module OrderStatistics
 open Api
 open Api.OrderStatistics
 open Elmish
+open Fable.Core
+open Fable.Core.JS
 open Feliz
 open Feliz.UseElmish
 open global.JS
@@ -23,7 +25,27 @@ type Model = {
 type Msg =
     | Load of AuthKey option
     | LoadResult of Result<OrderInfo list, ApiError<LoadOrderInfoError>>
-    | SetPeriod of System.DateTime option * System.DateTime option 
+    | SetPeriod of System.DateTime option * System.DateTime option
+    | CreateExcelReport
+    | CreateExcelReportFinished
+
+type GroupedData = {
+    Name: string
+    Amount: int
+    Revenue: decimal
+}
+
+let groupByProduct data =
+    data
+    |> List.groupBy (fun v -> v.ProductName)
+    |> List.map (fun (name, orders) -> {
+        Name = name
+        Amount = orders |> List.sumBy (fun v -> v.Amount)
+        Revenue = orders |> List.sumBy (fun v -> decimal v.Amount * v.PricePerUnit)
+    })
+
+[<Import("createAndDownloadReport", "./order-report.js")>]
+let createAndDownloadReport (orders: GroupedData array, fileName: string) : Promise<unit> = jsNative
 
 let init authKey =
     let model = {
@@ -57,6 +79,20 @@ let update msg state =
                 endTime |> Option.defaultValue (snd state.Period)
             { state with Period = period }, Cmd.ofMsg (Load authKey)
         | _ -> state, Cmd.none
+    | CreateExcelReport ->
+        match state.Data with
+        | Loaded (_, data) ->
+            let orderGroups =
+                groupByProduct data
+                |> List.sortBy (fun v -> v.Name)
+                |> List.toArray
+            let fileName =
+                let startDate = (fst state.Period).ToString "yyyy-MM-dd"
+                let endDate = (snd state.Period).ToString "yyyy-MM-dd"
+                $"Bestellbericht %s{startDate} - %s{endDate}.xlsx"
+            state, Cmd.OfPromise.perform createAndDownloadReport (orderGroups, fileName) (fun () -> CreateExcelReportFinished)
+        | _ -> state, Cmd.none
+    | CreateExcelReportFinished -> state, Cmd.none
 
 [<ReactComponent>]
 let OrderStatistics authKey setAuthKeyInvalid (setMenuItems: ReactElement list -> ReactElement) =
@@ -137,55 +173,61 @@ let OrderStatistics authKey setAuthKeyInvalid (setMenuItems: ReactElement list -
                 Html.div [
                     prop.className "container"
                     prop.children [
-                        Html.table [
-                            prop.className "min-w-[640px]"
+                        Html.div [
+                            prop.className "flex flex-col items-start gap-2"
                             prop.children [
-                                Html.thead [
-                                    Html.tr [
-                                        Html.th [
-                                            prop.className "text-right"
-                                            prop.text "Anzahl"
-                                        ]
-                                        Html.th "Name"
-                                        Html.th [
-                                            prop.className "text-right"
-                                            prop.text "Umsatz"
-                                        ]
+                                Html.div [
+                                    Html.a [
+                                        prop.className "btn btn-green"
+                                        prop.text "Bericht herunterladen"
+                                        prop.onClick (fun _e -> dispatch CreateExcelReport)
                                     ]
                                 ]
-                                let orderGroups =
-                                    data
-                                    |> List.groupBy (fun v -> v.ProductName)
-                                    |> List.map (fun (name, orders) -> {|
-                                        Name = name
-                                        Amount = orders |> List.sumBy (fun v -> v.Amount)
-                                        Revenue = orders |> List.sumBy (fun v -> decimal v.Amount * v.PricePerUnit)
-                                    |})
-                                    |> List.sortByDescending (fun v -> v.Amount)
-                                Html.tbody [
-                                    for group in orderGroups do
-                                        Html.tr [
-                                            Html.td [
-                                                prop.className "text-right"
-                                                prop.text group.Amount
-                                            ]
-                                            Html.td group.Name
-                                            Html.td [
-                                                prop.className "text-right"
-                                                prop.text (group.Revenue |> View.formatPrice)
+                                Html.table [
+                                    prop.className "min-w-[640px]"
+                                    prop.children [
+                                        Html.thead [
+                                            Html.tr [
+                                                Html.th [
+                                                    prop.className "text-right"
+                                                    prop.text "Anzahl"
+                                                ]
+                                                Html.th "Name"
+                                                Html.th [
+                                                    prop.className "text-right"
+                                                    prop.text "Umsatz"
+                                                ]
                                             ]
                                         ]
-                                ]
-                                Html.tfoot [
-                                    Html.tr [
-                                        Html.td [
-                                            prop.className "text-right"
-                                            prop.text (orderGroups |> List.sumBy (fun v -> v.Amount))
+                                        let orderGroups =
+                                            groupByProduct data
+                                            |> List.sortByDescending (fun v -> v.Amount)
+                                        Html.tbody [
+                                            for group in orderGroups do
+                                                Html.tr [
+                                                    Html.td [
+                                                        prop.className "text-right"
+                                                        prop.text group.Amount
+                                                    ]
+                                                    Html.td group.Name
+                                                    Html.td [
+                                                        prop.className "text-right"
+                                                        prop.text (group.Revenue |> View.formatPrice)
+                                                    ]
+                                                ]
                                         ]
-                                        Html.td []
-                                        Html.td [
-                                            prop.className "text-right"
-                                            prop.text (orderGroups |> List.sumBy (fun v -> v.Revenue) |> View.formatPrice)
+                                        Html.tfoot [
+                                            Html.tr [
+                                                Html.td [
+                                                    prop.className "text-right"
+                                                    prop.text (orderGroups |> List.sumBy (fun v -> v.Amount))
+                                                ]
+                                                Html.td []
+                                                Html.td [
+                                                    prop.className "text-right"
+                                                    prop.text (orderGroups |> List.sumBy (fun v -> v.Revenue) |> View.formatPrice)
+                                                ]
+                                            ]
                                         ]
                                     ]
                                 ]
