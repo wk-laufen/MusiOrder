@@ -16,6 +16,8 @@ let formatNumber (v: decimal) : string = jsNative
 [<Emit("new Intl.NumberFormat(navigator.language, { style: 'currency', currency: 'EUR', signDisplay: 'always' }).format($0)")>]
 let formatBalance (v: decimal) : string = jsNative
 
+let pluralize count singular plural = if count = 1 then $"%d{count} {singular}" else $"%d{count} {plural}"
+
 let retryButton onClick =
     Html.button [
         prop.className "!flex items-center gap-2 btn btn-solid btn-green"
@@ -78,7 +80,7 @@ let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement
                             prop.children body
                         ]
                         Html.div [
-                            prop.className "grow-0 flex justify-end gap-2 bg-slate-200 text-white rounded-b-lg px-4 py-2"
+                            prop.className "grow-0 flex justify-end gap-2 bg-slate-200 rounded-b-lg px-4 py-2"
                             prop.children [
                                 yield! footer
                                 Html.button [
@@ -328,6 +330,22 @@ module Order =
                                 ]
                             ]
                     ]
+                ]
+            ]
+        ]
+
+    let userCard onClick (user: UserInfo) =
+        Html.div [
+            prop.className "flex flex-col shadow rounded p-2 cursor-pointer"
+            prop.onClick (fun _ -> onClick user)
+            prop.children [
+                Html.span [
+                    prop.className "text-center"
+                    prop.text $"%s{user.LastName.ToUpper()} %s{user.FirstName}"
+                ]
+                Html.span [
+                    prop.className $"text-center text-sm %s{balanceColor user.Balance}"
+                    prop.text (formatBalance user.Balance)
                 ]
             ]
         ]

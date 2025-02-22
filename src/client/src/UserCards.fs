@@ -8,8 +8,8 @@ open MusiOrder.Models.Order
 type Msg =
     | SetUserFilter of char option option
 
-type State = {
-    Users: UserInfo list
+type State<'a> = {
+    Users: 'a list
     Filter: char option option
 }
 
@@ -21,7 +21,7 @@ let update msg state =
 let init users = { Users = users; Filter = None}, Cmd.none
 
 [<ReactComponent>]
-let UserCards (users: UserInfo list) onClick =
+let UserCards (users: 'a list) (getLastName: 'a -> string) (render: 'a -> ReactElement) =
     let (state, dispatch) = React.useElmish(init users, update, [||])
 
     Html.div [
@@ -33,7 +33,7 @@ let UserCards (users: UserInfo list) onClick =
                     let groups = [
                         ("Alle", None)
                         yield! users
-                            |> List.map (fun v -> v.LastName |> Seq.tryHead |> Option.map System.Char.ToUpper)
+                            |> List.map (fun v -> v |> getLastName |> Seq.tryHead |> Option.map System.Char.ToUpper)
                             |> List.distinct
                             |> List.sort
                             |> List.map (fun v -> ($"%c{v |> Option.defaultValue '␣'}", Some v))
@@ -56,10 +56,10 @@ let UserCards (users: UserInfo list) onClick =
                 state.Users
                 |> List.filter (fun v ->
                     match state.Filter with
-                    | Some firstChar -> v.LastName |> Seq.tryHead |> Option.map System.Char.ToUpper = firstChar
+                    | Some firstChar -> v |> getLastName |> Seq.tryHead |> Option.map System.Char.ToUpper = firstChar
                     | None -> true
                 )
-                |> List.groupBy (fun v -> v.LastName |> Seq.tryHead |> Option.map System.Char.ToUpper)
+                |> List.groupBy (fun v -> v |> getLastName |> Seq.tryHead |> Option.map System.Char.ToUpper)
             for (key, users) in users do
                 Html.div [
                     prop.className "flex flex-col gap-2"
@@ -79,21 +79,7 @@ let UserCards (users: UserInfo list) onClick =
                         Html.div [
                             prop.className "flex flex-wrap justify-center gap-2"
                             prop.children [
-                                for user in users do
-                                    Html.div [
-                                        prop.className "flex flex-col shadow rounded p-2 cursor-pointer"
-                                        prop.onClick (fun _ -> onClick user)
-                                        prop.children [
-                                            Html.span [
-                                                prop.className "text-center"
-                                                prop.text $"%s{user.LastName.ToUpper()} %s{user.FirstName}"
-                                            ]
-                                            Html.span [
-                                                prop.className $"text-center text-sm %s{View.balanceColor user.Balance}"
-                                                prop.text (View.formatBalance user.Balance)
-                                            ]
-                                        ]
-                                    ]
+                                for user in users do render user
                             ]
                         ]
                     ]

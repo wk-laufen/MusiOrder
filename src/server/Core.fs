@@ -464,7 +464,7 @@ module OrderAdministration =
         let query = """
             SELECT `O`.`id`, `M`.`firstName`, `M`.`lastName`, `O`.`articleName`, `O`.`amount`, `O`.`pricePerUnit`, `O`.`timestamp`
             FROM `Order` AS `O`
-            JOIN `Member` AS `M` ON `M`.id = `O`.userId
+            LEFT JOIN `Member` AS `M` ON `M`.id = `O`.userId
             WHERE `O`.`timestamp` >= @OldestTime
             ORDER BY `O`.`timestamp` DESC
         """
@@ -496,7 +496,7 @@ module OrderStatistics =
         let query = """
             SELECT `O`.`id`, `M`.`firstName`, `M`.`lastName`, `O`.`articleName`, `O`.`amount`, `O`.`pricePerUnit`, `O`.`timestamp`
             FROM `Order` AS `O`
-            JOIN `Member` AS `M` ON `M`.id = `O`.userId
+            LEFT JOIN `Member` AS `M` ON `M`.id = `O`.userId
             WHERE `O`.`timestamp` >= @OldestTime AND `O`.`timestamp` < @NewestTime
         """
         return!

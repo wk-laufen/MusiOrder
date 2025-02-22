@@ -336,7 +336,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | LoadUsersError _ -> errorView
         | LoadedUsers (_, authKey, users) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
-                UserCards.UserCards users (fun user -> dispatch (SendOrder (authKey, Some user.Id)))
+                UserCards.UserCards users (fun v -> v.LastName) (View.Order.userCard (fun user -> dispatch (SendOrder (authKey, Some user.Id))))
             ] []
         | Sending _ -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
         | SendError _ -> errorView
