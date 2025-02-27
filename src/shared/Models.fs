@@ -161,17 +161,20 @@ module UserPaymentAdministration =
         | NotAuthorized
 
 module UserAdministration =
-    type UserRole = Admin | User
+    type UserRole = Admin | OrderAssistant | User
     module UserRole =
         let tryParse v =
             if String.Equals(v, "admin", StringComparison.InvariantCultureIgnoreCase) then Some Admin
+            elif String.Equals(v, "order-assistant", StringComparison.InvariantCultureIgnoreCase) then Some OrderAssistant
             elif String.Equals(v, "user", StringComparison.InvariantCultureIgnoreCase) then Some User
             else None
         let toString = function
             | Admin -> "admin"
+            | OrderAssistant -> "order-assistant"
             | User -> "user"
         let label = function
-            | Admin -> "Administrator"
+            | Admin -> "Wirt"
+            | OrderAssistant -> "Kellner"
             | User -> "Benutzer"
 
     type ExistingUserData = {

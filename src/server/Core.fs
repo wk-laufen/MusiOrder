@@ -20,16 +20,25 @@ type Helper =
     static member Box (v: NonNegativeDecimal) = box (NonNegativeDecimal.value v)
     static member Box (v: DBNull) = box v
 
+type UserRole = User | OrderAssistant | Admin
+
+module UserRole =
+    let tryParse = function
+        | "admin" -> Some Admin
+        | "order-assistant" -> Some OrderAssistant
+        | "user" -> Some User
+        | _ -> None
+
 type User = {
     Id: UserId
     FirstName: string
     LastName: string
     AuthKey: AuthKey option
-    Role: string
+    Role: UserRole
 }
 module User =
-    let isAdmin user =
-        user.Role.Equals("admin", StringComparison.InvariantCultureIgnoreCase)
+    let isAdmin user = user.Role.IsAdmin
+    let canOrderForOtherUsers user = user.Role.IsOrderAssistant || user.Role.IsAdmin
 
     let getByAuthKey (AuthKey authKey) =
         DB.readSingle
@@ -41,7 +50,7 @@ module User =
                     FirstName = reader.GetString(1)
                     LastName = reader.GetString(2)
                     AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey
-                    Role = reader.GetString(4)
+                    Role = reader.GetString(4) |> fun roleName -> UserRole.tryParse roleName |> Option.defaultWith (fun () -> failwithf "DB error: Can't parse user role \"%s\"" roleName)
                 }
             )
 
@@ -55,7 +64,7 @@ module User =
                     FirstName = reader.GetString(1)
                     LastName = reader.GetString(2)
                     AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey
-                    Role = reader.GetString(4)
+                    Role = reader.GetString(4) |> fun roleName -> UserRole.tryParse roleName |> Option.defaultWith (fun () -> failwithf "DB error: Can't parse user role \"%s\"" roleName)
                 }
             )
 

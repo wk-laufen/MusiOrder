@@ -50,20 +50,20 @@ type AuthenticatedUsersAuthHandler() =
     interface IAuthHandler with
         member _.GetOrderSummary authUser summaryUser =
             match authUser, summaryUser with
-            | Some authUser, Some user when User.isAdmin authUser -> GetOrderSummaryAllowed (OrderSummaryUser.fromUser user)
-            | Some authUser, None when User.isAdmin authUser -> GetOrderSummaryNoUser
+            | Some authUser, Some user when User.canOrderForOtherUsers authUser -> GetOrderSummaryAllowed (OrderSummaryUser.fromUser user)
+            | Some authUser, None when User.canOrderForOtherUsers authUser -> GetOrderSummaryNoUser
             | Some authUser, None -> GetOrderSummaryAllowed (OrderSummaryUser.fromUser authUser)
             | _ -> GetOrderSummaryNotAuthorized
 
         member _.GetUsers authUser =
             match authUser with
-            | Some user when User.isAdmin user -> GetUsersAllowed
+            | Some user when User.canOrderForOtherUsers user -> GetUsersAllowed
             | Some _
             | None -> GetUsersNotAuthorized
 
         member _.CommitOrder authUser orderUserId =
             match authUser, orderUserId with
-            | Some authUser, Some orderUserId when User.isAdmin authUser -> AllowCommitOrder orderUserId
+            | Some authUser, Some orderUserId when User.canOrderForOtherUsers authUser -> AllowCommitOrder orderUserId
             | Some authUser, None -> AllowCommitOrder authUser.Id
             | Some _, Some _
             | None, _ -> DenyCommitOrderNotAuthorized

@@ -528,7 +528,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                     {
                                         Label = "Rolle"
                                         Options =
-                                            [ User; Admin ]
+                                            [ User; OrderAssistant; Admin ]
                                             |> List.map (fun role ->
                                                 (UserRole.toString role, UserRole.label role)
                                             )
