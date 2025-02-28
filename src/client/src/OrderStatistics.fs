@@ -206,7 +206,13 @@ let OrderStatistics authKey setAuthKeyInvalid (setMenuItems: ReactElement list -
                                     let text =
                                         if data.SelectedUsers = Collections.Set.empty then "Alle Personen"
                                         else
-                                            let names = data.SelectedUsers |> Seq.truncate 3 |> Seq.map fst |> String.concat ", "
+                                            let name (lastName: string, firstName: string) =
+                                                [
+                                                    lastName
+                                                    yield! firstName |> Seq.tryHead |> Option.map (sprintf "%c.") |> Option.toList
+                                                ]
+                                                |> String.concat " "
+                                            let names = data.SelectedUsers |> Seq.truncate 3 |> Seq.map name |> String.concat ", "
                                             if data.SelectedUsers.Count <= 3 then names
                                             else
                                                 let more = View.pluralize (data.SelectedUsers.Count - 3) "weitere Person" "weitere Personen"
