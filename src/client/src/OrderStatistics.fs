@@ -235,7 +235,7 @@ let OrderStatistics authKey setAuthKeyInvalid (setMenuItems: ReactElement list -
                                             Html.div [
                                                 prop.classes [
                                                     "flex flex-col shadow rounded p-2 cursor-pointer border"
-                                                    if isSelected then "border-musi-blue"
+                                                    if isSelected then "bg-musi-blue text-white"
                                                 ]
                                                 prop.onClick (fun _ ->
                                                     let selectedUsers =
