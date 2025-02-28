@@ -37,10 +37,7 @@ type User = {
     Role: UserRole
 }
 module User =
-    let isAdmin user =
-        match user.Role with
-        | Admin -> true
-        | _ -> false
+    let isAdmin user = user.Role.IsAdmin
 
     let canOrderForOtherUsers user =
         match user.Role with

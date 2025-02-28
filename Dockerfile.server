@@ -1,6 +1,6 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0 AS client-build-env
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 AS client-build-env
 
-# Install Node.js and yarn - see https://nodejs.org/en/download and https://stackoverflow.com/a/57546198/1293659
+# Install Node.js - see https://nodejs.org/en/download and https://stackoverflow.com/a/57546198/1293659
 ENV NODE_VERSION=22.12.0
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
@@ -34,7 +34,7 @@ RUN npm run build
 
 ###
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0 AS server-build-env
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 AS server-build-env
 
 WORKDIR /app
 
@@ -50,7 +50,7 @@ RUN dotnet publish ./server -c Release -o out
 ###
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=server-build-env /app/out .
 COPY --from=client-build-env /app/client/dist ./wwwroot
