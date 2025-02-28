@@ -37,8 +37,16 @@ type User = {
     Role: UserRole
 }
 module User =
-    let isAdmin user = user.Role.IsAdmin
-    let canOrderForOtherUsers user = user.Role.IsOrderAssistant || user.Role.IsAdmin
+    let isAdmin user =
+        match user.Role with
+        | Admin -> true
+        | _ -> false
+
+    let canOrderForOtherUsers user =
+        match user.Role with
+        | User -> false
+        | OrderAssistant
+        | Admin -> true
 
     let getByAuthKey (AuthKey authKey) =
         DB.readSingle
