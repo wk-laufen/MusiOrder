@@ -4,7 +4,6 @@ open Api
 open Api.OrderAdministration
 open Elmish
 open Fable.Core.JsInterop
-open Fable.FontAwesome
 open Feliz
 open Feliz.UseDeferred
 open Feliz.UseElmish
@@ -144,14 +143,14 @@ let OrderAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement li
                                                         | _ -> ()
 
                                                         prop.children [
-                                                            Fa.i [ Fa.Solid.TrashAlt ] []
+                                                            Html.i [ prop.className "fas fa-trash-alt" ]
                                                         ]
                                                     ]
                                                     match deleteOrderState with
                                                     | Some Deferred.HasNotStartedYet -> ()
-                                                    | Some Deferred.InProgress -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Spinner; Fa.Pulse; Fa.CustomClass "text-musi-gold" ] []
-                                                    | Some (Deferred.Failed e) -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Times; Fa.CustomClass "text-musi-red"; Fa.Props [ Fable.React.Props.Title e.Message ] ] []
-                                                    | Some (Deferred.Resolved _) -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Check; Fa.CustomClass "text-musi-green" ] []
+                                                    | Some Deferred.InProgress -> Html.i [ prop.className "fa-lg fas fa-spinner fa-pulse text-musi-gold" ]
+                                                    | Some (Deferred.Failed e) -> Html.i [ prop.className "fa-lg fas fa-times text-musi-red"; prop.title e.Message ]
+                                                    | Some (Deferred.Resolved _) -> Html.i [ prop.className "fa-lg fas fa-check text-musi-green" ]
                                                     | None -> ()
                                                 ]
                                             ]

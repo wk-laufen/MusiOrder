@@ -3,7 +3,6 @@ module OrderSummary
 open Api
 open Api.Order
 open Elmish
-open Fable.FontAwesome
 open Feliz
 open Feliz.UseElmish
 open MusiOrder.Models
@@ -96,7 +95,7 @@ let OrderSummary () =
                 Html.div [
                     prop.className "container flex flex-col items-center gap-2 text-musi-red"
                     prop.children [
-                        Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                        Html.i [ prop.className "fas fa-key fa-8x" ]
                         Html.span [
                             prop.className "text-center text-3xl"
                             prop.children [
@@ -121,7 +120,7 @@ let OrderSummary () =
                 Html.span [
                     prop.className "inline-flex gap-2 items-center"
                     prop.children [
-                        Fa.i [ Fa.Solid.FileAlt ] []
+                        Html.i [ prop.className "fas fa-file-alt" ]
                         Html.span [ prop.text "Meine Bestellungen" ]
                     ]
                 ]

@@ -2,7 +2,6 @@ module Administration
 
 open Elmish
 open Fable.Core.JsInterop
-open Fable.FontAwesome
 open Fable.React
 open Feliz
 open Feliz.UseElmish
@@ -78,7 +77,7 @@ let Administration activeTab =
     let setTabMenuItems (content: ReactElement list) =
         match tabMenuContainerRef.current with
         | Some node -> ReactDOM.createPortal(!!content, node)
-        | None -> nothing
+        | None -> Html.none
 
     let abortButton =
         Html.a [
@@ -101,9 +100,12 @@ let Administration activeTab =
             Html.div [
                 prop.className "flex flex-col items-center gap-4 p-8"
                 prop.children [
-                    Fa.stack [ Fa.Stack.Size Fa.Fa4x; Fa.Stack.CustomClass "text-musi-red" ] [
-                        Fa.i [ Fa.Solid.Key; Fa.Stack1x ] []
-                        Fa.i [ Fa.Solid.Ban; Fa.Stack2x ] []
+                    Html.span [
+                        prop.className "fa fa-stack fa-4x text-musi-red"
+                        prop.children [
+                            Html.i [ prop.className "fas fa-key fa-stack-1x" ]
+                            Html.i [ prop.className "fas fa-ban fa-stack-2x" ]
+                        ]
                     ]
                     Html.span [
                         prop.className "text-center text-2xl text-musi-red"
@@ -182,7 +184,7 @@ let Administration activeTab =
                                         prop.className "!flex items-center gap-2 btn"
                                         prop.href (Router.format(""))
                                         prop.children [
-                                            Fa.i [ Fa.Solid.Check ] []
+                                            Html.i [ prop.className "fas fa-check" ]
                                             Html.span [ prop.text "Fertig" ]
                                         ]
                                     ]

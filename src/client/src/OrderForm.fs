@@ -3,7 +3,6 @@ module OrderForm
 open Api
 open Api.Order
 open Elmish
-open Fable.FontAwesome
 open Feliz
 open Feliz.UseDeferred
 open Feliz.UseElmish
@@ -232,7 +231,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                     prop.disabled (Option.defaultValue 0 amount <= 0)
                     prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, -1)))
                     prop.children [
-                        Fa.i [ Fa.Solid.Minus ] []
+                        Html.i [ prop.className "fas fa-minus" ]
                     ]
                 ]
 
@@ -248,7 +247,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                     prop.className "btn btn-solid btn-green text-3xl"
                     prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, 1)))
                     prop.children [
-                        Fa.i [ Fa.Solid.Plus ] []
+                        Html.i [ prop.className "fas fa-plus" ]
                     ]
                 ]
             ]
@@ -284,7 +283,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                 Html.span [
                     prop.className "inline-flex gap-2 items-center"
                     prop.children [
-                        Fa.i [ Fa.Solid.UndoAlt ] []
+                        Html.i [ prop.className "fas fa-undo-alt" ]
                         Html.span [ prop.text "Zurücksetzen" ]
                     ]
                 ]
@@ -301,7 +300,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                 Html.span [
                     prop.className "inline-flex gap-2 items-center"
                     prop.children [
-                        Fa.i [ Fa.Solid.EuroSign ] []
+                        Html.i [ prop.className "fas fa-euro-sign" ]
                         Html.span [ prop.text "Bestellen" ]
                     ]
                 ]
@@ -314,7 +313,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
             Html.div [
                 prop.className "flex flex-col items-center gap-2 text-musi-red"
                 prop.children [
-                    Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                    Html.i [ prop.className "fas fa-key fa-8x" ]
                     Html.span [
                         prop.className "text-center text-3xl"
                         prop.children [
@@ -349,7 +348,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                             prop.className "flex flex-col items-center gap-2 text-musi-green"
                             prop.children [
                                 Html.div [
-                                    Fa.i [ Fa.Solid.Check; Fa.Size Fa.Fa8x ] []
+                                    Html.i [ prop.className "fas fa-check fa-8x" ]
                                 ]
                                 Html.span [
                                     prop.className "text-center text-3xl"

@@ -3,15 +3,14 @@ module Main
 open Browser.Dom
 open Elmish
 open Fable.Core.JsInterop
-open Fable.FontAwesome
 open Feliz
 open Feliz.Router
 open Feliz.UseElmish
 open global.JS
 open MusiOrder.Models
 
-importAll "../styles/main.scss"
 importAll "../styles/main.css"
+importAll "@fortawesome/fontawesome-free/css/all.css"
 
 type Model = {
     CurrentUrl: string list
@@ -51,7 +50,7 @@ let adminPageButton =
             Html.span [
                 prop.className "inline-flex items-center gap-2"
                 prop.children [
-                    Fa.i [ Fa.Solid.Cogs ] []
+                    Html.i [ prop.className "fas fa-cogs" ]
                     Html.span [ prop.text "Administration" ]
                 ]
             ]
@@ -89,4 +88,4 @@ let Main () =
 
 moment?locale("de-AT")
 
-ReactDOM.render(Main, document.getElementById "app")
+ReactDOM.createRoot(document.getElementById "app").render(Main())

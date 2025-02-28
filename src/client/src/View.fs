@@ -2,7 +2,6 @@ module View
 
 open Fable.Core
 open Fable.Core.JsInterop
-open Fable.FontAwesome
 open Fable.Form.Simple
 open Feliz
 open global.JS
@@ -23,7 +22,7 @@ let retryButton onClick =
         prop.className "!flex items-center gap-2 btn btn-solid btn-green"
         prop.onClick (ignore >> onClick)
         prop.children [
-            Fa.i [ Fa.Solid.SyncAlt ] []
+            Html.i [ prop.className "fas fa-sync-alt" ]
             Html.span [ prop.text "Wiederholen" ]
         ]
     ]
@@ -32,7 +31,7 @@ let errorNotificationWithRetry (message: string) onRetry =
     Html.div [
         prop.className "flex items-center gap-4 bg-musi-red rounded text-white px-8 py-4"
         prop.children [
-            Fa.i [ Fa.Solid.ExclamationTriangle; Fa.Size Fa.Fa2x ] []
+            Html.i [ prop.className "fas fa-exclamation-triangle fa-2x" ]
             Html.span [
                 prop.className "text-2xl"
                 prop.text message
@@ -57,14 +56,14 @@ let loadIconBig =
     Html.div [
         prop.className "text-center text-musi-gold py-2"
         prop.children [
-            Fa.i [ Fa.Solid.Spinner; Fa.Pulse; Fa.Size Fa.Fa8x ] []
+            Html.i [ prop.className "fas fa-spinner fa-pulse fa-8x" ]
         ]
     ]
 
 let modal (title: string) onHide (body: ReactElement list) (footer: ReactElement list) =
     ReactDOM.createPortal (
         Html.div [
-            prop.className "fixed inset-0 grid h-screen w-screen place-items-center bg-slate-800 bg-opacity-60 backdrop-blur-sm animate-fadeIn"
+            prop.className "fixed inset-0 grid h-screen w-screen place-items-center bg-slate-800/60 backdrop-blur-sm animate-fadeIn"
             prop.onClick (ignore >> onHide)
             prop.children [
                 Html.div [
@@ -101,7 +100,7 @@ let authForm =
     Html.div [
         prop.className "flex flex-col gap-2 items-center text-musi-gold"
         prop.children [
-            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+            Html.i [ prop.className "fas fa-key fa-8x" ]
             Html.span [
                 prop.className "text-center text-3xl"
                 prop.children [

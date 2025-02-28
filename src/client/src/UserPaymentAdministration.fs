@@ -4,7 +4,6 @@ open Api
 open Api.UserPaymentAdministration
 open Elmish
 open Fable.Core.JsInterop
-open Fable.FontAwesome
 open Feliz
 open Feliz.UseDeferred
 open Feliz.UseElmish
@@ -125,9 +124,9 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
                         ]
                     match state.AddPaymentState with
                     | Deferred.HasNotStartedYet -> ()
-                    | Deferred.InProgress -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Spinner; Fa.Pulse; Fa.CustomClass "text-musi-gold" ] []
-                    | Deferred.Failed e -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Times; Fa.CustomClass "text-musi-red"; Fa.Props [ Fable.React.Props.Title e.Message ] ] []
-                    | Deferred.Resolved _ -> Fa.i [ Fa.Size Fa.FaLarge; Fa.Solid.Check; Fa.CustomClass "text-musi-green" ] []
+                    | Deferred.InProgress -> Html.i [ prop.className "fa-lg fas fa-spinner fa-pulse text-musi-gold" ]
+                    | Deferred.Failed e -> Html.i [ prop.className "fa-lg fas fa-times text-musi-red"; prop.title e.Message ]
+                    | Deferred.Resolved _ -> Html.i [ prop.className "fa-lg fas fa-check text-musi-green" ]
                 ]
             | None -> ()
 

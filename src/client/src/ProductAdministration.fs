@@ -3,7 +3,6 @@ module ProductAdministration
 open Api
 open Api.ProductAdministration
 open Elmish
-open Fable.FontAwesome
 open Fable.Form.Simple
 open Feliz
 open Feliz.UseElmish
@@ -361,7 +360,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                     prop.onClick (fun _ -> dispatch EditNewProductGroup)
                     
                     prop.children [
-                        Fa.i [ Fa.Solid.Plus ] []
+                        Html.i [ prop.className "fas fa-plus" ]
                         Html.span [ prop.text "Neue Artikelgruppe" ]
                     ]
                 ]
@@ -370,7 +369,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                     prop.onClick (fun _ -> dispatch EditNewProduct)
                     
                     prop.children [
-                        Fa.i [ Fa.Solid.Plus ] []
+                        Html.i [ prop.className "fas fa-plus" ]
                         Html.span [ prop.text "Neuer Artikel" ]
                     ]
                 ]
@@ -406,7 +405,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                             prop.onClick (fun _ -> dispatch (MoveUpProductGroup group.Id))
                                             
                                             prop.children [
-                                                Fa.i [ Fa.Solid.ArrowUp ] []
+                                                Html.i [ prop.className "fas fa-arrow-up" ]
                                             ]
                                         ]
                                         Html.button [
@@ -419,7 +418,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                             prop.onClick (fun _ -> dispatch (MoveDownProductGroup group.Id))
                                             
                                             prop.children [
-                                                Fa.i [ Fa.Solid.ArrowDown ] []
+                                                Html.i [ prop.className "fas fa-arrow-down" ]
                                             ]
                                         ]
                                         Html.button [
@@ -439,7 +438,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                             | Some (DeletedProductGroup (Ok _)) -> ()
                                             
                                             prop.children [
-                                                Fa.i [ Fa.Solid.TrashAlt ] []
+                                                Html.i [ prop.className "fas fa-trash-alt" ]
                                             ]
                                         ]
                                         match deleteProductGroupState with
@@ -523,7 +522,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                                                             prop.onClick (fun _ -> dispatch (MoveUpProduct product.Id))
                                                                             
                                                                             prop.children [
-                                                                                Fa.i [ Fa.Solid.ArrowUp ] []
+                                                                                Html.i [ prop.className "fas fa-arrow-up" ]
                                                                             ]
                                                                         ]
                                                                         Html.button [
@@ -536,7 +535,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                                                             prop.onClick (fun _ -> dispatch (MoveDownProduct product.Id))
                                                                             
                                                                             prop.children [
-                                                                                Fa.i [ Fa.Solid.ArrowDown ] []
+                                                                                Html.i [ prop.className "fas fa-arrow-down" ]
                                                                             ]
                                                                         ]
                                                                         Html.button [
@@ -545,7 +544,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                                                             prop.onClick (fun _ -> dispatch (EditProduct (group.Id, product)))
                                                                             
                                                                             prop.children [
-                                                                                Fa.i [ Fa.Solid.Edit ] []
+                                                                                Html.i [ prop.className "fas fa-edit" ]
                                                                             ]
                                                                         ]
                                                                         Html.button [
@@ -559,7 +558,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                                                             | Some (DeletedProduct (Ok _)) -> ()
                                                                             
                                                                             prop.children [
-                                                                                Fa.i [ Fa.Solid.TrashAlt ] []
+                                                                                Html.i [ prop.className "fas fa-trash-alt" ]
                                                                             ]
                                                                         ]
                                                                     ]

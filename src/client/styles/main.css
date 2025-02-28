@@ -1,6 +1,22 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@utility container {
+  margin-inline: auto;
+}
+
+@theme {
+  --breakpoint-3xl: 120rem;
+  --color-musi-gold: #B18E36;
+  --color-musi-green: #36B151;
+  --color-musi-blue: #3659B1;
+  --color-musi-red: #B13696;
+
+  --animate-fadeIn: fadeIn 100ms ease-in;
+  @keyframes fadeIn {
+    0% { opacity: 0; },
+    100% { opacity: 1; }
+  }
+}
 
 html, body, #app {
   @apply h-full;
@@ -9,31 +25,33 @@ body {
   @apply text-stone-700;
 }
 
-table thead tr {
-  @apply border-b-2 border-slate-200;
-}
-table thead tr th {
-  @apply text-left;
-}
-table thead tr th,
-table tbody tr td,
-table tfoot tr td {
-  @apply px-4 py-2;
-}
-table tbody tr {
-  @apply border-b border-slate-200;
-}
-table tbody tr.selected {
-  @apply bg-slate-200;
-}
-table tbody tr:not(.selected) {
-  @apply hover:bg-slate-100;
-}
-table tfoot tr {
-  @apply border-t-2 border-slate-200;
-}
-table tfoot tr td {
-  @apply text-left;
+@layer utilities {
+  table thead tr {
+    @apply border-b-2 border-slate-200;
+  }
+  table thead tr th {
+    @apply text-left;
+  }
+  table thead tr th,
+  table tbody tr td,
+  table tfoot tr td {
+    @apply px-4 py-2;
+  }
+  table tbody tr {
+    @apply border-b border-slate-200;
+  }
+  table tbody tr.selected {
+    @apply bg-slate-200;
+  }
+  table tbody tr:not(.selected) {
+    @apply hover:bg-slate-100;
+  }
+  table tfoot tr {
+    @apply border-t-2 border-slate-200;
+  }
+  table tfoot tr td {
+    @apply text-left;
+  }
 }
 
 input[type='text'], input[type='number'], input[type='password'], input[type='date'] {

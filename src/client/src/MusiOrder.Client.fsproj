@@ -4,6 +4,7 @@
         <DefineConstants>FABLE_COMPILER;$(DefineConstants)</DefineConstants>
     </PropertyGroup>
     <ItemGroup>
+        <None Include="index.html" />
         <Compile Include="..\..\shared\Utils.fs" />
         <Compile Include="..\..\shared\Models.fs" />
         <Compile Include="JS.fs" />
@@ -23,14 +24,13 @@
         <Compile Include="Main.fs" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Fable.Fetch" Version="2.6.0" />
-        <PackageReference Include="Fable.FontAwesome.Free" Version="2.1.0" />
+        <PackageReference Include="Fable.Fetch" Version="2.7.0" />
         <PackageReference Include="Fable.Form.Simple" Version="1.1.0" />
-        <PackageReference Include="Feliz" Version="1.47.0" />
-        <PackageReference Include="Feliz.Router" Version="3.8.0" />
-        <PackageReference Include="Feliz.UseDeferred" Version="1.4.1" />
-        <PackageReference Include="Feliz.UseElmish" Version="1.5.1" />
-        <PackageReference Include="Thoth.Fetch" Version="2.0.0" />
-        <PackageReference Include="Thoth.Json" Version="5.1.0" />
+        <PackageReference Include="Feliz" Version="2.9.0" />
+        <PackageReference Include="Feliz.Router" Version="4.0.0" />
+        <PackageReference Include="Feliz.UseDeferred" Version="2.0.0" />
+        <PackageReference Include="Feliz.UseElmish" Version="2.5.0" />
+        <PackageReference Include="Thoth.Fetch" Version="3.0.1" />
+        <PackageReference Include="Thoth.Json" Version="10.4.1" />
     </ItemGroup>
 </Project>

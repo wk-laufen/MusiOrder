@@ -3,7 +3,6 @@ module UserAdministration
 open Api
 open Api.UserAdministration
 open Elmish
-open Fable.FontAwesome
 open Fable.Form.Simple
 open Feliz
 open Feliz.UseElmish
@@ -253,7 +252,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                     prop.onClick (fun _ -> dispatch EditNewUser)
                     
                     prop.children [
-                        Fa.i [ Fa.Solid.Plus ] []
+                        Html.i [ prop.className "fas fa-plus" ]
                         Html.span [ prop.text "Neuer Benutzer" ]
                     ]
                 ]
@@ -310,7 +309,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                                                     prop.disabled isDeleted
                                                                     
                                                                     prop.children [
-                                                                        Fa.i [ Fa.Solid.Eye ] []
+                                                                        Html.i [ prop.className "fas fa-eye" ]
                                                                     ]
                                                                 ]
                                                         | None -> Html.span "-"
@@ -321,7 +320,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                                             prop.disabled isDeleted
                                                             
                                                             prop.children [
-                                                                Fa.i [ Fa.Solid.Edit ] []
+                                                                Html.i [ prop.className "fas fa-edit" ]
                                                             ]
                                                         ]
                                                     ]
@@ -340,7 +339,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                                             prop.onClick (fun _ -> dispatch (EditUser user))
                                                             
                                                             prop.children [
-                                                                Fa.i [ Fa.Solid.Edit ] []
+                                                                Html.i [ prop.className "fas fa-edit" ]
                                                             ]
                                                         ]
                                                         Html.button [
@@ -357,7 +356,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                                             | Some (Deleted (Ok _)) -> ()
                                                             
                                                             prop.children [
-                                                                Fa.i [ Fa.Solid.TrashAlt ] []
+                                                                Html.i [ prop.className "fas fa-trash-alt" ]
                                                             ]
                                                         ]
                                                     ]
@@ -411,7 +410,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                     Html.div [
                         prop.className "flex flex-col gap-2 items-center text-musi-gold"
                         prop.children [
-                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                            Html.i [ prop.className "fas fa-key fa-8x" ]
                             Html.span [
                                 prop.className "text-center text-3xl"
                                 prop.children [
@@ -438,7 +437,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                     Html.div [
                         prop.className "flex flex-col items-center gap-2 text-musi-green"
                         prop.children [
-                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                            Html.i [ prop.className "fas fa-key fa-8x" ]
                             Html.span [
                                 prop.className "text-center text-3xl"
                                 if Option.isSome authKey then prop.text "Schlüssel wurde erfolgreich gespeichert."
@@ -452,7 +451,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                     Html.div [
                         prop.className "flex flex-col items-center gap-2 text-musi-red"
                         prop.children [
-                            Fa.i [ Fa.Solid.Key; Fa.Size Fa.Fa8x ] []
+                            Html.i [ prop.className "fas fa-key fa-8x" ]
                             Html.span [
                                 prop.className "text-center text-3xl"
                                 prop.children [
