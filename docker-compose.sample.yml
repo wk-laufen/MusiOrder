@@ -6,6 +6,7 @@ services:
       - 80:80
     environment:
       - DB_PATH=/app/data/musiorder.db
+      - AuthHandler__Name=NoAuthentication
     volumes:
       - ./data/musiorder.db:/app/data/musiorder.db
   nfc-reader:
