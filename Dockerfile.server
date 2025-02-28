@@ -8,11 +8,9 @@ ENV NVM_DIR=/root/.nvm
 RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION}
 RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
 RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
-RUN . "$NVM_DIR/nvm.sh" && corepack enable yarn
 ENV PATH="$NVM_DIR/versions/node/v${NODE_VERSION}/bin/:${PATH}"
 RUN node --version
 RUN npm --version
-RUN yarn --version
 
 WORKDIR /app
 
@@ -24,15 +22,15 @@ COPY ./src/client/src/*.fsproj ./client/src/
 RUN dotnet restore ./client/src/
 
 # Copy package.json and restore as distinct layers
-COPY ./src/client/package.json ./src/client/yarn.lock ./client/
-RUN yarn install --frozen-lockfile --cwd ./client
+COPY ./src/client/package.json ./src/client/package-lock.json ./client/
+RUN npm ci install --prefix ./client
 
 # Copy everything else and build
 COPY ./src/client ./client
 COPY ./src/shared ./shared
 
 WORKDIR /app/client
-RUN dotnet fable ./src --run yarn --cwd ./src build
+RUN npm run build
 
 ###
 
@@ -55,5 +53,5 @@ RUN dotnet publish ./server -c Release -o out
 FROM mcr.microsoft.com/dotnet/aspnet:6.0
 WORKDIR /app
 COPY --from=server-build-env /app/out .
-COPY --from=client-build-env /app/client/deploy ./wwwroot
+COPY --from=client-build-env /app/client/dist ./wwwroot
 ENTRYPOINT ["dotnet", "MusiOrder.Server.App.dll"]
