@@ -2,8 +2,6 @@ module MusiOrder.Server.App
 
 open System
 open Microsoft.AspNetCore.Builder
-open Microsoft.AspNetCore.Cors.Infrastructure
-open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
@@ -14,10 +12,6 @@ open MusiOrder.Models
 open Thoth.Json.Net
 open Thoth.Json.Giraffe
 open AuthHandler
-
-// ---------------------------------
-// Web app
-// ---------------------------------
 
 let webApp =
     choose [
@@ -84,30 +78,10 @@ let webApp =
         setStatusCode 404 >=> text "Not Found"
     ]
 
-// ---------------------------------
-// Error handler
-// ---------------------------------
-
-let errorHandler (ex : Exception) (logger : ILogger) =
-    logger.LogError(ex, "An unhandled exception has occurred while executing the request.")
-    clearResponse >=> setStatusCode 500 >=> text ex.Message
-
-// ---------------------------------
-// Config and Main
-// ---------------------------------
-
-let configureCors (builder : CorsPolicyBuilder) =
-    builder
-        .WithOrigins("http://localhost:8080")
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-   |> ignore
-
 [<EntryPoint>]
 let main args =
     let builder = WebApplication.CreateBuilder args
 
-    builder.Services.AddCors() |> ignore
     builder.Services.AddGiraffe() |> ignore
 
     builder.Services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = Json.coders)) |> ignore
@@ -119,23 +93,20 @@ let main args =
         builder.Services.AddTransient<IAuthHandler, NoAuthenticationAuthHandler>() |> ignore
     elif authHandlerOptions.Name.Equals("SingleUser", StringComparison.InvariantCultureIgnoreCase) then
         builder.Services.AddTransient<IAuthHandler>(fun _ -> SingleUserAuthHandler(OrderSummaryUser.fromConfig authHandlerOptions.User)) |> ignore
+
     let app = builder.Build()
 
     if app.Environment.IsDevelopment() then
         app.UseDeveloperExceptionPage() |> ignore
     else
-        app.UseGiraffeErrorHandler(errorHandler) |> ignore
+        app.UseGiraffeErrorHandler(fun ex logger ->
+            logger.LogError(ex, "An unhandled exception has occurred while executing the request.")
+            clearResponse >=> setStatusCode 500 >=> text ex.Message
+        ) |> ignore
 
     app.UseDefaultFiles() |> ignore
     app.UseStaticFiles() |> ignore
     app.UseHttpsRedirection() |> ignore
-    app.UseCors(fun builder ->
-        builder
-            .WithOrigins("http://localhost:8080")
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-        |> ignore
-    ) |> ignore
     app.UseGiraffe(webApp) |> ignore
 
     app.Run()
