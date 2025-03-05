@@ -103,48 +103,40 @@ let configureCors (builder : CorsPolicyBuilder) =
         .AllowAnyHeader()
    |> ignore
 
-let configureApp (ctx: WebHostBuilderContext) (app : IApplicationBuilder) =
-    if ctx.HostingEnvironment.IsDevelopment() then
+[<EntryPoint>]
+let main args =
+    let builder = WebApplication.CreateBuilder args
+
+    builder.Services.AddCors() |> ignore
+    builder.Services.AddGiraffe() |> ignore
+
+    builder.Services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = Json.coders)) |> ignore
+
+    let authHandlerOptions = builder.Configuration.GetRequiredSection("AuthHandler").Get<AuthHandlerOptions>()
+    if authHandlerOptions.Name.Equals("AuthenticatedUsers", StringComparison.InvariantCultureIgnoreCase) then
+        builder.Services.AddTransient<IAuthHandler, AuthenticatedUsersAuthHandler>() |> ignore
+    elif authHandlerOptions.Name.Equals("NoAuthentication", StringComparison.InvariantCultureIgnoreCase) then
+        builder.Services.AddTransient<IAuthHandler, NoAuthenticationAuthHandler>() |> ignore
+    elif authHandlerOptions.Name.Equals("SingleUser", StringComparison.InvariantCultureIgnoreCase) then
+        builder.Services.AddTransient<IAuthHandler>(fun _ -> SingleUserAuthHandler(OrderSummaryUser.fromConfig authHandlerOptions.User)) |> ignore
+    let app = builder.Build()
+
+    if app.Environment.IsDevelopment() then
         app.UseDeveloperExceptionPage() |> ignore
     else
         app.UseGiraffeErrorHandler(errorHandler) |> ignore
 
-    app
-        .UseDefaultFiles()
-        .UseStaticFiles()
-        .UseHttpsRedirection()
-        .UseCors(configureCors)
-        .UseGiraffe(webApp)
+    app.UseDefaultFiles() |> ignore
+    app.UseStaticFiles() |> ignore
+    app.UseHttpsRedirection() |> ignore
+    app.UseCors(fun builder ->
+        builder
+            .WithOrigins("http://localhost:8080")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+        |> ignore
+    ) |> ignore
+    app.UseGiraffe(webApp) |> ignore
 
-let configureServices (ctx: HostBuilderContext) (services : IServiceCollection) =
-    services
-        .AddCors()
-        .AddGiraffe()
-    |> ignore
-
-    services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = Json.coders)) |> ignore
-
-    let authHandlerOptions = ctx.Configuration.GetRequiredSection("AuthHandler").Get<AuthHandlerOptions>()
-    if authHandlerOptions.Name.Equals("AuthenticatedUsers", StringComparison.InvariantCultureIgnoreCase) then
-        services.AddTransient<IAuthHandler, AuthenticatedUsersAuthHandler>() |> ignore
-    elif authHandlerOptions.Name.Equals("NoAuthentication", StringComparison.InvariantCultureIgnoreCase) then
-        services.AddTransient<IAuthHandler, NoAuthenticationAuthHandler>() |> ignore
-    elif authHandlerOptions.Name.Equals("SingleUser", StringComparison.InvariantCultureIgnoreCase) then
-        services.AddTransient<IAuthHandler>(fun _ -> SingleUserAuthHandler(OrderSummaryUser.fromConfig authHandlerOptions.User)) |> ignore
-
-let configureLogging (ctx: HostBuilderContext) (builder : ILoggingBuilder) =
-    builder
-        .AddFilter(fun l -> ctx.HostingEnvironment.IsDevelopment() || l >= LogLevel.Error)
-        .AddConsole()
-        .AddDebug()
-    |> ignore
-
-[<EntryPoint>]
-let main args =
-    Host.CreateDefaultBuilder(args)
-        .ConfigureWebHostDefaults(fun webHostBuilder -> webHostBuilder.Configure(configureApp) |> ignore)
-        .ConfigureLogging(configureLogging)
-        .ConfigureServices(configureServices)
-        .Build()
-        .Run()
+    app.Run()
     0
