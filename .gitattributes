@@ -1,0 +1,2 @@
+setup/install-docker.sh eol=lf
+setup/setup.sh eol=lf
