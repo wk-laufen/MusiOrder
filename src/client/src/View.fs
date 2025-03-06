@@ -197,7 +197,7 @@ let form title fields data dispatch closeMsg formChangedMsg =
         Html.input [
             prop.type' typeName
             // dirty hack to change HTML attributes
-            yield! Option.ofObj config.Attributes?InputMode |> Option.map (fun v -> prop.custom ("inputmode", string v)) |> Option.toList
+            yield! Option.ofObj config.Attributes?InputMode |> Option.map (fun v -> prop.custom ("inputMode", string v)) |> Option.toList
             prop.classes [
                 if config.ShowError && config.Error.IsSome then "border-musi-red"
             ]
