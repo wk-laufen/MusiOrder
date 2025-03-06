@@ -6,9 +6,9 @@ let [<Import("default","moment")>] moment: System.DateTimeOffset -> obj = jsNati
 
 // see https://stackoverflow.com/a/51411310/1293659
 [<Emit("new Intl.NumberFormat(navigator.language).formatToParts(1.1).find(part => part.type === 'decimal').value")>]
-let getDecimalPoint : unit -> string = jsNative
+let decimalPoint : string = jsNative
 
 let tryParseDecimalInput (v: string) =
-    match v.Replace(getDecimalPoint(), ".") |> System.Decimal.TryParse with
+    match v.Replace(decimalPoint, ".") |> System.Decimal.TryParse with
     | (true, v) -> Some v
     | (false, _) -> None
