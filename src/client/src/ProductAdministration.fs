@@ -657,7 +657,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                         Form.textField
                             {
                                 Parser = fun value ->
-                                    match NonNegativeDecimal.tryParse value with
+                                    match tryParseDecimalInput value |> Option.bind NonNegativeDecimal.tryCreate with
                                     | Some v -> Ok v
                                     | None -> Error "Kein gültiger Preis"
                                 Value = fun product -> product.Price
