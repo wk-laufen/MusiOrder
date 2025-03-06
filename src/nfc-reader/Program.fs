@@ -13,7 +13,14 @@ module Program =
 
         let builder = WebApplication.CreateBuilder(args)
 
-        builder.Services.AddCors(fun v -> v.AddDefaultPolicy(fun policy -> policy.WithOrigins([|"*"|]) |> ignore)) |> ignore
+        builder.Services.AddCors(fun v ->
+            v.AddDefaultPolicy(fun policy ->
+                policy
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                |> ignore
+            )
+        ) |> ignore
         builder.Services.AddControllers() |> ignore
         builder.Services.AddTransient<ICardReader, PcscCardReader>() |> ignore
 
