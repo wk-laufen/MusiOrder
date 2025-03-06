@@ -143,6 +143,7 @@ let form title fields data dispatch closeMsg formChangedMsg =
                     )
                     prop.children config.Fields
                 ]
+                Html.div [ prop.className "simple-keyboard" ]
             ]
             [
                 match config.State with
@@ -194,12 +195,9 @@ let form title fields data dispatch closeMsg formChangedMsg =
 
     let inputFieldBuilder typeName = fun (config: Form.View.TextFieldConfig<_>) ->
         Html.input [
-            // dirty hack to change HTML attributes
-            let typeName = Option.ofObj config.Attributes?Type |> Option.defaultValue typeName
             prop.type' typeName
-            yield! Option.ofObj config.Attributes?Min |> Option.map (fun v -> prop.custom ("min", string v)) |> Option.toList
-            yield! Option.ofObj config.Attributes?Max |> Option.map (fun v -> prop.custom ("max", string v)) |> Option.toList
-            yield! Option.ofObj config.Attributes?Step |> Option.map (fun v -> prop.custom ("step", string v)) |> Option.toList
+            // dirty hack to change HTML attributes
+            yield! Option.ofObj config.Attributes?InputMode |> Option.map (fun v -> prop.custom ("inputmode", string v)) |> Option.toList
             prop.classes [
                 if config.ShowError && config.Error.IsSome then "border-musi-red"
             ]

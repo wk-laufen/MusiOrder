@@ -671,7 +671,7 @@ let ProductAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement 
                                             Placeholder = ""
                                         } : Field.TextField.Attributes
                                     )
-                                    |> fun v -> !!{| v with Type = "number"; Min = 0; Step = 0.1 |}
+                                    |> fun v -> !!{| v with InputMode = "decimal" |}
                             }
 
                     let stateField =

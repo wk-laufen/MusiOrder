@@ -2,6 +2,7 @@ module Main
 
 open Browser.Dom
 open Elmish
+open Fable.Core
 open Fable.Core.JsInterop
 open Feliz
 open Feliz.Router
@@ -89,3 +90,8 @@ let Main () =
 moment?locale("de-AT")
 
 ReactDOM.createRoot(document.getElementById "app").render(Main())
+
+importAll "simple-keyboard/build/css/index.css"
+[<Import("setupKeyboards", "./on-screen-keyboard.js")>]
+let setupKeyboards : unit -> unit = jsNative
+setupKeyboards()
