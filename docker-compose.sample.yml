@@ -3,7 +3,7 @@ services:
     image: ghcr.io/wk-laufen/musiorder:${TAG}
     restart: unless-stopped
     ports:
-      - 80:80
+      - 80:8080
     environment:
       - DB_PATH=/app/data/musiorder.db
       - AuthHandler__Name=NoAuthentication
