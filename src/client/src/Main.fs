@@ -87,7 +87,9 @@ let Main () =
         ]
     ]
 
-moment?locale("de-AT")
+[<Emit("navigator.language")>]
+let language : string = jsNative
+moment?locale language
 
 ReactDOM.createRoot(document.getElementById "app").render(Main())
 
