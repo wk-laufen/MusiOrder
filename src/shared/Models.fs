@@ -98,7 +98,6 @@ module Order =
         Id: UserId
         FirstName: string
         LastName: string
-        AuthKey: AuthKey option
         Balance: decimal
     }
 

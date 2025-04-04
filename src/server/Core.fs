@@ -128,7 +128,6 @@ module Order =
                 Id = reader.GetString(0) |> UserId
                 FirstName = reader.GetString(1)
                 LastName = reader.GetString(2)
-                AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey
                 Balance = reader.GetDecimal(4) / 100m
             })
     }
