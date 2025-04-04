@@ -3,7 +3,7 @@ if (-not (Get-Module SimplySql -ErrorAction Ignore) -and -not (Import-Module Sim
     Import-Module SimplySql
 }
 
-Open-SQLiteConnection -DataSource .\data\data.db
+Open-SQLiteConnection -DataSource .\data\musiorder.db
 $DbMembers = Invoke-SqlQuery -query "SELECT * FROM Member"
 $NewKeyCodes = Get-Content "1.txt" `
     | ConvertFrom-Csv -Delimiter "`t" -Header CardType,Empty1,KeyNumber,Name,Empty2,Empty3,Empty4,KeyCount,Empty5,Empty6,KeyCode `

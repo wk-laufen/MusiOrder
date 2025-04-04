@@ -6,7 +6,7 @@ $HostName = "musiorderpi"
 ssh-keygen -R $HostName
 
 ssh pi@$HostName 'mkdir -p ~/musiorder/data'
-scp ..\data\data.db pi@${HostName}:/home/pi/musiorder/data/musiorder.db
+scp ..\data\musiorder.db pi@${HostName}:/home/pi/musiorder/data/musiorder.db
 
 ssh pi@$HostName 'mkdir -p ~/setup'
 scp .\install-docker.sh pi@${HostName}:/home/pi/setup/install-docker.sh
