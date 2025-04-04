@@ -15,7 +15,7 @@ type OrderState =
     | AuthenticationError of Map<ProductId, int> * React.AuthenticationError
     | LoadingUsers of Map<ProductId, int> * AuthKey option
     | LoadUsersError of Map<ProductId, int> * AuthKey option
-    | LoadedUsers of Map<ProductId, int> * AuthKey option * UserInfo list
+    | LoadedUsers of Map<ProductId, int> * AuthKey option * UserList
     | Sending of Map<ProductId, int> * AuthKey option * UserId option
     | SendError of Map<ProductId, int> * AuthKey option
     | Sent of AuthKey option * UserId option * Deferred<OrderSummary>
@@ -34,7 +34,7 @@ type Msg =
     | Authenticate
     | SetAuthKey of Result<AuthKey, React.AuthenticationError>
     | LoadUsers of AuthKey option
-    | LoadUsersResult of Result<UserInfo list, ApiError<LoadUsersError>>
+    | LoadUsersResult of Result<UserList, ApiError<LoadUsersError>>
     | SendOrder of AuthKey option * UserId option
     | SendOrderResult of Result<unit, ApiError<AddOrderError list>>
     | LoadOrderSummary
@@ -335,7 +335,10 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | LoadUsersError _ -> errorView
         | LoadedUsers (_, authKey, users) ->
             View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [
-                UserCards.UserCards users (fun v -> v.LastName) (View.Order.userCard (fun user -> dispatch (SendOrder (authKey, Some user.Id))))
+                UserCards.UserCards
+                    { Self = users.Self; Users = users.Others }
+                    (fun v -> v.LastName)
+                    (View.Order.userCard (fun user -> dispatch (SendOrder (authKey, Some user.Id))))
             ] []
         | Sending _ -> View.modal "Bestellung speichern" (fun () -> dispatch CloseSendOrder) [ View.loadIconBig ] []
         | SendError _ -> errorView

@@ -79,7 +79,7 @@ module Order =
         return! tryGet url |> handleErrors
     }
 
-    let loadUsers authKey : Async<Result<UserInfo list, ApiError<LoadUsersError>>> = async {
+    let loadUsers authKey : Async<Result<UserList, ApiError<LoadUsersError>>> = async {
         let query = queryString [
             authKeyQueryParam authKey
         ]

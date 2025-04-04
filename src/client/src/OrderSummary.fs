@@ -14,7 +14,7 @@ type Model =
     | AuthenticationError of React.AuthenticationError
     | LoadingUsers of AuthKey option
     | LoadUsersError of AuthKey option
-    | LoadedUsers of AuthKey option * UserInfo list
+    | LoadedUsers of AuthKey option * UserList
     | LoadingOrderSummary of AuthKey option
     | LoadOrderSummaryError of ApiError<LoadOrderSummaryError>
     | LoadedOrderSummary of OrderSummary
@@ -23,7 +23,7 @@ type Msg =
     | Show
     | SetAuthKey of Result<AuthKey, React.AuthenticationError>
     | LoadUsers of AuthKey option
-    | LoadUsersResult of Result<UserInfo list, ApiError<LoadUsersError>>
+    | LoadUsersResult of Result<UserList, ApiError<LoadUsersError>>
     | LoadOrderSummary of AuthKey option * UserId option
     | LoadOrderSummaryResult of Result<OrderSummary, ApiError<LoadOrderSummaryError>>
     | Close
@@ -87,7 +87,10 @@ let OrderSummary () =
         | LoadingOrderSummary _ -> View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [ View.loadIconBig ] []
         | LoadedUsers (authKey, users) ->
             View.modal "Bestellungen anzeigen" (fun () -> dispatch Close) [
-                UserCards.UserCards users (fun v -> v.LastName) (View.Order.userCard (fun user -> dispatch (LoadOrderSummary (authKey, Some user.Id))))
+                UserCards.UserCards
+                    { Self = users.Self; Users = users.Others }
+                    (fun v -> v.LastName)
+                    (View.Order.userCard (fun user -> dispatch (LoadOrderSummary (authKey, Some user.Id))))
             ] []
         | LoadUsersError _
         | LoadOrderSummaryError _ ->

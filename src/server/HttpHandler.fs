@@ -65,7 +65,13 @@ module Order =
         let! authUser = authKey |> Option.bindTask (AuthKey >> User.getByAuthKey)
         match authHandler.GetUsers authUser with
         | GetUsersAllowed ->
-            let! result = getUserInfo ()
+            let! users = getUserInfo ()
+            let result =
+                authUser
+                |> Option.bind (fun v -> users |> List.tryFind (fun u -> u.Id = v.Id))
+                |> function
+                | Some self -> { Self = Some self; Others = users |> List.except [self] }
+                | None -> { Self = None; Others = users }
             return! Successful.OK result next ctx
         | GetUsersNotAuthorized -> return! RequestErrors.BAD_REQUEST LoadUsersError.NotAuthorized next ctx
     }

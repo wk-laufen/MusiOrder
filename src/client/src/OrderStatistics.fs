@@ -230,7 +230,7 @@ let OrderStatistics authKey setAuthKeyInvalid (setMenuItems: ReactElement list -
                                         )
                                         |> List.sortBy fst
                                     View.modal "Personen auswählen" (fun () -> dispatch HideUserSelection) [
-                                        UserCards.UserCards users (fst >> fst) (fun ((lastName, firstName), revenue) ->
+                                        UserCards.UserCards { Self = None; Users = users } (fst >> fst) (fun ((lastName, firstName), revenue) ->
                                             let isSelected = Collections.Set.contains (lastName, firstName) data.SelectedUsers
                                             Html.div [
                                                 prop.classes [

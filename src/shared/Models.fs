@@ -102,6 +102,11 @@ module Order =
         Balance: decimal
     }
 
+    type UserList = {
+        Self: UserInfo option
+        Others: UserInfo list
+    }
+
     type NewOrderEntry = {
         ProductId: ProductId
         Amount: PositiveInteger

@@ -8,8 +8,13 @@ open MusiOrder.Models.Order
 type Msg =
     | SetUserFilter of char option option
 
-type State<'a> = {
+type UserList<'a> = {
+    Self: 'a option
     Users: 'a list
+}
+
+type State<'a> = {
+    UserList: UserList<'a>
     Filter: char option option
 }
 
@@ -18,21 +23,31 @@ let update msg state =
     | SetUserFilter filter ->
         { state with Filter = filter }, Cmd.none
 
-let init users = { Users = users; Filter = None}, Cmd.none
+let init users = { UserList = users; Filter = None}, Cmd.none
 
 [<ReactComponent>]
-let UserCards (users: 'a list) (getLastName: 'a -> string) (render: 'a -> ReactElement) =
+let UserCards (users: UserList<'a>) (getLastName: 'a -> string) (render: 'a -> ReactElement) =
     let (state, dispatch) = React.useElmish(init users, update, [||])
 
     Html.div [
         prop.className "flex flex-col gap-2"
         prop.children [
+            match state.UserList.Self with
+            | Some self ->
+                Html.div [
+                    prop.className "flex gap-2 justify-center mb-4"
+                    prop.children [
+                        render self
+                    ]
+                ]
+            | None -> ()
+
             Html.div [
                 prop.className "flex flex-wrap justify-center gap-2"
                 prop.children [
                     let groups = [
                         ("Alle", None)
-                        yield! users
+                        yield! state.UserList.Users
                             |> List.map (fun v -> v |> getLastName |> Seq.tryHead |> Option.map System.Char.ToUpper)
                             |> List.distinct
                             |> List.sort
@@ -53,7 +68,7 @@ let UserCards (users: 'a list) (getLastName: 'a -> string) (render: 'a -> ReactE
                 ]
             ]
             let users =
-                state.Users
+                state.UserList.Users
                 |> List.filter (fun v ->
                     match state.Filter with
                     | Some firstChar -> v |> getLastName |> Seq.tryHead |> Option.map System.Char.ToUpper = firstChar
