@@ -191,64 +191,51 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         | Sent _ -> false
     React.useAuthentication acceptsAuthKey (SetAuthKey >> dispatch)
 
+    let order =
+        match state.Order with
+        | Drafting order
+        | Authenticating order
+        | AuthenticationError (order, _)
+        | LoadingUsers (order, _)
+        | LoadUsersError (order, _)
+        | LoadedUsers (order, _, _)
+        | Sending (order, _, _)
+        | SendError (order, _) -> Some order
+        | Sent _ -> None
+    let totalAmount =
+        match state.Products, order with
+        | Deferred.Resolved productGroups, Some order ->
+            order
+            |> Map.toSeq
+            |> Seq.sumBy (fun (productId, amount) ->
+                productGroups
+                |> Seq.collect (fun v -> v.Products)
+                |> Seq.tryFind (fun product -> product.Id = productId)
+                |> Option.map (fun product -> product.Price * decimal amount)
+                |> Option.defaultValue 0m
+            )
+        | _, _ -> 0m
+
     let productView (product: Product) =
-        let order =
-            match state.Order with
-            | Drafting order
-            | Authenticating order
-            | AuthenticationError (order, _)
-            | LoadingUsers (order, _)
-            | LoadUsersError (order, _)
-            | LoadedUsers (order, _, _)
-            | Sending (order, _, _)
-            | SendError (order, _) -> Some order
-            | Sent _ -> None
-        let amount = order |> Option.bind (Map.tryFind product.Id)
+        let amount = order |> Option.bind (Map.tryFind product.Id) |> Option.defaultValue 0
         Html.div [
-            prop.className "flex items-center gap-2"
+            prop.classes [
+                "flex flex-col grow items-center gap-2 min-w-80 p-4 border shadow rounded-lg cursor-pointer select-none"
+                if amount > 0 then "border-musi-green/75 shadow-musi-green" else "border-stone-700/25"
+            ]
+            prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, +1)))
             prop.children [
                 Html.span [
                     prop.className "text-3xl"
                     prop.text product.Name
                 ]
-                Html.hr [
-                    prop.className "grow h-px self-center bg-gray-300"
-                ]
                 Html.span [
                     prop.classes [
                         "text-2xl"
-                        if Option.isSome amount then "text-musi-green font-semibold"
+                        if amount > 0 then "text-musi-green font-semibold"
                     ]
-                    let price =
-                        match amount with
-                        | Some amount -> decimal amount * product.Price
-                        | None -> product.Price 
-                    prop.text (View.formatPrice price)
-                ]
-
-                Html.button [
-                    prop.className "btn btn-solid btn-red text-3xl"
-                    prop.disabled (Option.defaultValue 0 amount <= 0)
-                    prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, -1)))
-                    prop.children [
-                        Html.i [ prop.className "fas fa-minus" ]
-                    ]
-                ]
-
-                match amount with
-                | Some amount ->
-                    Html.span [
-                        prop.className "text-2xl"
-                        prop.text $"%d{amount}"
-                    ]
-                | None -> ()
-
-                Html.button [
-                    prop.className "btn btn-solid btn-green text-3xl"
-                    prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, 1)))
-                    prop.children [
-                        Html.i [ prop.className "fas fa-plus" ]
-                    ]
+                    if amount > 0 then prop.text $"%d{amount} x %s{View.formatPrice product.Price}"
+                    else prop.text (View.formatPrice product.Price)
                 ]
             ]
         ]
@@ -264,7 +251,7 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                         prop.text group.Name
                     ]
                     Html.div [
-                        prop.className "flex flex-col gap-2"
+                        prop.className "flex flex-wrap gap-2"
                         prop.children (List.map productView group.Products)
                     ]
                 ]
@@ -301,7 +288,10 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                     prop.className "inline-flex gap-2 items-center"
                     prop.children [
                         Html.i [ prop.className "fas fa-euro-sign" ]
-                        Html.span [ prop.text "Bestellen" ]
+                        Html.span [
+                            if totalAmount > 0m then prop.text $"Bestellen %s{View.formatPrice totalAmount}"
+                            else prop.text "Bestellen"
+                        ]
                     ]
                 ]
             ]
