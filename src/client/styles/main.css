@@ -16,6 +16,14 @@
     0% { opacity: 0; },
     100% { opacity: 1; }
   }
+
+  --animate-fly-up: fly-up 0.25s linear;
+  @keyframes fly-up {
+    100% {
+      transform: translateY(-75px);
+      opacity: 0;
+    }
+  }
 }
 
 html, body, #app {
@@ -51,6 +59,10 @@ body {
   }
   table tfoot tr td {
     @apply text-left;
+  }
+
+  .animate-no-reset {
+    animation-fill-mode: forwards;
   }
 }
 

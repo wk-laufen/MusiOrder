@@ -229,13 +229,30 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
                     prop.className "text-3xl"
                     prop.text product.Name
                 ]
-                Html.span [
-                    prop.classes [
-                        "text-2xl"
-                        if amount > 0 then "text-musi-green font-semibold"
+                Html.div [
+                    prop.className "grid"
+                    prop.children [
+                        let text =
+                            if amount > 0 then $"%d{amount} x %s{View.formatPrice product.Price}"
+                            else View.formatPrice product.Price
+                        let classes = [
+                            "row-[1] col-[1] text-2xl"
+                            if amount > 0 then "text-musi-green font-semibold"
+                        ]
+                        Html.span [
+                            prop.classes classes
+                            prop.text text
+                        ]
+                        if amount > 0 then
+                            Html.span [
+                                prop.key $"%O{product.Id}-%d{amount}"
+                                prop.classes [
+                                    yield! classes
+                                    "animate-fly-up animate-no-reset"
+                                ]
+                                prop.text text
+                            ]
                     ]
-                    if amount > 0 then prop.text $"%d{amount} x %s{View.formatPrice product.Price}"
-                    else prop.text (View.formatPrice product.Price)
                 ]
             ]
         ]
