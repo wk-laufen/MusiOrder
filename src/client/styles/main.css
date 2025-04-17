@@ -98,7 +98,7 @@ select {
   @apply text-musi-green border-musi-green;
 }
 .btn-green.btn-solid {
-  @apply text-white bg-musi-green;
+  @apply text-white bg-musi-green border-musi-green;
 }
 .btn-green:hover {
   @apply shadow-musi-green;
@@ -107,7 +107,7 @@ select {
   @apply text-musi-blue border-musi-blue;
 }
 .btn-blue.btn-solid {
-  @apply text-white bg-musi-blue;
+  @apply text-white bg-musi-blue border-musi-blue;
 }
 .btn-blue:hover {
   @apply shadow-musi-blue;
@@ -116,7 +116,7 @@ select {
   @apply text-musi-red border-musi-red;
 }
 .btn-red.btn-solid {
-  @apply text-white bg-musi-red;
+  @apply text-white bg-musi-red border-musi-red;
 }
 .btn-red:hover {
   @apply shadow-musi-red;
