@@ -220,38 +220,54 @@ let OrderForm (userButtons: ReactElement list) (adminButtons: ReactElement list)
         let amount = order |> Option.bind (Map.tryFind product.Id) |> Option.defaultValue 0
         Html.div [
             prop.classes [
-                "flex flex-col grow items-center gap-2 min-w-80 p-4 border shadow rounded-lg cursor-pointer select-none"
-                if amount > 0 then "border-musi-green/75 shadow-musi-green" else "border-stone-700/25"
+                "flex grow gap-2 p-4 border shadow rounded-lg cursor-pointer select-none"
+                if amount > 0 then "border-musi-green/75 shadow-musi-green" else "border-stone-700/25 hover:border-musi-green/75 hover:shadow-musi-green"
             ]
             prop.onClick (fun _ -> dispatch (ChangeOrderAmount(product.Id, +1)))
             prop.children [
-                Html.span [
-                    prop.className "text-3xl"
-                    prop.text product.Name
-                ]
+                for cssClasses in [["order-1"; "invisible"]; ["order-3"; if amount = 0 then "invisible"]] do
+                    Html.button [
+                        prop.classes [
+                            yield! cssClasses
+                            "btn btn-solid btn-red text-3xl"
+                        ]
+                        prop.onClick (fun e -> e.stopPropagation(); dispatch (ChangeOrderAmount(product.Id, -1)))
+                        prop.children [
+                            Html.i [ prop.className "fas fa-minus" ]
+                        ]
+                    ]
                 Html.div [
-                    prop.className "grid"
+                    prop.className "order-2 grow flex flex-col items-center gap-2"
                     prop.children [
-                        let text =
-                            if amount > 0 then $"%d{amount} x %s{View.formatPrice product.Price}"
-                            else View.formatPrice product.Price
-                        let classes = [
-                            "row-[1] col-[1] text-2xl"
-                            if amount > 0 then "text-musi-green font-semibold"
-                        ]
                         Html.span [
-                            prop.classes classes
-                            prop.text text
+                            prop.className "text-3xl"
+                            prop.text product.Name
                         ]
-                        if amount > 0 then
-                            Html.span [
-                                prop.key $"%O{product.Id}-%d{amount}"
-                                prop.classes [
-                                    yield! classes
-                                    "animate-fly-up animate-no-reset"
+                        Html.div [
+                            prop.className "grid"
+                            prop.children [
+                                let text =
+                                    if amount > 0 then $"%d{amount} x %s{View.formatPrice product.Price}"
+                                    else View.formatPrice product.Price
+                                let classes = [
+                                    "row-[1] col-[1] text-2xl min-w-40 text-center"
+                                    if amount > 0 then "text-musi-green font-semibold"
                                 ]
-                                prop.text text
+                                Html.span [
+                                    prop.classes classes
+                                    prop.text text
+                                ]
+                                if amount > 0 then
+                                    Html.span [
+                                        prop.key $"%O{product.Id}-%d{amount}"
+                                        prop.classes [
+                                            yield! classes
+                                            "animate-fly-up animate-no-reset"
+                                        ]
+                                        prop.text text
+                                    ]
                             ]
+                        ]
                     ]
                 ]
             ]
