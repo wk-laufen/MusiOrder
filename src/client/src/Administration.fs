@@ -143,15 +143,13 @@ let Administration activeTab =
                                 prop.children [
                                     for tab in allTabs ->
                                         Html.li [
-                                            prop.classes [
-                                                "px-4 py-2 -mb-px hover:border-b hover:border-musi-blue hover:text-musi-blue"
-                                                if tab = activeTab then "border-b border-musi-blue text-musi-blue"
-                                            ]
-                                            prop.children [
-                                                Html.a [
-                                                    prop.text (Tab.title tab)
-                                                    prop.href (Router.format(route, Tab.toRoute tab))
+                                            Html.a [
+                                                prop.classes [
+                                                    "inline-block px-4 py-2 -mb-px hover:border-b hover:border-musi-blue hover:text-musi-blue"
+                                                    if tab = activeTab then "border-b border-musi-blue text-musi-blue"
                                                 ]
+                                                prop.text (Tab.title tab)
+                                                prop.href (Router.format(route, Tab.toRoute tab))
                                             ]
                                         ]
                                 ]
