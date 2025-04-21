@@ -97,4 +97,6 @@ type NfcReaderController (cardReader: ICardReader, logger : ILogger<NfcReaderCon
                 match cardReader.ReadCardId readerName ct with
                 | None -> this.BadRequest() :> IActionResult
                 | Some cardId -> this.Ok(cardId)
-        with :? OperationCanceledException -> this.NoContent()
+        with
+            | :? OperationCanceledException -> this.NoContent()
+            | _ -> this.StatusCode(500)
