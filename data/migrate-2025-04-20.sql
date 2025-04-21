@@ -6,8 +6,8 @@ CREATE TABLE AuthKey (
     PRIMARY KEY (keyCode, keyType)
 );
 
-INSERT INTO AuthKey (keyCode, keyType, userId)
-SELECT keyCode, 'nfc', id FROM Member WHERE keyCode NOT NULL;
+INSERT INTO AuthKey (keyCode, keyType, userId, creationTime)
+SELECT keyCode, 'nfc', id, '2025-01-01 00:00:00.0000000+01:00' FROM Member WHERE keyCode NOT NULL;
 
 -- see https://sqlite.org/lang_altertable.html - Making Other Kinds Of Table Schema Changes
 PRAGMA foreign_keys=OFF;

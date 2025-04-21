@@ -1,8 +1,12 @@
-INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES ('e4470d38-4726-47c4-b7ee-3025992dbf85', 'Robin', 'Cella', '1234', 'admin');
-INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES ('ef87d330-94ab-4ea5-bfb0-bce4329fd3a7', 'Sebastian', 'Manz', 'qwer', 'user');
-INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES ('b018c560-af6d-42d0-9ee7-4aa46a764a47', 'Thomas', 'Morgenstern', 'asdf', 'user');
-INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES ('c421dfe2-af42-4770-bef3-b8a7c06917c5', 'Matheo', 'Goss', 'zxcv', 'user');
-INSERT INTO Member (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES ('e5db874a-dc7f-407a-9a37-eb1e18dcf1be', 'Dominik', 'Haspel', 'wert', 'user');
+INSERT INTO Member (`id`, `firstName`, `lastName`, `role`) VALUES ('e4470d38-4726-47c4-b7ee-3025992dbf85', 'Robin', 'Cella', 'admin');
+INSERT INTO Member (`id`, `firstName`, `lastName`, `role`) VALUES ('ef87d330-94ab-4ea5-bfb0-bce4329fd3a7', 'Sebastian', 'Manz', 'user');
+INSERT INTO Member (`id`, `firstName`, `lastName`, `role`) VALUES ('b018c560-af6d-42d0-9ee7-4aa46a764a47', 'Thomas', 'Morgenstern', 'user');
+INSERT INTO Member (`id`, `firstName`, `lastName`, `role`) VALUES ('c421dfe2-af42-4770-bef3-b8a7c06917c5', 'Matheo', 'Goss', 'user');
+INSERT INTO Member (`id`, `firstName`, `lastName`, `role`) VALUES ('e5db874a-dc7f-407a-9a37-eb1e18dcf1be', 'Dominik', 'Haspel', 'user');
+
+INSERT INTO AuthKey (keyCode, keyType, userId, creationTime) VALUES ('1234', 'nfc', 'e4470d38-4726-47c4-b7ee-3025992dbf85', '2025-01-01 00:00:00.0000000+01:00');
+INSERT INTO AuthKey (keyCode, keyType, userId, creationTime) VALUES ('1235', 'nfc', 'e4470d38-4726-47c4-b7ee-3025992dbf85', '2025-01-01 00:00:00.0000000+01:00');
+INSERT INTO AuthKey (keyCode, keyType, userId, creationTime) VALUES ('qwer', 'nfc', 'ef87d330-94ab-4ea5-bfb0-bce4329fd3a7', '2025-01-01 00:00:00.0000000+01:00');
 
 INSERT INTO ArticleGroup (`id`, `grade`, `name`) VALUES ('1e11c985-cb94-4ca4-ace9-4752f43c314a', 1, 'Getränke');
 INSERT INTO ArticleGroup (`id`, `grade`, `name`) VALUES ('1f418489-6b00-46d9-9d76-25a691a10e11', 2, 'Speisen');

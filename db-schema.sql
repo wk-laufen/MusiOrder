@@ -2,17 +2,27 @@ DROP TABLE IF EXISTS `Order`;
 DROP TABLE IF EXISTS `Article`;
 DROP TABLE IF EXISTS `ArticleGroup`;
 DROP TABLE IF EXISTS `MemberPayment`;
+DROP VIEW IF EXISTS `ActiveMember`;
+DROP TABLE IF EXISTS `AuthKey`;
 DROP TABLE IF EXISTS `Member`;
 
 CREATE TABLE `Member` (
     `id` TEXT NOT NULL PRIMARY KEY,
     `firstName` TEXT NOT NULL,
     `lastName` TEXT NOT NULL,
-    `keyCode` TEXT UNIQUE,
     `role` TEXT NOT NULL,
     `deleteTimestamp` TEXT
 );
-CREATE VIEW `ActiveMember` AS SELECT `id`, `firstName`, `lastName`, `keyCode`, `role` FROM `Member` WHERE `deleteTimestamp` IS NULL;
+
+CREATE TABLE AuthKey (
+    keyCode TEXT NOT NULL,
+    keyType TEXT NOT NULL,
+    userId TEXT NOT NULL REFERENCES Member(id),
+    creationTime TEXT NOT NULL,
+    PRIMARY KEY (keyCode, keyType)
+);
+
+CREATE VIEW ActiveMember AS SELECT id, firstName, lastName, (SELECT json_group_array(json_object('keyCode', keyCode, 'keyType', keyType)) FROM AuthKey WHERE userId = id) AS authKeys, role FROM Member WHERE deleteTimestamp IS NULL;
 
 CREATE TABLE `MemberPayment` (
     `id` TEXT NOT NULL PRIMARY KEY,
