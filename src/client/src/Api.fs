@@ -293,7 +293,10 @@ module DataExport =
     open MusiOrder.Models.DataExport
 
     let exportDatabase authKey : Async<Result<Browser.Types.Blob, ApiError<ExportDatabaseError>>> = async {
-        let url = sprintf "/api/administration/data-export/export-db?authKey=%s" (AuthKey.toString authKey |> JS.encodeURIComponent)
+        let query = queryString [
+            authKeyQueryParam (Some authKey)
+        ]
+        let url = $"/api/administration/data-export/export-db%s{query}"
         let! response = fetchUnsafe url [ Method HttpMethod.GET ] |> Async.AwaitPromise
         if response.Ok then
             let! data = response.blob() |> Async.AwaitPromise
