@@ -4,13 +4,13 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.Data.Sqlite
 open MusiOrder.Models
 open System
+open System.Text.Json
 
 type Helper =
     static member Box (v: string) = box v
     static member Box (v: DateTimeOffset) = box v
     static member Box (v: Guid) = box (v.ToString())
     static member Box (v: decimal) = box v
-    static member Box (AuthKey v) = box v
     static member Box (UserId v) = box v
     static member Box (ProductId v) = box v
     static member Box (ProductGroupId v) = box v
@@ -19,6 +19,17 @@ type Helper =
     static member Box (v: NotEmptyString) = box v.Value
     static member Box (v: NonNegativeDecimal) = box (NonNegativeDecimal.value v)
     static member Box (v: DBNull) = box v
+
+type DbAuthKey = {
+    keyType: string
+    keyCode: string
+}
+module DbAuthKey =
+    let toDb = function
+        | NFCAuthKey keyCode -> ("nfc", keyCode)
+    let toDomain v =
+        if String.Equals(v.keyType, "nfc", StringComparison.InvariantCultureIgnoreCase) then NFCAuthKey v.keyCode
+        else failwith $"Unknown key type \"{v.keyType}\""
 
 type UserRole = User | OrderAssistant | Admin
 
@@ -33,7 +44,7 @@ type User = {
     Id: UserId
     FirstName: string
     LastName: string
-    AuthKey: AuthKey option
+    AuthKeys: AuthKey list
     Role: UserRole
 }
 module User =
@@ -45,30 +56,31 @@ module User =
         | OrderAssistant
         | Admin -> true
 
-    let getByAuthKey (AuthKey authKey) =
+    let getByAuthKey authKey =
+        let (keyType, keyCode) = DbAuthKey.toDb authKey
         DB.readSingle
-            "SELECT `id`, `firstName`, `lastName`, `keyCode`, `role` FROM `ActiveMember` WHERE `keyCode` = @KeyCode"
-            [ ("@KeyCode", Helper.Box authKey) ]
+            "SELECT m.id, m.firstName, m.lastName, m.authKeys, m.role FROM ActiveMember m, json_each(authKeys) WHERE json_each.value ->> '$.keyCode' = @KeyCode AND json_each.value ->> '$.keyType' = @KeyType"
+            [ ("@KeyType", Helper.Box keyType); ("@KeyCode", Helper.Box keyCode)]
             (fun reader ->
                 {
                     Id = reader.GetString(0) |> UserId
                     FirstName = reader.GetString(1)
                     LastName = reader.GetString(2)
-                    AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey
+                    AuthKeys = JsonSerializer.Deserialize<DbAuthKey[]>(reader.GetString(3)) |> Seq.map DbAuthKey.toDomain |> Seq.toList
                     Role = reader.GetString(4) |> fun roleName -> UserRole.tryParse roleName |> Option.defaultWith (fun () -> failwithf "DB error: Can't parse user role \"%s\"" roleName)
                 }
             )
 
     let getById (userId: UserId) =
         DB.readSingle
-            "SELECT `id`, `firstName`, `lastName`, `keyCode`, `role` FROM `ActiveMember` WHERE `id` = @Id"
+            "SELECT `id`, `firstName`, `lastName`, `authKeys`, `role` FROM `ActiveMember` WHERE `id` = @Id"
             [ ("@Id", Helper.Box userId) ]
             (fun reader ->
                 {
                     Id = reader.GetString(0) |> UserId
                     FirstName = reader.GetString(1)
                     LastName = reader.GetString(2)
-                    AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey
+                    AuthKeys = JsonSerializer.Deserialize<DbAuthKey[]>(reader.GetString(3)) |> Seq.map DbAuthKey.toDomain |> Seq.toList
                     Role = reader.GetString(4) |> fun roleName -> UserRole.tryParse roleName |> Option.defaultWith (fun () -> failwithf "DB error: Can't parse user role \"%s\"" roleName)
                 }
             )
@@ -205,7 +217,7 @@ module UserAdministration =
 
     let getExistingUsers () = task {
         let query = """
-            SELECT `id`, `firstName`, `lastName`, `keyCode`, `role`
+            SELECT `id`, `firstName`, `lastName`, `authKeys`, `role`
             FROM `ActiveMember`
             ORDER BY `lastName`, `firstName`
         """
@@ -216,34 +228,44 @@ module UserAdministration =
                 Data = {
                     FirstName = reader.GetString(1) |> NotEmptyString.tryCreate |> Option.defaultWith (fun () -> failwithf "DB error: First name of user (%O) is empty" userId)
                     LastName = reader.GetString(2) |> NotEmptyString.tryCreate |> Option.defaultWith (fun () -> failwithf "DB error: Last name of user (%O) is empty" userId)
-                    AuthKey = DB.tryGet reader reader.GetString 3 |> Option.map AuthKey
+                    AuthKeys = JsonSerializer.Deserialize<DbAuthKey[]>(reader.GetString(3)) |> Seq.map DbAuthKey.toDomain |> Seq.toList
                     Role = reader.GetString(4) |> fun roleName -> UserRole.tryParse roleName |> Option.defaultWith (fun () -> failwithf "DB error: Can't parse user role \"%s\"" roleName)
                 }
             })
     }
 
-    let private isDuplicateKeyCodeException (e: SqliteException) =
-        e.Message = "SQLite Error 19: 'UNIQUE constraint failed: Member.keyCode'."
+    let private isDuplicateAuthKeyException (e: SqliteException) =
+        e.Message = "SQLite Error 19: 'UNIQUE constraint failed: AuthKey.keyCode, AuthKey.keyType'."
 
     let createUser (data: ExistingUserData) = task {
         try
             let newUserId = sprintf "%O" (Guid.NewGuid()) |> UserId
-            do!
-                DB.write
-                    "INSERT INTO `Member` (`id`, `firstName`, `lastName`, `keyCode`, `role`) VALUES (@Id, @FirstName, @LastName, @KeyCode, @Role)"
+            do! DB.executeCommands [
+                (
+                    "INSERT INTO `Member` (`id`, `firstName`, `lastName`, `role`) VALUES (@Id, @FirstName, @LastName, @Role)",
                     [
                         ("@Id", Helper.Box newUserId)
                         ("@FirstName", Helper.Box data.FirstName)
                         ("@LastName", Helper.Box data.LastName)
-                        ("@KeyCode", data.AuthKey |> Option.map Helper.Box |> Option.defaultValue (Helper.Box DBNull.Value))
                         ("@Role", UserRole.toString data.Role |> Helper.Box)
                     ]
+                )
+                yield! data.AuthKeys |> List.map (fun authKey ->
+                    let (keyType, keyCode) = DbAuthKey.toDb authKey
+                    "INSERT INTO `AuthKey` (`keyCode`, `keyType`, `userId`) VALUES (@KeyCode, @KeyType, @UserId)",
+                    [
+                        ("@KeyCode", Helper.Box keyCode)
+                        ("@KeyType", Helper.Box keyType)
+                        ("@UserId", Helper.Box newUserId)
+                    ]
+                )
+            ]
             return Ok newUserId
         with
-        | :? SqliteException as e when isDuplicateKeyCodeException e ->
-            let! user = data.AuthKey |> Option.bindTask User.getByAuthKey
-            let userName = user |> Option.map (fun v -> sprintf "%s %s" v.LastName v.FirstName)
-            return Error (KeyCodeTaken userName)
+        | :? SqliteException as e when isDuplicateAuthKeyException e ->
+            let! users = data.AuthKeys |> List.map User.getByAuthKey |> System.Threading.Tasks.Task.WhenAll
+            let userNames = users |> Seq.choose (Option.map (fun v -> $"{v.LastName} {v.FirstName}")) |> Seq.toList
+            return Error (KeyCodeTaken userNames)
     }
 
     let updateUser (userId: UserId) (data: PatchUserData) = task {
@@ -258,34 +280,60 @@ module UserAdministration =
                 | Some v -> ("lastName", Helper.Box v)
                 | None -> ()
 
-                if data.SetAuthKey then
-                    ("keyCode", data.AuthKey |> Option.map Helper.Box |> Option.defaultValue (Helper.Box DBNull.Value))
-
                 match data.Role with
                 | Some v -> ("role", UserRole.toString v |> Helper.Box)
                 | None -> ()
             ]
             let updateFields = fields |> Seq.map (fst >> fun v -> $"`%s{v}`=@%s{v}") |> String.concat ", "
             do!
-                DB.write
-                    $"UPDATE `Member` SET %s{updateFields} WHERE `id`=@Id"
-                    [
-                        ("@Id", Helper.Box userId)
-                        yield! fields |> List.map (fun (name, value) -> ($"@%s{name}", value))
-                    ]
+                DB.executeCommands [
+                    if not <| List.isEmpty fields then
+                        (
+                            $"UPDATE `Member` SET %s{updateFields} WHERE `id`=@Id",
+                            [
+                                ("@Id", Helper.Box userId)
+                                yield! fields |> List.map (fun (name, value) -> ($"@%s{name}", value))
+                            ]
+                        )
+                    yield! data.AddAuthKeys |> List.map (fun authKey ->
+                        let (keyType, keyCode) = DbAuthKey.toDb authKey
+                        "INSERT INTO `AuthKey` (`keyCode`, `keyType`, `userId`, `creationTime`) VALUES (@KeyCode, @KeyType, @UserId, @CreationTime)",
+                        [
+                            ("@KeyCode", Helper.Box keyCode)
+                            ("@KeyType", Helper.Box keyType)
+                            ("@UserId", Helper.Box userId)
+                            ("@CreationTime", Helper.Box DateTimeOffset.Now)
+                        ]
+                    )
+                    yield! data.RemoveAuthKeys |> List.map (fun authKey ->
+                        let (keyType, keyCode) = DbAuthKey.toDb authKey
+                        "DELETE FROM `AuthKey` WHERE `keyCode`=@KeyCode AND `keyType`=@KeyType AND `userId`=@UserId",
+                        [
+                            ("@KeyCode", Helper.Box keyCode)
+                            ("@KeyType", Helper.Box keyType)
+                            ("@UserId", Helper.Box userId)
+                        ]
+                    )
+                ]
             return Ok ()
         with
-        | :? SqliteException as e when isDuplicateKeyCodeException e ->
-            match data.SetAuthKey, data.AuthKey with
-            | true, Some authKey ->
-                let! user = User.getByAuthKey authKey
-                let userName = user |> Option.map (fun v -> $"%s{v.LastName} %s{v.FirstName}")
-                return Error (KeyCodeTaken userName)
-            | _ -> return raise e
+        | :? SqliteException as e when isDuplicateAuthKeyException e ->
+            let! users = data.AddAuthKeys |> List.map User.getByAuthKey |> System.Threading.Tasks.Task.WhenAll
+            let userNames = users |> Seq.choose (Option.map (fun v -> $"{v.LastName} {v.FirstName}")) |> Seq.toList
+            return Error (KeyCodeTaken userNames)
     }
 
     let deleteUser (userId: UserId) = task {
-        return! DB.write "UPDATE `Member` SET `keyCode` = NULL, `deleteTimestamp` = @DeleteTimestamp WHERE `id` = @Id" [ ("@Id", Helper.Box userId); ("@DeleteTimestamp", Helper.Box DateTimeOffset.Now) ]
+        return! DB.executeCommands [
+            (
+                "UPDATE `Member` SET `deleteTimestamp` = @DeleteTimestamp WHERE `id` = @Id",
+                [ ("@Id", Helper.Box userId); ("@DeleteTimestamp", Helper.Box DateTimeOffset.Now) ]
+            )
+            (
+                "DELETE FROM `AuthKey` WHERE `userId`=@Id",
+                [ ("@Id", Helper.Box userId) ]
+            )
+        ]
     }
 
 module ProductAdministration =

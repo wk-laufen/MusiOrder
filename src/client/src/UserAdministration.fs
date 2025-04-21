@@ -10,16 +10,15 @@ open global.JS
 open MusiOrder.Models
 open MusiOrder.Models.UserAdministration
 
-type EditingUserAuthKeyState =
+type AddingUserAuthKeyState =
     | WaitingForUserAuthKey
     | GettingUserAuthKeyError of React.AuthenticationError
-    | SavingUserAuthKey of AuthKey option
-    | SaveUserAuthKeyResult of Result<AuthKey option, ApiError<SaveUserError>>
+    | SavingAuthKey of AuthKey
+    | SavingAuthKeyResult of Result<AuthKey, ApiError<SaveUserError>>
 
 type UserFormData = {
     FirstName: string
     LastName: string
-    AuthKey: string
     Role: string
 }
 module UserFormData =
@@ -27,14 +26,12 @@ module UserFormData =
         {
             FirstName = v.FirstName.Value
             LastName = v.LastName.Value
-            AuthKey = v.AuthKey |> Option.map AuthKey.toString |> Option.defaultValue ""
             Role = UserRole.toString v.Role
         }
     let empty =
         {
             FirstName = ""
             LastName = ""
-            AuthKey = ""
             Role = UserRole.toString User
         }
 
@@ -49,13 +46,28 @@ type DeleteUserState =
     | Deleting
     | Deleted of Result<unit, ApiError<ForceDeleteUserError>>
 
+type RemovingUserAuthKeyState =
+    | RemovingUserAuthKey
+    | RemovedUserAuthKey of Result<unit, ApiError<SaveUserError>>
+
 type LoadedModel = {
     Users: ExistingUser list
-    VisibleKeyCodeUserIds: Set<UserId>
-    EditingUserAuthKey: (ExistingUser * EditingUserAuthKeyState) option
+    VisibleAuthKeyUserIds: Set<UserId>
+    AddingUserAuthKey: (ExistingUser * AddingUserAuthKeyState) option
+    RemoveAuthKeyStates: Map<UserId * AuthKey, RemovingUserAuthKeyState>
     EditingUser: EditingUser option
     DeleteUserStates: Map<UserId, DeleteUserState>
 }
+module LoadedModel =
+    let create users = {
+        Users = users
+        VisibleAuthKeyUserIds = Set.empty
+        AddingUserAuthKey = None
+        RemoveAuthKeyStates = Map.empty
+        EditingUser = None
+        DeleteUserStates = Map.empty
+    }
+
 
 type Model =
     | NotLoaded
@@ -66,11 +78,13 @@ type Model =
 type Msg =
     | Load of AuthKey option
     | LoadResult of Result<ExistingUser list, ApiError<LoadExistingUsersError>>
-    | ShowAuthKey of UserId
-    | EditAuthKey of ExistingUser
-    | SetAuthKey of Result<AuthKey option, React.AuthenticationError>
-    | SetAuthKeyResult of Result<AuthKey option, ApiError<SaveUserError>>
-    | CancelEditAuthKey
+    | ShowAuthKeys of UserId
+    | AddAuthKey of ExistingUser
+    | SaveNewAuthKey of Result<AuthKey, React.AuthenticationError>
+    | SaveNewAuthKeyResult of Result<AuthKey, ApiError<SaveUserError>>
+    | CancelAddAuthKey
+    | RemoveUserAuthKey of UserId * AuthKey
+    | RemoveUserAuthKeyResult of UserId * AuthKey * Result<unit, ApiError<SaveUserError>>
     | EditUser of ExistingUser
     | DeleteUser of UserId
     | DeleteUserResult of UserId * Result<DeleteUserWarning list, ApiError<DeleteUserError>>
@@ -92,48 +106,60 @@ let update msg state =
     | LoadResult (Ok users) ->
         match state with
         | Loading authKey ->
-            Loaded (authKey, { Users = users; VisibleKeyCodeUserIds = Set.empty; EditingUserAuthKey = None; EditingUser = None; DeleteUserStates = Map.empty }),
+            Loaded (authKey, LoadedModel.create users),
             Cmd.none
         | _ -> state, Cmd.none
     | LoadResult (Error e) ->
         match state with
         | Loading authKey -> LoadError (authKey, e), Cmd.none
         | _ -> state, Cmd.none
-    | ShowAuthKey userId ->
+    | ShowAuthKeys userId ->
         match state with
         | Loaded (authKey, state) ->
-            Loaded (authKey, { state with VisibleKeyCodeUserIds = Set.add userId state.VisibleKeyCodeUserIds }),
+            Loaded (authKey, { state with VisibleAuthKeyUserIds = Set.add userId state.VisibleAuthKeyUserIds }),
             Cmd.none
         | _ -> state, Cmd.none
-    | EditAuthKey user ->
+    | AddAuthKey user ->
         match state with
         | Loaded (authKey, state) ->
-            Loaded (authKey, { state with EditingUserAuthKey = Some (user, WaitingForUserAuthKey) }),
+            Loaded (authKey, { state with AddingUserAuthKey = Some (user, WaitingForUserAuthKey) }),
             Cmd.none
         | _ -> state, Cmd.none
-    | SetAuthKey (Ok userAuthKey) ->
+    | SaveNewAuthKey (Ok userAuthKey) ->
         match state with
-        | Loaded (authKey, ({ EditingUserAuthKey = Some (user, _) } as state)) ->
-            Loaded (authKey, { state with EditingUserAuthKey = Some (user, SavingUserAuthKey userAuthKey) }),
-            Cmd.OfAsync.perform (updateUser authKey user.Id) { PatchUserData.empty with AuthKey = userAuthKey; SetAuthKey = true } (Result.map (fun () -> userAuthKey) >> SetAuthKeyResult)
+        | Loaded (authKey, ({ AddingUserAuthKey = Some (user, _) } as state)) ->
+            Loaded (authKey, { state with AddingUserAuthKey = Some (user, SavingAuthKey userAuthKey) }),
+            Cmd.OfAsync.perform (updateUser authKey user.Id) { PatchUserData.empty with AddAuthKeys = [userAuthKey] } (Result.map (fun () -> userAuthKey) >> SaveNewAuthKeyResult)
         | _ -> state, Cmd.none
-    | SetAuthKey (Error error) ->
+    | SaveNewAuthKey (Error error) ->
         match state with
-        | Loaded (authKey, ({ EditingUserAuthKey = Some (user, _) } as state)) ->
-            Loaded (authKey, { state with EditingUserAuthKey = Some (user, GettingUserAuthKeyError error) }),
+        | Loaded (authKey, ({ AddingUserAuthKey = Some (user, _) } as state)) ->
+            Loaded (authKey, { state with AddingUserAuthKey = Some (user, GettingUserAuthKeyError error) }),
             Cmd.none
         | _ -> state, Cmd.none
-    | SetAuthKeyResult result ->
+    | SaveNewAuthKeyResult result ->
         match state with
-        | Loaded (authKey, ({ EditingUserAuthKey = Some (user, _) } as state)) ->
-            Loaded (authKey, { state with EditingUserAuthKey = Some (user, SaveUserAuthKeyResult result) }),
+        | Loaded (authKey, ({ AddingUserAuthKey = Some (user, _) } as state)) ->
+            Loaded (authKey, { state with AddingUserAuthKey = Some (user, SavingAuthKeyResult result) }),
             Cmd.none
         | _ -> state, Cmd.none
-    | CancelEditAuthKey ->
+    | CancelAddAuthKey ->
         match state with
         | Loaded (authKey, state) ->
-            Loaded (authKey, { state with EditingUserAuthKey = None }),
+            Loaded (authKey, { state with AddingUserAuthKey = None }),
             Cmd.ofMsg (Load authKey)
+        | _ -> state, Cmd.none
+    | RemoveUserAuthKey (userId, authKeyToRemove) ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with RemoveAuthKeyStates = state.RemoveAuthKeyStates |> Map.add (userId, authKeyToRemove) RemovingUserAuthKey }),
+            Cmd.OfAsync.perform (updateUser authKey userId) { PatchUserData.empty with RemoveAuthKeys = [authKeyToRemove] } (fun result -> RemoveUserAuthKeyResult (userId, authKeyToRemove, result))
+        | _ -> state, Cmd.none
+    | RemoveUserAuthKeyResult (userId, authKeyToRemove, result) ->
+        match state with
+        | Loaded (authKey, state) ->
+            Loaded (authKey, { state with RemoveAuthKeyStates = state.RemoveAuthKeyStates |> Map.add (userId, authKeyToRemove) (RemovedUserAuthKey result) }),
+            Cmd.none
         | _ -> state, Cmd.none
     | EditUser user ->
         match state with
@@ -201,9 +227,10 @@ let update msg state =
             let errorMessage =
                 match e with
                 | ExpectedError DowngradeSelfNotAllowed -> "Fehler beim Speichern des Benutzers: Die eigene Rolle darf nicht gewechselt werden."
-                | ExpectedError RemoveKeyCodeNotAllowed -> "Fehler beim Speichern des Benutzers: Die eigene Schlüsselnummer darf nicht entfernt werden."
-                | ExpectedError (KeyCodeTaken None) -> "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits vergeben."
-                | ExpectedError (KeyCodeTaken (Some userName)) -> sprintf "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits an %s vergeben." userName
+                | ExpectedError SaveUserError.RemoveActiveAuthKeyNotAllowed -> "Fehler beim Speichern des Benutzers: Die eigene Schlüsselnummer darf nicht entfernt werden."
+                | ExpectedError (KeyCodeTaken []) -> "Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits vergeben."
+                | ExpectedError (KeyCodeTaken [userName]) -> $"Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits an %s{userName} vergeben."
+                | ExpectedError (KeyCodeTaken userNames) -> $"""Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits vergeben an: %s{String.concat ", " userNames}"""
                 | ExpectedError SaveUserError.InvalidAuthKey
                 | ExpectedError SaveUserError.NotAuthorized
                 | UnexpectedError _ -> "Fehler beim Speichern des Benutzers."
@@ -229,11 +256,108 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
 
     let acceptsAuthKey =
         match state with
-        | Loaded (_, { EditingUserAuthKey = Some (_, WaitingForUserAuthKey) })
-        | Loaded (_, { EditingUserAuthKey = Some (_, GettingUserAuthKeyError _) })
-        | Loaded (_, { EditingUserAuthKey = Some (_, SaveUserAuthKeyResult (Error _)) }) -> true
+        | Loaded (_, { AddingUserAuthKey = Some (_, WaitingForUserAuthKey) })
+        | Loaded (_, { AddingUserAuthKey = Some (_, GettingUserAuthKeyError _) })
+        | Loaded (_, { AddingUserAuthKey = Some (_, SavingAuthKeyResult (Error _)) }) -> true
         | _ -> false
-    React.useAuthentication acceptsAuthKey (Result.map Some >> SetAuthKey >> dispatch)
+    React.useAuthentication acceptsAuthKey (SaveNewAuthKey >> dispatch)
+
+    let authKeysView (user: ExistingUser) isDeleted areAuthKeysVisible removeAuthKeyStates =
+        Html.div [
+            prop.classes [
+                "flex gap-2"
+                if areAuthKeysVisible then "flex-col items-start"
+                else "flex-row items-center"
+            ]
+            prop.children [
+                match user.Data.AuthKeys with
+                | [] -> Html.span "Keine"
+                | authKeys ->
+                    if areAuthKeysVisible then
+                        Html.div [
+                            prop.className "flex flex-col gap-2"
+                            prop.children [
+                                yield! authKeys
+                                |> List.map (fun authKey ->
+                                    let isRemoving =
+                                        match removeAuthKeyStates |> Map.tryFind (user.Id, authKey) with
+                                        | Some RemovingUserAuthKey -> true
+                                        | None
+                                        | Some (RemovedUserAuthKey (Ok ()))
+                                        | Some (RemovedUserAuthKey (Error _)) -> false
+                                    let isRemoved =
+                                        match removeAuthKeyStates |> Map.tryFind (user.Id, authKey) with
+                                        | Some (RemovedUserAuthKey (Ok ())) -> true
+                                        | None
+                                        | Some RemovingUserAuthKey
+                                        | Some (RemovedUserAuthKey (Error _)) -> false
+                                    Html.div [
+                                        prop.classes [
+                                            "flex items-center gap-2"
+                                            if isRemoving then "animate-pulse"
+                                            elif isRemoved then "opacity-50"
+                                        ]
+                                        prop.children [
+                                            Html.span [
+                                                prop.className "flex items-center gap-2 border rounded-lg py-2 px-4"
+                                                prop.children [
+                                                    match authKey with
+                                                    | NFCAuthKey keyCode ->
+                                                        Html.i [ prop.className "fas fa-id-card" ]
+                                                        Html.span keyCode
+                                                ]
+                                            ]
+                                            Html.button [
+                                                prop.className "btn btn-red"
+                                                prop.onClick (fun _ -> dispatch (RemoveUserAuthKey (user.Id, authKey)))
+                                                prop.disabled (isDeleted || isRemoving || isRemoved)
+                                                prop.children [
+                                                    Html.i [ prop.className "fas fa-trash-alt" ]
+                                                ]
+                                            ]
+                                            match removeAuthKeyStates |> Map.tryFind (user.Id, authKey) with
+                                            | None
+                                            | Some RemovingUserAuthKey
+                                            | Some (RemovedUserAuthKey (Ok ())) -> ()
+                                            | Some (RemovedUserAuthKey (Error e)) -> Html.span [
+                                                prop.className "text-musi-red"
+                                                match e with
+                                                | ExpectedError SaveUserError.RemoveActiveAuthKeyNotAllowed ->
+                                                    prop.text "Die aktuell verwendete Schlüsselnummer darf nicht entfernt werden."
+                                                | ExpectedError DowngradeSelfNotAllowed
+                                                | ExpectedError (KeyCodeTaken _)
+                                                | ExpectedError SaveUserError.InvalidAuthKey
+                                                | ExpectedError SaveUserError.NotAuthorized
+                                                | UnexpectedError _ ->
+                                                    prop.text "Fehler beim Entfernen der Schlüsselnummer."
+                                            ]
+                                        ]
+                                    ]
+                                )
+                            ]
+                        ]
+                    else
+                        Html.button [
+                            prop.className "btn btn-white !flex gap-2 items-center"
+                            prop.onClick (fun _ -> dispatch (ShowAuthKeys user.Id))
+                            prop.disabled isDeleted
+                            prop.children [
+                                Html.i [ prop.className "fas fa-eye" ]
+                                Html.span $"{authKeys.Length}"
+                            ]
+                        ]
+
+                Html.button [
+                    prop.className "btn btn-white"
+                    prop.onClick (fun _ -> dispatch (AddAuthKey user))
+                    prop.disabled isDeleted
+                    
+                    prop.children [
+                        Html.i [ prop.className "fas fa-plus" ]
+                    ]
+                ]
+            ]
+        ]
 
     match state with
     | NotLoaded -> Html.none // Handled by parent component
@@ -268,7 +392,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                 Html.tr [
                                     Html.th "Nachname"
                                     Html.th "Vorname"
-                                    Html.th "Schlüsselnummer"
+                                    Html.th "Schlüsselnummern"
                                     Html.th "Rolle"
                                     Html.th []
                                 ]
@@ -294,37 +418,8 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                                 prop.text user.Data.FirstName.Value
                                             ]
                                             Html.td [
-                                                Html.div [
-                                                    prop.className "flex items-center gap-2"
-                                                    prop.children [
-                                                        match user.Data.AuthKey with
-                                                        | Some authKey ->
-                                                            if Set.contains user.Id state.VisibleKeyCodeUserIds then
-                                                                Html.span (AuthKey.toString authKey)
-                                                            else
-                                                                Html.span [ prop.text "●●●●●●●●●●" ]
-                                                                Html.button [
-                                                                    prop.className "btn btn-white"
-                                                                    prop.onClick (fun _ -> dispatch (ShowAuthKey user.Id))
-                                                                    prop.disabled isDeleted
-                                                                    
-                                                                    prop.children [
-                                                                        Html.i [ prop.className "fas fa-eye" ]
-                                                                    ]
-                                                                ]
-                                                        | None -> Html.span "-"
-
-                                                        Html.button [
-                                                            prop.className "btn btn-white"
-                                                            prop.onClick (fun _ -> dispatch (EditAuthKey user))
-                                                            prop.disabled isDeleted
-                                                            
-                                                            prop.children [
-                                                                Html.i [ prop.className "fas fa-edit" ]
-                                                            ]
-                                                        ]
-                                                    ]
-                                                ]
+                                                let areAuthKeysVisible = Set.contains user.Id state.VisibleAuthKeyUserIds
+                                                authKeysView user isDeleted areAuthKeysVisible state.RemoveAuthKeyStates
                                             ]
                                             Html.td [
                                                 prop.text (UserRole.label user.Data.Role)
@@ -404,9 +499,9 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                 ]
             ]
 
-            match state.EditingUserAuthKey with
+            match state.AddingUserAuthKey with
             | Some (user, WaitingForUserAuthKey) ->
-                View.modal $"Schlüsselnummer von %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} ändern" (fun () -> dispatch CancelEditAuthKey) [
+                View.modal $"Neue Schlüsselnummer für %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} anlegen" (fun () -> dispatch CancelAddAuthKey) [
                     Html.div [
                         prop.className "flex flex-col gap-2 items-center text-musi-gold"
                         prop.children [
@@ -421,33 +516,26 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                             ]
                         ]
                     ]
-                ] [
-                    Html.button [
-                        prop.className "btn btn-solid btn-red"
-                        prop.onClick (fun _ -> dispatch (SetAuthKey (Ok None)))
-                        prop.text "Schlüsselnummer löschen"
-                    ]
-                ]
+                ] []
             | Some (user, GettingUserAuthKeyError error) ->
-                View.modalAuthError $"Schlüsselnummer von %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} ändern" error (fun () -> dispatch (EditAuthKey user)) (fun () -> dispatch CancelEditAuthKey)
-            | Some (user, SavingUserAuthKey _) ->
-                View.modal $"Schlüsselnummer von %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} ändern" (fun () -> dispatch CancelEditAuthKey) [ View.loadIconBig ] []
-            | Some (user, SaveUserAuthKeyResult (Ok authKey)) ->
-                View.modal $"Schlüsselnummer von %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} ändern" (fun () -> dispatch CancelEditAuthKey) [
+                View.modalAuthError $"Neue Schlüsselnummer für %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} anlegen" error (fun () -> dispatch (AddAuthKey user)) (fun () -> dispatch CancelAddAuthKey)
+            | Some (user, SavingAuthKey _) ->
+                View.modal $"Neue Schlüsselnummer für %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} anlegen" (fun () -> dispatch CancelAddAuthKey) [ View.loadIconBig ] []
+            | Some (user, SavingAuthKeyResult (Ok authKey)) ->
+                View.modal $"Neue Schlüsselnummer für %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} anlegen" (fun () -> dispatch CancelAddAuthKey) [
                     Html.div [
                         prop.className "flex flex-col items-center gap-2 text-musi-green"
                         prop.children [
                             Html.i [ prop.className "fas fa-key fa-8x" ]
                             Html.span [
                                 prop.className "text-center text-3xl"
-                                if Option.isSome authKey then prop.text "Schlüssel wurde erfolgreich gespeichert."
-                                else prop.text "Schlüssel wurde erfolgreich gelöscht."
+                                prop.text "Schlüsselnummer wurde erfolgreich hinzugefügt."
                             ]
                         ]
                     ]
                 ] []
-            | Some (user, SaveUserAuthKeyResult (Error error)) ->
-                View.modal $"Schlüsselnummer von %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} ändern" (fun () -> dispatch CancelEditAuthKey) [
+            | Some (user, SavingAuthKeyResult (Error error)) ->
+                View.modal $"Neue Schlüsselnummer für %s{user.Data.LastName.Value} %s{user.Data.FirstName.Value} anlegen" (fun () -> dispatch CancelAddAuthKey) [
                     Html.div [
                         prop.className "flex flex-col items-center gap-2 text-musi-red"
                         prop.children [
@@ -460,12 +548,14 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                                     match error with
                                     | ExpectedError DowngradeSelfNotAllowed ->
                                         Html.text "Die eigene Rolle darf nicht gewechselt werden."
-                                    | ExpectedError RemoveKeyCodeNotAllowed ->
+                                    | ExpectedError SaveUserError.RemoveActiveAuthKeyNotAllowed ->
                                         Html.text "Die eigene Schlüsselnummer darf nicht entfernt werden."
-                                    | ExpectedError (KeyCodeTaken None) ->
+                                    | ExpectedError (KeyCodeTaken []) ->
                                         Html.text "Schlüsselnummer ist bereits vergeben."
-                                    | ExpectedError (KeyCodeTaken (Some userName)) ->
+                                    | ExpectedError (KeyCodeTaken [userName]) ->
                                         Html.text $"Schlüsselnummer ist bereits an %s{userName} vergeben."
+                                    | ExpectedError (KeyCodeTaken userNames) ->
+                                        Html.text $"""Fehler beim Speichern des Benutzers: Schlüsselnummer ist bereits vergeben an: %s{String.concat ", " userNames}"""
                                     | ExpectedError SaveUserError.InvalidAuthKey
                                     | ExpectedError SaveUserError.NotAuthorized
                                     | UnexpectedError _ -> Html.text "Versuche es nochmal."
@@ -535,7 +625,7 @@ let UserAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElement lis
                             }
 
                     let onSubmit = fun firstName lastName role ->
-                        SaveUser { FirstName = firstName; LastName = lastName; AuthKey = None; Role = role }
+                        SaveUser { FirstName = firstName; LastName = lastName; AuthKeys = []; Role = role }
 
                     Form.succeed onSubmit
                     |> Form.append firstNameField

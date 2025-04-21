@@ -13,8 +13,8 @@ let createConnection () =
     connection.Open()
     connection
 
-let createCommand (connection: SqliteConnection) query parameters =
-    let command = connection.CreateCommand(CommandText = query)
+let createCommand (connection: SqliteConnection) tx query parameters =
+    let command = connection.CreateCommand(CommandText = query, Transaction = Option.toObj tx)
     parameters
     |> List.iter (fun (key, value) -> command.Parameters.AddWithValue(key, value) |> ignore)
     command
@@ -22,7 +22,7 @@ let createCommand (connection: SqliteConnection) query parameters =
 
 let read query parameters readRow = task {
     use connection = createConnection()
-    let command = createCommand connection query parameters
+    let command = createCommand connection None query parameters
     use! reader = command.ExecuteReaderAsync()
     let rec readRows acc = task {
         let! hasNext = reader.ReadAsync()
@@ -45,23 +45,27 @@ let readIndexed query parameters readRow = task {
     return Map.ofList list
 }
 
-let private writeInternal connection query parameters = task {
-    let command = createCommand connection query parameters
+let private writeInternal connection tx query parameters = task {
+    let command = createCommand connection tx query parameters
     let! result = command.ExecuteNonQueryAsync()
     return ()
 }
 
 let write query parameters = task {
     use connection = createConnection()
-    do! writeInternal connection query parameters
+    do! writeInternal connection None query parameters
+}
+
+let executeCommands queries = task {
+    use connection = createConnection()
+    use! tx = connection.BeginTransactionAsync()
+    for (query, parameters) in queries do
+        do! writeInternal connection (Some (tx :?> SqliteTransaction)) query parameters
+    do! tx.CommitAsync()
 }
 
 let writeMany query parameterLists = task {
-    use connection = createConnection()
-    use! tx = connection.BeginTransactionAsync()
-    for parameters in parameterLists do
-        do! writeInternal connection query parameters
-    do! tx.CommitAsync()
+    return! executeCommands [ for parameterList in parameterLists -> (query, parameterList)]
 }
 
 let tryGet (reader: SqliteDataReader) fn index =

@@ -56,11 +56,31 @@ module NotEmptyString =
             | None -> Decode.fail "Must be non-empty"
         )
 
-type AuthKey = AuthKey of string
+type AuthKey =
+    | NFCAuthKey of keyCode: string
 module AuthKey =
-    let encode : Encoder<_> = fun (AuthKey v) -> Encode.string v
-    let decoder : Decoder<_> = Decode.string |> Decode.map AuthKey
-    let toString (AuthKey authKey) = authKey
+    let encode : Encoder<_> = function
+        | NFCAuthKey keyCode -> Encode.object [
+            "keyType", Encode.string "nfc"
+            "keyCode", Encode.string keyCode
+        ] 
+    let decoder : Decoder<_> =
+        Decode.object (fun get ->
+            let keyTypeText = get.Required.Field "keyType" Decode.string
+            if String.Equals(keyTypeText, "nfc", StringComparison.InvariantCultureIgnoreCase) then
+                Some (NFCAuthKey (get.Required.Field "keyCode" Decode.string))
+            else None
+        )
+        |> Decode.andThen (function
+            | Some v -> Decode.succeed v
+            | None -> Decode.fail $"Can't parse AuthKey"
+        )
+    let toString = function
+        | NFCAuthKey keyCode -> $"nfc/{keyCode}"
+    let tryParse (v: string) =
+        if v.StartsWith("nfc/", StringComparison.InvariantCultureIgnoreCase) then
+            Some (NFCAuthKey (v.Substring("nfc/".Length)))
+        else None
 
 type ProductGroupId = ProductGroupId of string
 module ProductGroupId =
@@ -184,19 +204,19 @@ module UserAdministration =
     type ExistingUserData = {
         FirstName: NotEmptyString
         LastName: NotEmptyString
-        AuthKey: AuthKey option
+        AuthKeys: AuthKey list
         Role: UserRole
     }
 
     type PatchUserData = {
         FirstName: NotEmptyString option
         LastName: NotEmptyString option
-        AuthKey: AuthKey option
-        SetAuthKey: bool
+        AddAuthKeys: AuthKey list
+        RemoveAuthKeys: AuthKey list
         Role: UserRole option
     }
     module PatchUserData =
-        let empty = { FirstName = None; LastName = None; AuthKey = None; SetAuthKey = false; Role = None }
+        let empty = { FirstName = None; LastName = None; AddAuthKeys = []; RemoveAuthKeys = []; Role = None }
 
     type ExistingUser = {
         Id: UserId
@@ -219,8 +239,8 @@ module UserAdministration =
 
     type SaveUserError =
         | DowngradeSelfNotAllowed
-        | RemoveKeyCodeNotAllowed
-        | KeyCodeTaken of string option
+        | RemoveActiveAuthKeyNotAllowed
+        | KeyCodeTaken of string list
         | InvalidAuthKey
         | NotAuthorized
 

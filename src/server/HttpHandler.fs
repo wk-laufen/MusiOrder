@@ -25,8 +25,8 @@ module Order =
 
     let handlePostOrder : HttpHandler = fun next ctx -> task {
         let authHandler = ctx.RequestServices.GetRequiredService<IAuthHandler>()
-        let authKey = ctx.TryGetQueryStringValue "authKey"
-        let! authUser = authKey |> Option.bindTask (AuthKey >> User.getByAuthKey)
+        let authKey = ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse
+        let! authUser = authKey |> Option.bindTask User.getByAuthKey
         let orderUserId = ctx.TryGetQueryStringValue "userId" |> Option.map UserId
         match authHandler.CommitOrder authUser orderUserId with
         | AllowCommitOrder userId -> return! saveOrder userId next ctx
@@ -49,8 +49,8 @@ module Order =
 
     let handleGetOrderSummary : HttpHandler = fun next ctx -> task {
         let authHandler = ctx.RequestServices.GetRequiredService<IAuthHandler>()
-        let authKey = ctx.TryGetQueryStringValue "authKey"
-        let! authUser = authKey |> Option.bindTask (AuthKey >> User.getByAuthKey)
+        let authKey = ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse
+        let! authUser = authKey |> Option.bindTask User.getByAuthKey
         let! orderUser = ctx.TryGetQueryStringValue "userId" |> Option.bindTask (UserId >> User.getById)
         match authHandler.GetOrderSummary authUser orderUser with
         | GetOrderSummaryAllowed user -> return! loadOrderSummary user next ctx
@@ -61,8 +61,8 @@ module Order =
 
     let handleGetUsers : HttpHandler = fun next ctx -> task {
         let authHandler = ctx.RequestServices.GetRequiredService<IAuthHandler>()
-        let authKey = ctx.TryGetQueryStringValue "authKey"
-        let! authUser = authKey |> Option.bindTask (AuthKey >> User.getByAuthKey)
+        let authKey = ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse
+        let! authUser = authKey |> Option.bindTask User.getByAuthKey
         match authHandler.GetUsers authUser with
         | GetUsersAllowed ->
             let! users = getUserInfo ()
@@ -81,7 +81,7 @@ module UserPaymentAdministration =
     open MusiOrder.Models.UserPaymentAdministration
 
     let handleGetUsers : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! result = getUserInfo ()
             return! Successful.OK result next ctx
@@ -90,7 +90,7 @@ module UserPaymentAdministration =
     }
 
     let handlePostPayment userId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! data = ctx.BindModelAsync<Payment>()
             do! savePayment userId data.Amount
@@ -105,7 +105,7 @@ module UserAdministration =
     open MusiOrder.Models.UserAdministration
 
     let handleGetUsers : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! result = getExistingUsers ()
             return! Successful.OK result next ctx
@@ -114,7 +114,7 @@ module UserAdministration =
     }
 
     let handlePostUser : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! data = ctx.BindModelAsync<ExistingUserData>()
             match! createUser data with
@@ -125,36 +125,39 @@ module UserAdministration =
     }
 
     let handlePutUser userId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
-        | Some user when User.isAdmin user ->
-            let! data = ctx.BindModelAsync<PatchUserData>()
-            if user.Id = userId && (data.Role <> None && data.Role <> Some Admin) then
-                return! RequestErrors.BAD_REQUEST DowngradeSelfNotAllowed next ctx
-            elif user.Id = userId && (data.SetAuthKey && Option.isNone data.AuthKey) then
-                return! RequestErrors.BAD_REQUEST RemoveKeyCodeNotAllowed next ctx
-            else
-                match! updateUser userId data with
-                | Ok () -> return! Successful.OK () next ctx
-                | Error e -> return! RequestErrors.BAD_REQUEST e next ctx
-        | Some _ -> return! RequestErrors.BAD_REQUEST SaveUserError.NotAuthorized next ctx
+        match ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse with
+        | Some authKey ->
+            match! User.getByAuthKey authKey with
+            | Some user when User.isAdmin user ->
+                let! data = ctx.BindModelAsync<PatchUserData>()
+                if user.Id = userId && (data.Role <> None && data.Role <> Some Admin) then
+                    return! RequestErrors.BAD_REQUEST DowngradeSelfNotAllowed next ctx
+                elif user.Id = userId && data.RemoveAuthKeys |> List.contains authKey then
+                    return! RequestErrors.BAD_REQUEST RemoveActiveAuthKeyNotAllowed next ctx
+                else
+                    match! updateUser userId data with
+                    | Ok () -> return! Successful.OK () next ctx
+                    | Error e -> return! RequestErrors.BAD_REQUEST e next ctx
+            | Some _ -> return! RequestErrors.BAD_REQUEST SaveUserError.NotAuthorized next ctx
+            | None -> return! RequestErrors.BAD_REQUEST SaveUserError.InvalidAuthKey next ctx
         | None -> return! RequestErrors.BAD_REQUEST SaveUserError.InvalidAuthKey next ctx
     }
 
     let handleDeleteUser userId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             match ctx.TryGetQueryStringValue "force" with
             | Some _ ->
                 do! deleteUser userId
                 return! Successful.OK () next ctx
             | None ->
-                let! userAuthKey = task {
+                let! userAuthKeys = task {
                     let! user = User.getById userId
-                    return user |> Option.bind (fun v -> v.AuthKey)
+                    return user |> Option.map (fun v -> v.AuthKeys) |> Option.defaultValue []
                 }
                 let! balance = User.getBalance userId
                 let result = [
-                    if Option.isSome userAuthKey then AuthKeyPresent
+                    if not <| List.isEmpty userAuthKeys then AuthKeyPresent
                     if balance <> 0.0m then CurrentBalanceNotZero balance
                 ]
                 return! Successful.OK result next ctx
@@ -167,7 +170,7 @@ module ProductAdministration =
     open MusiOrder.Models.ProductAdministration
 
     let handleGetProducts : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! result = getProducts ()
             return! Successful.OK result next ctx
@@ -176,7 +179,7 @@ module ProductAdministration =
     }
 
     let handlePostProductGroup : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! data = ctx.BindModelAsync<ProductGroupData>()
             let! newProductGroupId = createProductGroup data
@@ -186,7 +189,7 @@ module ProductAdministration =
     }
 
     let handlePutProductGroup productGroupId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! data = ctx.BindModelAsync<ProductGroupData>()
             do! updateProductGroup productGroupId data
@@ -196,7 +199,7 @@ module ProductAdministration =
     }
 
     let handleMoveUpProductGroup productGroupId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             do! moveUpProductGroup productGroupId
             return! Successful.OK () next ctx
@@ -205,7 +208,7 @@ module ProductAdministration =
     }
 
     let handleMoveDownProductGroup productGroupId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             do! moveDownProductGroup productGroupId
             return! Successful.OK () next ctx
@@ -214,7 +217,7 @@ module ProductAdministration =
     }
 
     let handleDeleteProductGroup productGroupId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! isDeleted = deleteProductGroup productGroupId
             if isDeleted then return! Successful.OK () next ctx
@@ -224,7 +227,7 @@ module ProductAdministration =
     }
 
     let handlePostProduct productGroupId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! data = ctx.BindModelAsync<ProductData>()
             let! newProductId = createProduct productGroupId data
@@ -234,7 +237,7 @@ module ProductAdministration =
     }
 
     let handlePutProduct productId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! data = ctx.BindModelAsync<ProductData>()
             do! updateProduct productId data
@@ -244,7 +247,7 @@ module ProductAdministration =
     }
 
     let handleMoveUpProduct productId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             do! moveUpProduct productId
             return! Successful.OK () next ctx
@@ -253,7 +256,7 @@ module ProductAdministration =
     }
 
     let handleMoveDownProduct productId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             do! moveDownProduct productId
             return! Successful.OK () next ctx
@@ -262,7 +265,7 @@ module ProductAdministration =
     }
 
     let handleDeleteProduct productId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             do! deleteProduct productId
             return! Successful.OK () next ctx
@@ -275,7 +278,7 @@ module OrderAdministration =
     open MusiOrder.Models.OrderAdministration
 
     let handleGetOrders : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let! result = getOrders ()
             return! Successful.OK result next ctx
@@ -284,7 +287,7 @@ module OrderAdministration =
     }
 
     let handleDeleteOrder orderId : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             do! deleteOrder orderId
             return! Successful.OK () next ctx
@@ -297,7 +300,7 @@ module OrderStatistics =
     open MusiOrder.Models.OrderStatistics
 
     let handleGetOrders : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             let startTime = ctx.TryGetQueryStringValue "startTime" |> Option.bind DateTime.tryParseDate
             let endTime = ctx.TryGetQueryStringValue "endTime" |> Option.bind DateTime.tryParseDate
@@ -315,7 +318,7 @@ module DataExport =
     open System.IO
 
     let handleExportDatabase : HttpHandler = fun next ctx -> task {
-        match! ctx.TryGetQueryStringValue "authKey" |> Option.bindTask (AuthKey >> User.getByAuthKey) with
+        match! ctx.TryGetQueryStringValue "authKey" |> Option.bind AuthKey.tryParse |> Option.bindTask User.getByAuthKey with
         | Some user when User.isAdmin user ->
             use stream = File.OpenRead DB.dbPath
             return! Successful.ok (streamData false stream None None) next ctx

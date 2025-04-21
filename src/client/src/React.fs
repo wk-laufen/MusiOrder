@@ -12,7 +12,7 @@ let private useKeyboardAuthentication setAuthKey =
     let mutable key = ""
     let mutable timeoutId = 0.
     let rec finishAuthKey () =
-        setAuthKey (Ok (AuthKey key))
+        setAuthKey (Ok (NFCAuthKey key))
         key <- ""
     and listener (e: Browser.Types.Event) =
         e.preventDefault()
@@ -30,8 +30,8 @@ let private useRemoteAuthentication setAuthKey =
     let abortController = Fetch.newAbortController()
     Fetch.fetchUnsafe "http://localhost:8080/nfc-reader/card-id" [ Signal abortController.signal ]
     |> Promise.bind (fun v ->
-        if v.Ok then v.text() |> Promise.map (AuthKey >> Ok >> Some)
-        elif v.Status >= 400 && v.Status < 500 then Promise.lift (Some (Ok (AuthKey "")))
+        if v.Ok then v.text() |> Promise.map (NFCAuthKey >> Ok >> Some)
+        elif v.Status >= 400 && v.Status < 500 then Promise.lift (Some (Ok (NFCAuthKey "")))
         else Promise.lift (Some (Error ReaderNotAvailable))
     )
     |> Promise.catch (fun _e -> None) // request cancelled or server not running -> ignore
