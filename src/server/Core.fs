@@ -116,7 +116,7 @@ module Order =
 
     let getUserInfo () = task {
         let query = """
-            SELECT `M`.`id`, `M`.`firstName`, `M`.`lastName`, `M`.`keyCode`, COALESCE(`payment`, 0) - COALESCE(`orderPrice`, 0) as `balance`
+            SELECT `M`.`id`, `M`.`firstName`, `M`.`lastName`, COALESCE(`payment`, 0) - COALESCE(`orderPrice`, 0) as `balance`
             FROM `ActiveMember` as `M`
             LEFT OUTER JOIN (SELECT userId, SUM(`amount` * 100) as `payment` FROM `MemberPayment` GROUP BY userId) AS `P` ON `M`.`id` = `P`.`userId`
             LEFT OUTER JOIN (SELECT userId, SUM(`amount` * (`pricePerUnit` * 100)) as `orderPrice` FROM `Order` GROUP BY userId) AS `O` ON `M`.`id` = `O`.`userId`
@@ -128,7 +128,7 @@ module Order =
                 Id = reader.GetString(0) |> UserId
                 FirstName = reader.GetString(1)
                 LastName = reader.GetString(2)
-                Balance = reader.GetDecimal(4) / 100m
+                Balance = reader.GetDecimal(3) / 100m
             })
     }
 
