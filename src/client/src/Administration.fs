@@ -41,33 +41,11 @@ type AuthKeyState =
     | AuthKeyProvided of Result<AuthKey, React.AuthenticationError>
     | InvalidAuthKeyProvided
 
-type Model = {
-    ActiveTab: Tab
-    AuthKey: AuthKeyState
-}
-
-type Msg =
-    | Show
-    | Close
-
-let init authKey activeTab =
-    let state = {
-        ActiveTab = activeTab
-        AuthKey = authKey
-    }
-    (state, Cmd.none)
-
-let update msg (state: Model) =
-    match msg with
-    | Show -> { state with AuthKey = NoAuthKeyProvided }, Cmd.none
-    | Close -> { state with AuthKey = NoAuthKeyProvided }, Cmd.none
-
 [<ReactComponent>]
 let Administration activeTab =
     let (authKey, setAuthKey) = React.useState(NoAuthKeyProvided)
-    let (state, dispatch) = React.useElmish(init authKey activeTab, update, [| authKey :> obj; activeTab :> obj |])
     let acceptsAuthKey =
-        match state.AuthKey with
+        match authKey with
         | NoAuthKeyProvided
         | InvalidAuthKeyProvided -> true
         | AuthKeyProvided _ -> false
@@ -87,7 +65,7 @@ let Administration activeTab =
         ]
 
     React.fragment [
-        match state.AuthKey with
+        match authKey with
         | NoAuthKeyProvided ->
             Html.div [
                 prop.className "flex flex-col items-center gap-4 p-8"
@@ -122,7 +100,7 @@ let Administration activeTab =
             Html.div [
                 prop.className "flex flex-col gap-4 p-8"
                 prop.children [
-                    View.authError error (fun () -> dispatch Show)
+                    View.authError error (fun () -> setAuthKey NoAuthKeyProvided)
                     Html.div [
                         prop.className "flex flex-col items-center"
                         prop.children [
