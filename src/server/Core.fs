@@ -192,12 +192,17 @@ module UserPaymentAdministration =
             ORDER BY `M`.`lastName`, `M`.`firstName`
         """
         return! DB.read query [] (fun reader ->
+            let balance = reader.GetDecimal(4) / 100m
             {
                 Id = reader.GetString(0) |> UserId
                 FirstName = reader.GetString(1)
                 LastName = reader.GetString(2)
                 LatestOrderTimestamp = DB.tryGet reader reader.GetDateTimeOffset 3
-                Balance = reader.GetDecimal(4) / 100m
+                Balance = balance
+                SuggestedBalanceChanges = [
+                    if balance <> 0m then -balance
+                    1m; 2m; 5m; 10m; 20m; 50m; 100m
+                ]
             })
     }
 

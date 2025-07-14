@@ -170,6 +170,7 @@ module UserPaymentAdministration =
         LastName: string
         LatestOrderTimestamp: DateTimeOffset option
         Balance: decimal
+        SuggestedBalanceChanges: decimal list
     }
 
     type Payment = {

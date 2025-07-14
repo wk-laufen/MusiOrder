@@ -101,16 +101,10 @@ let UserPaymentAdministration authKey setAuthKeyInvalid (setMenuItems: ReactElem
                     ]
                     let amounts = [
                         yield!
-                            state.SelectedUser
-                            |> Option.bind (fun userId ->
-                                state.Users
-                                |> List.tryFind (fun v -> v.Id = userId)
-                            )
-                            |> Option.filter (fun v -> v.Balance <> 0.m)
-                            |> Option.map (fun v -> -v.Balance)
-                            |> Option.toList
-
-                        yield! [ 0.1m; 0.2m; 0.5m; 1.m; 2.m; 5.m; 10.m; 20.m ]
+                            state.Users
+                            |> List.tryFind (fun v -> v.Id = selectedUserId)
+                            |> Option.map (fun v -> v.SuggestedBalanceChanges)
+                            |> Option.defaultValue []
                     ]
                     for amount in amounts do
                         Html.button [
