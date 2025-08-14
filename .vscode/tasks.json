@@ -1,0 +1,51 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run server",
+			"type": "process",
+			"command": "dotnet",
+			"args": [
+				"watch",
+				"run",
+				"--environment", "Development",
+				"--urls", "http://+:5000",
+			],
+			"problemMatcher": "$msCompile",
+			"options": {
+				"cwd": "${workspaceFolder}/src/server",
+				"env": {
+					"DB_PATH": "${workspaceFolder}/data/musiorder.db"
+				}
+			},
+		},
+		{
+			"label": "Run NFC reader",
+			"type": "process",
+			"command": "dotnet",
+			"args": [
+				"watch",
+				"run",
+				"--environment", "Development",
+				"--urls", "http://+:8080",
+			],
+			"problemMatcher": "$msCompile",
+			"options": {
+				"cwd": "${workspaceFolder}/src/nfc-reader"
+			},
+		},
+		{
+			"label": "Run client",
+			"type": "shell",
+			"options": {
+				"cwd": "./src/client"
+			},
+			"problemMatcher": [],
+			"command": "dotnet tool restore && npm install && npm start"
+		},
+		{
+			"label": "Dev",
+			"dependsOn": [ "Run server", "Run NFC reader", "Run client" ]
+		},
+	]
+}
