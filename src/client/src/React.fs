@@ -27,8 +27,9 @@ let private useKeyboardAuthentication setAuthKey =
     React.createDisposable (fun () -> window.removeEventListener("keydown", listener))
 
 let private useRemoteAuthentication setAuthKey =
+    let url = window.localStorage.getItem "nfc-reader-url" |> Option.ofObj |> Option.defaultValue "http://localhost:8080/nfc-reader/card-id"
     let abortController = Fetch.newAbortController()
-    Fetch.fetchUnsafe "http://localhost:8080/nfc-reader/card-id" [ Signal abortController.signal ]
+    Fetch.fetchUnsafe url [ Signal abortController.signal ]
     |> Promise.bind (fun v ->
         if v.Ok then v.text() |> Promise.map (NFCAuthKey >> Ok >> Some)
         elif v.Status >= 400 && v.Status < 500 then Promise.lift (Some (Ok (NFCAuthKey "")))
