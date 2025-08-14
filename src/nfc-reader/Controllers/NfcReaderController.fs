@@ -1,5 +1,6 @@
 ﻿namespace MusiOrder.NfcReader.Controllers
 
+open Iot.Device.Pn532
 open Microsoft.AspNetCore.Mvc
 open Microsoft.Extensions.Logging
 open PCSC
@@ -7,6 +8,7 @@ open PCSC.Exceptions
 open PCSC.Extensions
 open System
 open System.Threading
+open Iot.Device.Pn532.ListPassive
 
 type ICardReader =
     abstract member GetReaders: unit -> string array
@@ -80,6 +82,48 @@ type ConsoleCardReader() =
                     ct.ThrowIfCancellationRequested()
                     fn ()
             fn ()
+
+type PN532UARTCardReader(devicePaths: string[], logger: ILogger<PN532UARTCardReader>) =
+    let waitForCard (reader: Pn532) (ct: CancellationToken) =
+        let rec fn () =
+            ct.ThrowIfCancellationRequested()
+            match reader.ListPassiveTarget(MaxTarget.One, TargetBaudRate.B106kbpsTypeA) |> Option.ofObj with
+            | Some data -> Some data
+            | None ->
+                Thread.Sleep 200
+                fn ()
+        fn ()
+
+    interface ICardReader with
+        member _.GetReaders () =
+            let readerCandidates =
+                devicePaths
+                |> Array.choose (fun devicePath ->
+                    try
+                        Some (devicePath, new Pn532(devicePath))
+                    with e ->
+                        logger.LogWarning(e, "Device {DevicePath} can't be used", devicePath)
+                        None
+                )
+            let connectedReaders =
+                readerCandidates
+                |> Array.filter (fun (name, reader) -> reader.RunSelfTest(DiagnoseMode.CommunicationLineTest))
+                |> Array.map (fun (name, reader) -> name)
+
+            readerCandidates |> Seq.map snd |> Seq.iter _.Dispose()
+
+            connectedReaders
+
+        member _.ReadCardId readerName ct =
+            use reader = new Pn532(readerName)
+            match waitForCard reader ct with
+            | None -> None
+            | Some data ->
+                match reader.TryDecode106kbpsTypeA(data.AsSpan().Slice(1)) |> Option.ofObj with
+                | Some data -> Some (Convert.ToHexString data.NfcId)
+                | None ->
+                    logger.LogWarning("Can't decode reader data {ReaderData}", data)
+                    None
 
 [<ApiController>]
 [<Route("/nfc-reader")>]

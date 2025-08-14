@@ -10,6 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Iot.Device.Bindings" Version="4.0.1" />
     <PackageReference Include="PCSC" Version="7.0.0" />
   </ItemGroup>
 
