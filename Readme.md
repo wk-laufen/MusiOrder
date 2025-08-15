@@ -56,6 +56,14 @@ Settings can be specified as usual, e.g. using `appsettings.json` or environment
           }
         }
         ```
+        * When using `docker`: Mount the device to the container:
+            ```yaml
+            environment:
+              - CardReader__Type=pn532-uart
+              - CardReader__DevicePaths__0=/dev/ttyS0
+            devices:
+              - /dev/ttyAMA0:/dev/ttyS0
+            ```
     * PC/SC
         ```json
         {
@@ -65,6 +73,13 @@ Settings can be specified as usual, e.g. using `appsettings.json` or environment
           }
         }
         ```
+        * When using `docker`: Mount the PCSClite socket to the container
+            ```yaml
+            environment:
+              - CardReader__Type=pcsc
+            volumes:
+              - /run/pcscd/pcscd.comm:/run/pcscd/pcscd.comm
+            ```
     * Console - used in dev environments only to simulate a card reader
         ```json
         {
