@@ -39,6 +39,8 @@ Settings can be specified as usual, e.g. using `appsettings.json` or environment
 
 ## NFC reader settings
 
+Settings can be specified as usual, e.g. using `appsettings.json` or environment variables.
+
 * Card reader
     * PN532 via UART
         ```json
