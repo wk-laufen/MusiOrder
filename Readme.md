@@ -45,6 +45,24 @@ Settings can be specified as usual, e.g. using `appsettings.json` or environment
 
 * Card reader
     * PN532 via UART
+        ```
+                                                  NFC reader module        
+                                                                           
+                RasPi GPIO Pins          e.g. Elechouse PN532 NFC module V3
+                                                                           
+        ┌────────────────────────────────────┐                             
+        │┌──────────────────────────┐        │                             
+        └┤  1 3V3 Power            2│        │                             
+         │  3                      4│        │    ┌──────────────┐         
+         │  5             GND      6├────────┼──┐ │              │         
+         │  7             UART TX  8├──┐     │  └─┤ GND          │         
+         │  9             UART RX 10├──┼───┐ └────┤ VCC          │         
+         │ 11                     12│  │   └──────┤ SDA (UART RX)│         
+         │ ..                     ..│  └──────────┤ SCL (UART TX)│         
+         │                          │             │              │         
+         │                          │             └──────────────┘         
+         └──────────────────────────┘                                      
+        ```
         ```json
         {
           ...
