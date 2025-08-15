@@ -15,6 +15,7 @@ Settings can be specified as usual, e.g. using `appsettings.json` or environment
             "Name": "AuthenticatedUsers"
           }
         }
+        ```
     * No authentication - Order is made per user, but users don't have to authenticate
         ```json
         {
@@ -23,6 +24,7 @@ Settings can be specified as usual, e.g. using `appsettings.json` or environment
             "Name": "NoAuthentication"
           }
         }
+        ```
     * Single user - Order can be made without selecting a specific user
         ```json
         {
@@ -53,6 +55,7 @@ Settings can be specified as usual, e.g. using `appsettings.json` or environment
             ]
           }
         }
+        ```
     * PC/SC
         ```json
         {
@@ -61,6 +64,7 @@ Settings can be specified as usual, e.g. using `appsettings.json` or environment
             "Type": "pcsc"
           }
         }
+        ```
     * Console - used in dev environments only to simulate a card reader
         ```json
         {
@@ -69,6 +73,7 @@ Settings can be specified as usual, e.g. using `appsettings.json` or environment
             "Type": "console"
           }
         }
+        ```
 
 ## Client settings
 
