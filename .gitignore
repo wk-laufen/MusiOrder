@@ -4,3 +4,5 @@ bin/
 obj/
 *.fs.js
 target/
+out/
+out.tar.gz
