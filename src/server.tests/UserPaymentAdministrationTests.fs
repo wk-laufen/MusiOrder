@@ -53,27 +53,24 @@ let tests =
             }
         ]
 
-        // NOTE: handlePostPayment has REVERSED auth semantics vs all other admin endpoints:
-        //   None (no/unknown key) -> NotAuthorized
-        //   Some non-admin user   -> InvalidAuthKey
         testList "postPayment" [
-            testTask "missing authKey returns 400 NotAuthorized (reversed semantics)" {
+            testTask "missing authKey returns 400 InvalidAuthKey" {
                 let! (userId, _) = seedRegularUser ()
                 let! (client: HttpClient) = createTestClient (AuthenticatedUsersAuthHandler())
                 let! (response: HttpResponseMessage) = client.PostAsync($"/api/administration/user-payment/{userId}", jsonContent """{"amount":5.0}""")
                 Expect.equal response.StatusCode HttpStatusCode.BadRequest "should return 400"
                 let! body = response.Content.ReadFromJsonAsync<string>()
-                Expect.equal body "NotAuthorized" "missing key → NotAuthorized (reversed semantics)"
+                Expect.equal body "InvalidAuthKey" "missing key → InvalidAuthKey"
             }
 
-            testTask "non-admin authKey returns 400 InvalidAuthKey (reversed semantics)" {
+            testTask "non-admin authKey returns 400 NotAuthorized" {
                 let! (userId, _) = seedRegularUser ()
                 let! (_, userKey) = seedRegularUser ()
                 let! (client: HttpClient) = createTestClient (AuthenticatedUsersAuthHandler())
                 let! (response: HttpResponseMessage) = client.PostAsync($"/api/administration/user-payment/{userId}{authQuery userKey}", jsonContent """{"amount":5.0}""")
                 Expect.equal response.StatusCode HttpStatusCode.BadRequest "should return 400"
                 let! body = response.Content.ReadFromJsonAsync<string>()
-                Expect.equal body "InvalidAuthKey" "non-admin key → InvalidAuthKey (reversed semantics)"
+                Expect.equal body "NotAuthorized" "non-admin key → NotAuthorized"
             }
 
             testTask "admin authKey with valid amount returns 200 with new balance" {

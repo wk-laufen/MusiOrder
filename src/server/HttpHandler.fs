@@ -96,8 +96,8 @@ module UserPaymentAdministration =
             do! savePayment userId data.Amount
             let! balance = User.getBalance userId
             return! Successful.OK balance next ctx
-        | Some _ -> return! RequestErrors.BAD_REQUEST AddPaymentError.InvalidAuthKey next ctx
-        | None -> return! RequestErrors.BAD_REQUEST AddPaymentError.NotAuthorized next ctx
+        | Some _ -> return! RequestErrors.BAD_REQUEST AddPaymentError.NotAuthorized next ctx
+        | None -> return! RequestErrors.BAD_REQUEST AddPaymentError.InvalidAuthKey next ctx
     }
 
 module UserAdministration =
