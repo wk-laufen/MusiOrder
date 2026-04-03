@@ -257,11 +257,12 @@ module UserAdministration =
                 )
                 yield! data.AuthKeys |> List.map (fun authKey ->
                     let (keyType, keyCode) = DbAuthKey.toDb authKey
-                    "INSERT INTO `AuthKey` (`keyCode`, `keyType`, `userId`) VALUES (@KeyCode, @KeyType, @UserId)",
+                    "INSERT INTO `AuthKey` (`keyCode`, `keyType`, `userId`, `creationTime`) VALUES (@KeyCode, @KeyType, @UserId, @CreationTime)",
                     [
                         ("@KeyCode", Helper.Box keyCode)
                         ("@KeyType", Helper.Box keyType)
                         ("@UserId", Helper.Box newUserId)
+                        ("@CreationTime", Helper.Box DateTimeOffset.Now)
                     ]
                 )
             ]

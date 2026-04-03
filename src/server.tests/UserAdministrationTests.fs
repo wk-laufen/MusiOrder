@@ -65,6 +65,18 @@ let tests =
                 let! responseBody = response.Content.ReadFromJsonAsync<string>()
                 Expect.isNotEmpty responseBody "response body should contain a user id"
             }
+
+            testTask "duplicate auth key returns 400 KeyCodeTaken" {
+                let! (_, adminKey) = seedAdmin ()
+                let! (_, existingKeyStr: string) = seedRegularUser ()
+                let existingKeyCode = existingKeyStr.Substring("nfc/".Length)
+                let! (client: HttpClient) = createTestClient (AuthenticatedUsersAuthHandler())
+                let body = sprintf """{"firstName":"Bob","lastName":"Test","authKeys":[{"keyType":"nfc","keyCode":"%s"}],"role":"User"}""" existingKeyCode
+                let! (response: HttpResponseMessage) = client.PostAsync($"/api/administration/user/users{authQuery adminKey}", jsonContent body)
+                Expect.equal response.StatusCode HttpStatusCode.BadRequest "should return 400"
+                let! (responseBody: JsonElement array) = response.Content.ReadFromJsonAsync<JsonElement array>()
+                Expect.equal (responseBody.[0].GetString()) "KeyCodeTaken" "should report KeyCodeTaken"
+            }
         ]
 
         testList "putUser" [
@@ -96,23 +108,6 @@ let tests =
                 Expect.equal response.StatusCode HttpStatusCode.BadRequest "should return 400"
                 let! responseBody = response.Content.ReadFromJsonAsync<string>()
                 Expect.equal responseBody "RemoveActiveAuthKeyNotAllowed" "removing own active key should be rejected"
-            }
-
-            // createUser (POST) omits creationTime from AuthKey INSERT (known bug), so KeyCodeTaken is
-            // tested via updateUser (PUT) which uses the correct INSERT with creationTime.
-            testTask "adding duplicate auth key returns 400 KeyCodeTaken" {
-                let! (_, adminKey) = seedAdmin ()
-                let! (userAId: string, userAKeyStr: string) = seedRegularUser ()
-                let userAKeyCode = userAKeyStr.Substring("nfc/".Length)
-                let userBId = sprintf "%O" (System.Guid.NewGuid())
-                do! seedMember userBId "UserB" "Test" "user"
-                let! (client: HttpClient) = createTestClient (AuthenticatedUsersAuthHandler())
-                let body = sprintf """{"addAuthKeys":[{"keyType":"nfc","keyCode":"%s"}],"removeAuthKeys":[]}""" userAKeyCode
-                let! (response: HttpResponseMessage) = client.PutAsync($"/api/administration/user/users/{userBId}{authQuery adminKey}", jsonContent body)
-                Expect.equal response.StatusCode HttpStatusCode.BadRequest "should return 400"
-                let! (responseBody: JsonElement array) = response.Content.ReadFromJsonAsync<JsonElement array>()
-                Expect.equal (responseBody.[0].GetString()) "KeyCodeTaken" "should report KeyCodeTaken"
-                ignore userAId
             }
 
             testTask "admin updating another user's name returns 200" {
