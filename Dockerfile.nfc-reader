@@ -13,8 +13,8 @@ RUN dotnet publish ./nfc-reader -c Release -o out
 ###
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
-RUN apt update && apt install -y libpcsclite1 && rm -rf /var/lib/apt/lists/*
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine
+RUN apk add --no-cache pcsc-lite-libs
 WORKDIR /app
 COPY --from=builder /app/out .
 ENTRYPOINT ["dotnet", "MusiOrder.NfcReader.dll"]
