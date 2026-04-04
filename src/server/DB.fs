@@ -1,6 +1,5 @@
 module DB
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.Data.Sqlite
 
 let dbPath =
@@ -14,60 +13,74 @@ let createConnection () =
     connection
 
 let createCommand (connection: SqliteConnection) tx query parameters =
-    let command = connection.CreateCommand(CommandText = query, Transaction = Option.toObj tx)
+    let command =
+        connection.CreateCommand(CommandText = query, Transaction = Option.toObj tx)
+
     parameters
     |> List.iter (fun (key, value) -> command.Parameters.AddWithValue(key, value) |> ignore)
+
     command
 
 
 let read query parameters readRow = task {
-    use connection = createConnection()
+    use connection = createConnection ()
     let command = createCommand connection None query parameters
     use! reader = command.ExecuteReaderAsync()
+
     let rec readRows acc = task {
         let! hasNext = reader.ReadAsync()
+
         if hasNext then
             let row = readRow reader
             return! readRows (row :: acc)
         else
             return List.rev acc
     }
+
     return! readRows []
 }
 
-let readSingle query parameters readRow = task {
-    let! list = read query parameters readRow
-    return List.tryExactlyOne list
-}
+let readSingle query parameters readRow =
+    task {
+        let! list = read query parameters readRow
+        return List.tryExactlyOne list
+    }
 
-let readIndexed query parameters readRow = task {
-    let! list = read query parameters readRow
-    return Map.ofList list
-}
+let readIndexed query parameters readRow =
+    task {
+        let! list = read query parameters readRow
+        return Map.ofList list
+    }
 
-let private writeInternal connection tx query parameters = task {
-    let command = createCommand connection tx query parameters
-    let! result = command.ExecuteNonQueryAsync()
-    return ()
-}
+let private writeInternal connection tx query parameters =
+    task {
+        let command = createCommand connection tx query parameters
+        let! result = command.ExecuteNonQueryAsync()
+        return ()
+    }
 
-let write query parameters = task {
-    use connection = createConnection()
-    do! writeInternal connection None query parameters
-}
+let write query parameters =
+    task {
+        use connection = createConnection ()
+        do! writeInternal connection None query parameters
+    }
 
-let executeCommands queries = task {
-    use connection = createConnection()
-    use! tx = connection.BeginTransactionAsync()
-    for (query, parameters) in queries do
-        do! writeInternal connection (Some (tx :?> SqliteTransaction)) query parameters
-    do! tx.CommitAsync()
-}
+let executeCommands queries =
+    task {
+        use connection = createConnection ()
+        use! tx = connection.BeginTransactionAsync()
 
-let writeMany query parameterLists = task {
-    return! executeCommands [ for parameterList in parameterLists -> (query, parameterList)]
-}
+        for (query, parameters) in queries do
+            do! writeInternal connection (Some(tx :?> SqliteTransaction)) query parameters
+
+        do! tx.CommitAsync()
+    }
+
+let writeMany query parameterLists =
+    task { return! executeCommands [ for parameterList in parameterLists -> (query, parameterList) ] }
 
 let tryGet (reader: SqliteDataReader) fn index =
-    if not <| reader.IsDBNull index then fn index |> Some
-    else None
+    if not <| reader.IsDBNull index then
+        fn index |> Some
+    else
+        None

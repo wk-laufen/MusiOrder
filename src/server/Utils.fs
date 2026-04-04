@@ -1,6 +1,5 @@
 namespace global
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
 
 module Option =
     let bindTask fn o = task {

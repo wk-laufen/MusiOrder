@@ -2,7 +2,6 @@ namespace MusiOrder.Server.HttpHandler
 
 open System
 open Microsoft.Extensions.DependencyInjection
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
 open MusiOrder.Core
 open MusiOrder.Models

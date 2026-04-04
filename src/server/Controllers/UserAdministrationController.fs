@@ -1,6 +1,5 @@
 namespace MusiOrder.Server.Controllers
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.AspNetCore.Mvc
 open MusiOrder.Core
 open MusiOrder.Core.UserAdministration

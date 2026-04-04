@@ -1,6 +1,5 @@
 module MusiOrder.Core
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.Data.Sqlite
 open MusiOrder.Models
 open System
