@@ -50,9 +50,20 @@ Press `Ctrl+Shift+B` and select:
 - **Run client**: Client only
 - **Run NFC reader**: NFC reader only
 
-### Formatting
-- **Fantomas**: Run after code changes (`fantomas <file>.fs`)
-- Request formatting by mentioning "Fantomas" when files have been changed
+### Formatting and Linting
+
+After **every** modification to `.fs` files, run both tools:
+
+1. **Fantomas** (auto-formats in place):
+   ```bash
+   dotnet fantomas <file>.fs
+   ```
+
+2. **FSharpLint** (reports issues to fix manually):
+   ```bash
+   dotnet fsharplint lint <project>.fsproj
+   ```
+   Run against the `.fsproj` of the project containing the changed files (e.g. `src/server/MusiOrder.Server.fsproj`).
 
 ### Running Tests
 Tests exist in `src/server.tests/MusiOrder.Server.Tests.fsproj` (Expecto framework).

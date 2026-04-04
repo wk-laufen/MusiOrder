@@ -15,6 +15,20 @@
         "femto"
       ],
       "rollForward": false
+    },
+    "fantomas": {
+      "version": "7.0.5",
+      "commands": [
+        "fantomas"
+      ],
+      "rollForward": false
+    },
+    "dotnet-fsharplint": {
+      "version": "0.26.10",
+      "commands": [
+        "dotnet-fsharplint"
+      ],
+      "rollForward": false
     }
   }
 }
