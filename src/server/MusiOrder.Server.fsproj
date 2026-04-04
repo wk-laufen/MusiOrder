@@ -9,8 +9,6 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="2.2.4" />
     <PackageReference Include="TaskBuilder.fs" Version="2.1.*" />
-    <PackageReference Include="Thoth.Json" Version="5.1.0" />
-    <PackageReference Include="Thoth.Json.Giraffe" Version="4.2.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,6 +17,7 @@
     <Compile Include="DB.fs" />
     <Compile Include="Core.fs" />
     <Compile Include="AuthHandler.fs" />
+    <Compile Include="Serialization.fs" />
     <Compile Include="HttpHandler.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

@@ -3,8 +3,6 @@ namespace MusiOrder.Models
 open System
 #if FABLE_COMPILER
 open Thoth.Json
-#else
-open Thoth.Json.Net
 #endif
 
 type PositiveInteger = private PositiveInteger of int
@@ -14,6 +12,7 @@ module PositiveInteger =
         | v when v > 0 -> Some (PositiveInteger v)
         | _ -> None
     let value (PositiveInteger v) = v
+#if FABLE_COMPILER
     let encode : Encoder<_> = fun (PositiveInteger v) -> Encode.int v
     let decoder : Decoder<_> =
         Decode.int
@@ -21,6 +20,7 @@ module PositiveInteger =
             | Some v -> Decode.succeed v
             | None -> Decode.fail "Must be positive"
         )
+#endif
 
 type NonNegativeDecimal = private NonNegativeDecimal of decimal
 
@@ -33,6 +33,7 @@ module NonNegativeDecimal =
         | (true, v) -> tryCreate v
         | (false, _) -> None
     let value (NonNegativeDecimal v) = v
+#if FABLE_COMPILER
     let encode : Encoder<_> = fun (NonNegativeDecimal v) -> Encode.decimal v
     let decoder : Decoder<_> =
         Decode.decimal
@@ -40,6 +41,7 @@ module NonNegativeDecimal =
             | Some v -> Decode.succeed v
             | None -> Decode.fail "Must be non-negative"
         )
+#endif
 
 type NotEmptyString =
     private NotEmptyString of string
@@ -48,6 +50,7 @@ module NotEmptyString =
     let tryCreate v =
         if String.IsNullOrWhiteSpace v then None
         else Some (NotEmptyString v)
+#if FABLE_COMPILER
     let encode : Encoder<_> = fun (NotEmptyString v) -> Encode.string v
     let decoder : Decoder<_> =
         Decode.string
@@ -55,10 +58,12 @@ module NotEmptyString =
             | Some v -> Decode.succeed v
             | None -> Decode.fail "Must be non-empty"
         )
+#endif
 
 type AuthKey =
     | NFCAuthKey of keyCode: string
 module AuthKey =
+#if FABLE_COMPILER
     let encode : Encoder<_> = function
         | NFCAuthKey keyCode -> Encode.object [
             "keyType", Encode.string "nfc"
@@ -75,6 +80,7 @@ module AuthKey =
             | Some v -> Decode.succeed v
             | None -> Decode.fail $"Can't parse AuthKey"
         )
+#endif
     let toString = function
         | NFCAuthKey keyCode -> $"nfc/{keyCode}"
     let tryParse (v: string) =
@@ -83,24 +89,32 @@ module AuthKey =
         else None
 
 type ProductGroupId = ProductGroupId of string
+#if FABLE_COMPILER
 module ProductGroupId =
     let encode : Encoder<_> = fun (ProductGroupId v) -> Encode.string v
     let decoder : Decoder<_> = Decode.string |> Decode.map ProductGroupId
+#endif
 
 type ProductId = ProductId of string
+#if FABLE_COMPILER
 module ProductId =
     let encode : Encoder<_> = fun (ProductId v) -> Encode.string v
     let decoder : Decoder<_> = Decode.string |> Decode.map ProductId
+#endif
 
 type UserId = UserId of string
+#if FABLE_COMPILER
 module UserId =
     let encode : Encoder<_> = fun (UserId v) -> Encode.string v
     let decoder : Decoder<_> = Decode.string |> Decode.map UserId
+#endif
 
 type OrderId = OrderId of string
+#if FABLE_COMPILER
 module OrderId =
     let encode : Encoder<_> = fun (OrderId v) -> Encode.string v
     let decoder : Decoder<_> = Decode.string |> Decode.map OrderId
+#endif
 
 module Order =
     type Product = {
@@ -356,6 +370,7 @@ module DataExport =
         | InvalidAuthKey
         | NotAuthorized
 
+#if FABLE_COMPILER
 module Json =
     let coders =
         Extra.empty
@@ -368,3 +383,4 @@ module Json =
         |> Extra.withCustom NotEmptyString.encode NotEmptyString.decoder
         |> Extra.withCustom NonNegativeDecimal.encode NonNegativeDecimal.decoder
         |> Extra.withDecimal
+#endif

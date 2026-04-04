@@ -9,8 +9,7 @@ open Microsoft.Extensions.DependencyInjection
 open Giraffe
 open Giraffe.Serialization
 open MusiOrder.Models
-open Thoth.Json.Net
-open Thoth.Json.Giraffe
+open MusiOrder.Server.Serialization
 open AuthHandler
 
 let webApp =
@@ -84,7 +83,7 @@ let main args =
 
     builder.Services.AddGiraffe() |> ignore
 
-    builder.Services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = Json.coders)) |> ignore
+    builder.Services.AddSingleton<IJsonSerializer>(SystemTextJsonSerializer()) |> ignore
 
     let authHandlerOptions = builder.Configuration.GetRequiredSection("AuthHandler").Get<AuthHandlerOptions>()
     if authHandlerOptions.Name.Equals("AuthenticatedUsers", StringComparison.InvariantCultureIgnoreCase) then

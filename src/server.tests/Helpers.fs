@@ -10,8 +10,7 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Giraffe
 open Giraffe.Serialization
-open Thoth.Json.Net
-open Thoth.Json.Giraffe
+open MusiOrder.Server.Serialization
 open AuthHandler
 open MusiOrder.Models
 
@@ -38,7 +37,7 @@ let createTestClient (authHandler: IAuthHandler) = task {
                     .UseTestServer()
                     .ConfigureServices(fun services ->
                         services.AddGiraffe() |> ignore
-                        services.AddSingleton<IJsonSerializer>(ThothSerializer(caseStrategy = CamelCase, extra = Json.coders)) |> ignore
+                        services.AddSingleton<IJsonSerializer>(SystemTextJsonSerializer()) |> ignore
                         services.AddSingleton<IAuthHandler>(authHandler) |> ignore
                     )
                     .Configure(fun app ->
