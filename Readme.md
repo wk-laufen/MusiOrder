@@ -91,7 +91,7 @@ Settings can be specified as usual, e.g. using `appsettings.json` or environment
           }
         }
         ```
-        * When using `docker`: Mount the PCSClite socket to the container
+        * When using `docker`: Mount the PCSClite socket to the container and ensure that the container and the host use the same PCSC version (see https://blog.apdu.fr/posts/2026/01/pcsc-lite-backward-forward-compatible-with-itself/)
             ```yaml
             environment:
               - CardReader__Type=pcsc
