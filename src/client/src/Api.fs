@@ -6,27 +6,33 @@ open MusiOrder.Models
 open Thoth.Fetch
 open Thoth.Json
 
+[<Emit("import.meta.env.BASE_URL")>]
+let private baseUrl: string = jsNative
+
+let private fullUrl (path: string) =
+    $"{baseUrl.TrimEnd '/'}/{path.TrimStart '/'}"
+
 let inline tryGet url = async {
     return!
-        Fetch.tryGet(url, caseStrategy = CamelCase, extra = Json.coders)
+        Fetch.tryGet(fullUrl url, caseStrategy = CamelCase, extra = Json.coders)
         |> Async.AwaitPromise
 }
 
 let inline tryPut url data = async {
     return!
-        Fetch.tryPut(url, data, caseStrategy = CamelCase, extra = Json.coders)
+        Fetch.tryPut(fullUrl url, data, caseStrategy = CamelCase, extra = Json.coders)
         |> Async.AwaitPromise
 }
 
 let inline tryPost url data = async {
     return!
-        Fetch.tryPost(url, data, caseStrategy = CamelCase, extra = Json.coders)
+        Fetch.tryPost(fullUrl url, data, caseStrategy = CamelCase, extra = Json.coders)
         |> Async.AwaitPromise
 }
 
 let inline tryDelete url = async {
     return!
-        Fetch.tryDelete(url, caseStrategy = CamelCase, extra = Json.coders)
+        Fetch.tryDelete(fullUrl url, caseStrategy = CamelCase, extra = Json.coders)
         |> Async.AwaitPromise
 }
 
