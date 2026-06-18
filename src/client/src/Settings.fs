@@ -48,12 +48,13 @@ let Settings _authKey _setAuthKeyInvalid (_setMenuItems: ReactElement list -> Re
                             setEnabled isChecked
                             persist isChecked parsedSeconds)
                     ]
-                    Html.span [ prop.text "Bildschirmschoner-Timeout (Sekunden)" ]
+                    Html.span "Bildschirmschoner-Timeout:"
                     Html.input [
                         prop.type' "number"
                         prop.min MinTimeoutSeconds
                         prop.disabled (not enabled)
                         prop.classes [
+                            "w-24"
                             if enabled && parsedSeconds.IsNone then
                                 "border-musi-red"
                         ]
@@ -62,6 +63,7 @@ let Settings _authKey _setAuthKeyInvalid (_setMenuItems: ReactElement list -> Re
                             setSecondsText value
                             persist enabled (parseSeconds value))
                     ]
+                    Html.span "Sekunden"
                 ]
             ]
         ]
