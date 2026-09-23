@@ -118,7 +118,7 @@ let seedProduct (groupId: string) (name: string) (price: decimal) =
 
         do!
             DB.write
-                "INSERT INTO `Article` (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES (@Id, @GroupId, 'enabled', (SELECT COALESCE(MAX(`grade`) + 1, 1) FROM `Article` WHERE `groupId` = @GroupId), @Name, @Price)"
+                "INSERT INTO `Article` (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES (@Id, @GroupId, 'Enabled', (SELECT COALESCE(MAX(`grade`) + 1, 1) FROM `Article` WHERE `groupId` = @GroupId), @Name, @Price)"
                 [
                     ("@Id", box id)
                     ("@GroupId", box groupId)

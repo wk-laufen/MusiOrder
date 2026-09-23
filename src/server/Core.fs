@@ -149,7 +149,7 @@ module Order =
 
             let! products =
                 DB.read
-                    "SELECT `id`, `groupId`, `name`, `price` FROM `Article` WHERE `state` = 'enabled' ORDER BY `grade`"
+                    "SELECT `id`, `groupId`, `name`, `price` FROM `Article` WHERE `state` = 'Enabled' ORDER BY `grade`"
                     []
                     (fun reader ->
                         (reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetDecimal(3)))

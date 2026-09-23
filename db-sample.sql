@@ -11,14 +11,14 @@ INSERT INTO AuthKey (keyCode, keyType, userId, creationTime) VALUES ('qwer', 'nf
 INSERT INTO ArticleGroup (`id`, `grade`, `name`) VALUES ('1e11c985-cb94-4ca4-ace9-4752f43c314a', 1, 'Getränke');
 INSERT INTO ArticleGroup (`id`, `grade`, `name`) VALUES ('1f418489-6b00-46d9-9d76-25a691a10e11', 2, 'Speisen');
 
-INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('9f33f4ed-785d-45d0-a385-5990c99d2b74', '1e11c985-cb94-4ca4-ace9-4752f43c314a', 'enabled', 1, 'Bier', 2.5);
-INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('83646d9d-ac2d-4fd0-9633-abf884527fa6', '1e11c985-cb94-4ca4-ace9-4752f43c314a', 'enabled', 2, 'Wasser', 20);
-INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('291da6e7-411a-47f2-b1d1-38caeae10a86', '1e11c985-cb94-4ca4-ace9-4752f43c314a', 'enabled', 3, 'Saft', 10);
-INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('2cc84f35-65e7-4ee1-a57b-dca95cf0d9c6', '1e11c985-cb94-4ca4-ace9-4752f43c314a', 'enabled', 4, 'Wein', 3);
-INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('dc8beb05-b98c-4006-b0e3-d05d529b2562', '1e11c985-cb94-4ca4-ace9-4752f43c314a', 'disabled', 5, 'alter Wein', 2.3);
+INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('9f33f4ed-785d-45d0-a385-5990c99d2b74', '1e11c985-cb94-4ca4-ace9-4752f43c314a', 'Enabled', 1, 'Bier', 2.5);
+INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('83646d9d-ac2d-4fd0-9633-abf884527fa6', '1e11c985-cb94-4ca4-ace9-4752f43c314a', 'Enabled', 2, 'Wasser', 20);
+INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('291da6e7-411a-47f2-b1d1-38caeae10a86', '1e11c985-cb94-4ca4-ace9-4752f43c314a', 'Enabled', 3, 'Saft', 10);
+INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('2cc84f35-65e7-4ee1-a57b-dca95cf0d9c6', '1e11c985-cb94-4ca4-ace9-4752f43c314a', 'Enabled', 4, 'Wein', 3);
+INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('dc8beb05-b98c-4006-b0e3-d05d529b2562', '1e11c985-cb94-4ca4-ace9-4752f43c314a', 'Disabled', 5, 'alter Wein', 2.3);
 
-INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('67c47193-08c7-4e9b-904c-2807668ae73c', '1f418489-6b00-46d9-9d76-25a691a10e11', 'enabled', 1, 'Käseburger', 5.2);
-INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('8e83fd8d-1a93-41cc-981b-2f532cf9e904', '1f418489-6b00-46d9-9d76-25a691a10e11', 'enabled', 2, 'Schinkenburger', 4.7);
+INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('67c47193-08c7-4e9b-904c-2807668ae73c', '1f418489-6b00-46d9-9d76-25a691a10e11', 'Enabled', 1, 'Käseburger', 5.2);
+INSERT INTO Article (`id`, `groupId`, `state`, `grade`, `name`, `price`) VALUES ('8e83fd8d-1a93-41cc-981b-2f532cf9e904', '1f418489-6b00-46d9-9d76-25a691a10e11', 'Enabled', 2, 'Schinkenburger', 4.7);
 
 INSERT INTO MemberPayment (`id`, `userId`, `amount`, `timestamp`) VALUES ('aa85847b-a3d2-4015-b486-a65536e9c49f', 'e4470d38-4726-47c4-b7ee-3025992dbf85', 10, '2020-07-04 13:55:20.0263132+02:00');
 INSERT INTO MemberPayment (`id`, `userId`, `amount`, `timestamp`) VALUES ('bab60ee2-4241-4dad-ab15-36ad4b387079', 'e4470d38-4726-47c4-b7ee-3025992dbf85', 2.5, '2020-06-04 19:55:20.0263132+02:00');
