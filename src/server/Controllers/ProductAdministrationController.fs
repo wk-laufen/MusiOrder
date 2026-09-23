@@ -33,7 +33,7 @@ module ProductDataDto =
             |> NonNegativeDecimal.tryCreate
             |> Option.defaultWith (fun () -> failwith "Invalid price")
         State =
-            dto.State.ToLowerInvariant()
+            dto.State
             |> ProductState.tryParse
             |> Option.defaultWith (fun () -> failwith "Invalid state")
     }
