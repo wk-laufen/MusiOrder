@@ -271,12 +271,12 @@ module ProductAdministration =
     type ProductState = Enabled | Disabled
     module ProductState =
         let tryParse = function
-            | "enabled" -> Some Enabled
-            | "disabled" -> Some Disabled
+            | "Enabled" -> Some Enabled
+            | "Disabled" -> Some Disabled
             | _ -> None
         let toString = function
-            | Enabled -> "enabled"
-            | Disabled -> "disabled"
+            | Enabled -> "Enabled"
+            | Disabled -> "Disabled"
         let label = function
             | Enabled -> "Aktiv"
             | Disabled -> "Inaktiv"
